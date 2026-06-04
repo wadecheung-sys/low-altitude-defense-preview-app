@@ -1,0 +1,181 @@
+<script setup lang="tsx">
+import { ContentWrap } from '@/components/ContentWrap'
+import { Search } from '@/components/Search'
+import { Table } from '@/components/Table'
+import { BaseButton } from '@/components/Button'
+import { useTable } from '@/hooks/web/useTable'
+import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
+import { deleteDictTypeApi, getDictTypeListApi } from '@/api/lad/system'
+import type { DictTypeItem } from '@/api/lad/system/types'
+import DictTypeFormDialog from './components/DictTypeFormDialog.vue'
+import { reactive, ref, unref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
+
+defineOptions({ name: 'LadSystemDictList' })
+
+const { push } = useRouter()
+const searchParams = ref<Recordable>({})
+const formVisible = ref(false)
+const formRow = ref<DictTypeItem>()
+
+const statusOptions = [
+  { label: '启用', value: 'enabled' },
+  { label: '停用', value: 'disabled' }
+]
+
+const setSearchParams = (params: Recordable) => {
+  searchParams.value = {
+    dictCode: params.dictCode,
+    dictName: params.dictName,
+    status: params.status
+  }
+  currentPage.value = 1
+  getList()
+}
+
+const openAdd = () => {
+  formRow.value = undefined
+  formVisible.value = true
+}
+
+const openEdit = (row: DictTypeItem) => {
+  formRow.value = row
+  formVisible.value = true
+}
+
+const goEntries = (row: DictTypeItem) => {
+  push(`/lad/system/dict/detail/${row.id}`)
+}
+
+async function onDelete(row: DictTypeItem) {
+  try {
+    await ElMessageBox.confirm(`确认删除字典「${row.dictName}」及其全部字典项吗？`, '删除字典', {
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+  await deleteDictTypeApi({ id: row.id })
+  ElMessage.success('已删除')
+  getList()
+}
+
+const { tableRegister, tableState, tableMethods } = useTable({
+  fetchDataApi: async () => {
+    const { currentPage, pageSize } = tableState
+    const res = await getDictTypeListApi({
+      pageIndex: unref(currentPage),
+      pageSize: unref(pageSize),
+      ...unref(searchParams)
+    })
+    return { list: res.data.list, total: res.data.total }
+  }
+})
+
+const { loading, dataList, total, currentPage, pageSize } = tableState
+const { getList } = tableMethods
+
+const crudSchemas = reactive<CrudSchema[]>([
+  {
+    field: 'index',
+    label: '序号',
+    type: 'index',
+    search: { hidden: true }
+  },
+  {
+    field: 'dictCode',
+    label: '字典编码',
+    search: { component: 'Input', componentProps: { clearable: true } },
+    table: { minWidth: 140, showOverflowTooltip: true }
+  },
+  {
+    field: 'dictName',
+    label: '字典名称',
+    search: { component: 'Input', componentProps: { clearable: true } },
+    table: { minWidth: 140, showOverflowTooltip: true }
+  },
+  {
+    field: 'itemCount',
+    label: '条目数',
+    search: { hidden: true },
+    table: { width: 90, align: 'center' }
+  },
+  {
+    field: 'status',
+    label: '状态',
+    search: {
+      component: 'Select',
+      componentProps: { options: statusOptions, clearable: true }
+    },
+    table: {
+      width: 90,
+      slots: {
+        default: (data: { row: DictTypeItem }) => (
+          <ElTag type={data.row.status === 'enabled' ? 'success' : 'info'}>
+            {data.row.status === 'enabled' ? '启用' : '停用'}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
+    field: 'remark',
+    label: '备注',
+    search: { hidden: true },
+    table: { minWidth: 120, showOverflowTooltip: true }
+  },
+  {
+    field: 'updatedAt',
+    label: '更新时间',
+    search: { hidden: true },
+    table: { width: 170 }
+  },
+  {
+    field: 'action',
+    label: '操作',
+    search: { hidden: true },
+    table: {
+      width: 220,
+      fixed: 'right',
+      slots: {
+        default: (data: { row: DictTypeItem }) => (
+          <>
+            <ElLink type="primary" onClick={() => goEntries(data.row)}>
+              字典项
+            </ElLink>
+            <ElLink type="primary" class="ml-12px" onClick={() => openEdit(data.row)}>
+              编辑
+            </ElLink>
+            <ElLink type="danger" class="ml-12px" onClick={() => onDelete(data.row)}>
+              删除
+            </ElLink>
+          </>
+        )
+      }
+    }
+  }
+])
+
+const { allSchemas } = useCrudSchemas(crudSchemas)
+</script>
+
+<template>
+  <ContentWrap>
+    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams">
+      <template #action>
+        <BaseButton type="primary" @click="openAdd">新增字典</BaseButton>
+      </template>
+    </Search>
+    <Table
+      v-model:pageSize="pageSize"
+      v-model:currentPage="currentPage"
+      :columns="allSchemas.tableColumns"
+      :data="dataList"
+      :loading="loading"
+      :pagination="{ total }"
+      @register="tableRegister"
+    />
+    <DictTypeFormDialog v-model="formVisible" :row="formRow" @success="getList" />
+  </ContentWrap>
+</template>
