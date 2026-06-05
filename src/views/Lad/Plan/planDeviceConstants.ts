@@ -1,7 +1,5 @@
 export {
-  planDeviceTypeOptions,
-  planDeviceFunctionMap,
-  listFunctionsByDeviceType,
+  listFunctionsByDeviceGroupType,
   resolveDeviceFunction,
   functionLabel,
   type PlanDeviceFunctionOption

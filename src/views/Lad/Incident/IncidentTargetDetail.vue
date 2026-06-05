@@ -1,16 +1,20 @@
 <script setup lang="ts">
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
-  deleteHistoryEventApi,
-  getHistoryEventDetailApi
-} from '@/api/lad/incident'
+  ElAlert,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElMessage,
+  ElMessageBox,
+  ElTag
+} from 'element-plus'
+import { deleteHistoryEventApi, getHistoryEventDetailApi } from '@/api/lad/incident'
 import type { HistoryEventDetail, HandlingStatus, ThreatLevel } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import DisposalTimelinePanel from './components/DisposalTimelinePanel.vue'
 import TrajectoryReplay from './components/TrajectoryReplay.vue'
-import { ElAlert, ElDescriptions, ElDescriptionsItem, ElMessage, ElMessageBox, ElTag } from 'element-plus'
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 
 defineOptions({
   name: 'LadIncidentTargetDetail'
@@ -21,6 +25,7 @@ const { push, go } = useRouter()
 
 const loading = ref(true)
 const detail = ref<HistoryEventDetail | null>(null)
+const loadError = ref('')
 const replayRef = ref<InstanceType<typeof TrajectoryReplay> | null>(null)
 
 const eventId = computed(() => route.params.id as string)
@@ -36,21 +41,25 @@ const threatTagType = (level: ThreatLevel) => {
 }
 
 const statusLabel = (status: HandlingStatus) => {
-  if (status === '待处置') return '未处理'
+  if (status === '待处置') return '未处置'
   return status
 }
 
 const lastAltitude = computed(() => {
-  const pts = detail.value?.trajectory
-  if (!pts?.length) return '—'
-  return `${pts[pts.length - 1].altitude}m`
+  const points = detail.value?.trajectory
+  if (!points?.length) return '--'
+  return `${points[points.length - 1].altitude}m`
 })
 
 const fetchDetail = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     const res = await getHistoryEventDetailApi(eventId.value)
     detail.value = res.data
+  } catch (error) {
+    detail.value = null
+    loadError.value = error instanceof Error ? error.message : '详情加载失败'
   } finally {
     loading.value = false
   }
@@ -115,14 +124,14 @@ onMounted(async () => {
         <el-col :xs="24" :md="17" :lg="18">
           <div class="detail-info__desc-title">基本信息</div>
           <ElDescriptions :column="3" border size="small">
-            <ElDescriptionsItem label="目标 ID">{{ detail.targetId }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="目标ID">{{ detail.targetId }}</ElDescriptionsItem>
             <ElDescriptionsItem label="品牌型号">{{ detail.targetModel }}</ElDescriptionsItem>
             <ElDescriptionsItem label="SN 码">{{ detail.uavSn }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="发现时间">{{ detail.discoveredAt }}</ElDescriptionsItem>
             <ElDescriptionsItem label="结束时间">{{ detail.endedAt }}</ElDescriptionsItem>
             <ElDescriptionsItem label="处置时间">
-              {{ detail.handledAt === '—' ? '—' : detail.handledAt }}
+              {{ detail.handledAt === '--' ? '--' : detail.handledAt }}
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="威胁等级">
@@ -133,31 +142,32 @@ onMounted(async () => {
             <ElDescriptionsItem label="当前状态">
               {{ statusLabel(detail.handlingStatus) }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="人工确认">{{ detail.manualConfirmStatus }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="人工确认">{{
+              detail.manualConfirmStatus
+            }}</ElDescriptionsItem>
 
-            <ElDescriptionsItem label="最后位置" :span="2">
-              {{ detail.targetLocation }}，高度 {{ lastAltitude }}
+            <ElDescriptionsItem label="最新高度">
+              {{ lastAltitude }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="飞手位置">
               <template v-if="detail.pilotLocation === '未定位'">未定位</template>
               <template v-else>
                 {{ detail.pilotLocation }}
-                <span v-if="detail.pilotConfidence !== '—'" class="detail-info__confidence">
+                <span v-if="detail.pilotConfidence !== '--'" class="detail-info__confidence">
                   置信度 {{ detail.pilotConfidence }}
                 </span>
               </template>
             </ElDescriptionsItem>
-
             <ElDescriptionsItem label="区域">{{ detail.zoneName }}</ElDescriptionsItem>
+
             <ElDescriptionsItem label="频率信息">{{ detail.frequencyInfo }}</ElDescriptionsItem>
             <ElDescriptionsItem label="目标类型">{{ detail.targetType }}</ElDescriptionsItem>
-
             <ElDescriptionsItem label="持续时长">{{ detail.duration }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="异常时长">{{ detail.abnormalDuration }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="轨迹特征">{{ detail.trajectoryFeature }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="探测设备">{{ detail.detectionDevice }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="反制设备">{{ detail.countermeasureDevice }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="反制设备">{{
+              detail.countermeasureDevice
+            }}</ElDescriptionsItem>
             <ElDescriptionsItem label="处置结果">{{ detail.handlingResult }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="处置详情" :span="3">
@@ -167,7 +177,11 @@ onMounted(async () => {
             <ElDescriptionsItem v-if="detail.relatedEventCount > 1" label="关联事件">
               同目标共 {{ detail.relatedEventCount }} 条飞行记录
             </ElDescriptionsItem>
-            <ElDescriptionsItem v-if="detail.remark" label="备注" :span="detail.relatedEventCount > 1 ? 2 : 3">
+            <ElDescriptionsItem
+              v-if="detail.remark"
+              label="备注"
+              :span="detail.relatedEventCount > 1 ? 2 : 3"
+            >
               {{ detail.remark }}
             </ElDescriptionsItem>
           </ElDescriptions>
@@ -177,7 +191,7 @@ onMounted(async () => {
       <section v-if="detail.disposalTimeline?.length" class="detail-timeline-section">
         <div class="detail-timeline-section__title">设备处置时间链</div>
         <p class="detail-timeline-section__hint">
-          从设备发现、威胁识别（如进入高等级区域）、威胁评估、处置执行到结果归档的全过程记录。
+          从设备发现、威胁识别、评估、处置执行到结果归档的全过程记录。
         </p>
         <DisposalTimelinePanel :nodes="detail.disposalTimeline" />
       </section>
@@ -188,16 +202,16 @@ onMounted(async () => {
         :closable="false"
         show-icon
         class="detail-merge-alert"
-        :title="
-          detail.trajectoryMergeNote ||
-          '已按同架次合并雷达、无线电等多源探测轨迹（演示）'
-        "
+        :title="detail.trajectoryMergeNote || '已按同架次合并多源探测轨迹（演示）'"
       />
+
       <div class="detail-map-section">
         <div class="detail-map-section__title">地图轨迹</div>
         <TrajectoryReplay ref="replayRef" :detail="detail" />
       </div>
     </template>
+
+    <ElAlert v-else-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
   </ContentDetailWrap>
 </template>
 

@@ -1,8 +1,5 @@
-import {
-  functionLabel,
-  planDeviceTypeOptions,
-  resolveDeviceFunction
-} from './planDeviceCatalog'
+import { queryDeviceGroupList } from '@/api/lad/device-group/groupStore'
+import { functionLabel, resolveDeviceFunction } from './planDeviceCatalog'
 import {
   formatDisposalModeDetail,
   normalizePlanDisposal,
@@ -30,370 +27,462 @@ function formatNow() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
-type PlanSeedRow = Omit<
-  PlanStrategy,
-  'triggerRules' | 'disposalMode' | 'manualResponseSeconds' | 'disposalModeLabel'
-> & {
-  triggerRules?: PlanTriggerRule[]
-  disposalMode?: PlanStrategy['disposalMode']
-  manualResponseSeconds?: number
+function generatePlanCode() {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  let code = ''
+  do {
+    code = `PLAN-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(
+      d.getHours()
+    )}${p(d.getMinutes())}${p(d.getSeconds())}${p(Math.floor(Math.random() * 100))}`
+  } while (allPlans.some((plan) => plan.planCode === code))
+  return code
 }
 
-const seed: PlanSeedRow[] = [
+function groupMap() {
+  const { list } = queryDeviceGroupList({ pageIndex: 1, pageSize: 999 })
+  return new Map(list.map((item) => [item.id, item]))
+}
+
+type SeedInput = Omit<
+  PlanStrategy,
+  | 'triggerRules'
+  | 'weatherFactor'
+  | 'deviceGroupName'
+  | 'deviceGroupType'
+  | 'deviceFunction'
+  | 'deviceAction'
+  | 'triggerRuleCount'
+  | 'triggerRulesSummary'
+  | 'disposalModeLabel'
+> & {
+  triggerRules: PlanTriggerRule[]
+}
+
+export const PLAN_STORE_VERSION = 16
+export const PLAN_DEFAULT_PRIORITY = 5
+
+const seed: SeedInput[] = [
   {
     id: 'plan-001',
     planCode: 'contingency-001',
-    planName: '\u81ea\u52a8\u9a71\u79bb',
+    planName: '自动驱离',
     planRule:
-      '1.\u542f\u52a8\u5e72\u6270\u8bbe\u5907\u5e76\u5207\u81f3\u9a71\u79bb\u6a21\u5f0f\n2.\u5355\u6b21\u5de5\u4f5c\u65f6\u957f\u4e0d\u8d85\u8fc730\u79d2\n3.\u65e0\u6548\u679c\u5219\u505c\u6b62\u5e76\u901a\u77e5\u503c\u73ed\u590d\u6838',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u5168\u90e8',
-    deviceType: '\u65e0\u7ebf\u7535\u5e72\u6270',
-    deviceFunction: 'jam_band_expel',
-    deviceAction: '\u9a71\u79bb',
+      '1. 启动干扰设备并切至驱离模式\n2. 单次工作时长不超过30秒\n3. 无效果则停止并通知值班复核',
+    disposalMode: 'auto',
+    manualResponseSeconds: 20,
+    threatLevel: '高',
+    areaLevel: '全部',
+    priority: 70,
     enabled: true,
     updatedAt: '2026-03-08 10:00:00',
-    updatedBy: '\u5f20\u4e09'
+    updatedBy: '张三',
+    triggerRules: [
+      {
+        id: 'ptr-plan-001-1',
+        ruleName: '晴天默认驱离',
+        weatherFactor: '晴天',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'jam_band_expel',
+        deviceAction: '驱离',
+        enabled: true
+      },
+      {
+        id: 'ptr-plan-001-2',
+        ruleName: '兜底人工复核告警',
+        weatherFactor: '全部',
+        deviceGroupId: 'dg-1003',
+        deviceGroupName: '南门光电观察组',
+        deviceGroupType: '光电协同组',
+        deviceFunction: 'alarm_sound_light',
+        deviceAction: '告警',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-002',
     planCode: 'contingency-002',
-    planName: '\u8feb\u964d\u53cd\u5236',
+    planName: '迫降反制',
     planRule:
-      '1.\u503c\u73ed\u5458\u5728\u7ebf\u786e\u8ba4\u540e\u4e0b\u53d1\u8feb\u964d\u6307\u4ee4\n2.\u6267\u884c\u671f\u95f4\u6301\u7eed\u5149\u7535\u76d1\u6d4b\n3.\u76ee\u6807\u79bb\u5f00\u6838\u5fc3\u533a\u540e\u81ea\u52a8\u7ed3\u675f',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u6674\u5929',
-    deviceType: '\u53cd\u5236\u8bbe\u5907',
-    deviceFunction: 'counter_forced_land',
-    deviceAction: '\u8feb\u964d',
+      '1. 值班员在线确认后下发迫降指令\n2. 执行期间持续光电监测\n3. 目标离开核心区后自动结束',
+    disposalMode: 'manual',
+    manualResponseSeconds: 0,
+    threatLevel: '高',
+    areaLevel: '全部',
+    priority: 85,
     enabled: true,
     updatedAt: '2026-03-10 14:20:00',
-    updatedBy: '\u674e\u56db'
+    updatedBy: '李四',
+    triggerRules: [
+      {
+        id: 'ptr-plan-002-1',
+        ruleName: '雨天迫降反制',
+        weatherFactor: '雨天',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'counter_forced_land',
+        deviceAction: '迫降',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-003',
     planCode: 'contingency-003',
-    planName: '\u5149\u7535\u8ddf\u8e2a\u8054\u52a8',
-    planRule:
-      '1.\u542f\u52a8\u5149\u7535\u8bbe\u5907\u8fdb\u5165\u8ddf\u8e2a\u6a21\u5f0f\n2.\u540c\u6b65\u4e0a\u62a5\u76ee\u6807\u8f68\u8ff9\u81f3\u6307\u6325\u5e73\u53f0\n3.\u4e0d\u8054\u52a8\u6253\u51fb\uff1b\u76ee\u6807\u6d88\u5931\u540e\u81ea\u52a8\u505c\u6b62',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u5168\u90e8',
-    deviceType: '\u5149\u7535\u8bbe\u5907',
-    deviceFunction: 'eo_track_lock',
-    deviceAction: '\u8ddf\u8e2a',
+    planName: '光电跟踪联动',
+    planRule: '1. 启动光电设备进入跟踪模式\n2. 同步上报目标轨迹至指挥平台\n3. 目标消失后自动停止',
+    disposalMode: 'auto',
+    manualResponseSeconds: 10,
+    threatLevel: '中',
+    areaLevel: '全部',
+    priority: 40,
     enabled: true,
     updatedAt: '2026-05-18 09:00:00',
-    updatedBy: '\u7cfb\u7edf\u7ba1\u7406\u5458'
+    updatedBy: '系统管理员',
+    triggerRules: [
+      {
+        id: 'ptr-plan-003-1',
+        ruleName: '阴天光电跟踪',
+        weatherFactor: '阴天',
+        deviceGroupId: 'dg-1003',
+        deviceGroupName: '南门光电观察组',
+        deviceGroupType: '光电协同组',
+        deviceFunction: 'eo_track_lock',
+        deviceAction: '跟踪',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-004',
     planCode: 'contingency-004',
-    planName: '\u4eba\u5de5\u590d\u6838\u544a\u8b66',
-    planRule:
-      '1.\u89e6\u53d1\u58f0\u5149\u544a\u8b66\u4e0e\u5e73\u53f0\u5f39\u7a97\n2.\u503c\u73ed\u5458\u5fc5\u987b\u70b9\u51fb\u786e\u8ba4\u540e\u65b9\u53ef\u5347\u7ea7\u5904\u7f6e\n3.\u672a\u786e\u8ba4\u524d\u7981\u6b62\u81ea\u52a8\u9a71\u79bb',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u5168\u90e8',
-    deviceType: '\u58f0\u5149\u544a\u8b66',
-    deviceFunction: 'alarm_dispatch_notify',
-    deviceAction: '\u544a\u8b66',
-    enabled: false,
+    planName: '人工复核告警',
+    planRule: '1. 触发声光告警与平台弹窗\n2. 值班员确认后升级处置\n3. 未确认前禁止自动驱离',
+    disposalMode: 'manual',
+    manualResponseSeconds: 0,
+    threatLevel: '全部',
+    areaLevel: '全部',
+    priority: PLAN_DEFAULT_PRIORITY,
+    enabled: true,
     updatedAt: '2026-05-01 16:00:00',
-    updatedBy: '\u5b89\u5168\u4fdd\u5bc6\u5458'
+    updatedBy: '安全保密员',
+    triggerRules: [
+      {
+        id: 'ptr-plan-004-1',
+        ruleName: '兜底人工复核告警',
+        weatherFactor: '全部',
+        deviceGroupId: 'dg-1003',
+        deviceGroupName: '南门光电观察组',
+        deviceGroupType: '光电协同组',
+        deviceFunction: 'alarm_sound_light',
+        deviceAction: '告警',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-006',
     planCode: 'contingency-006',
-    planName: '\u96f7\u8fbe\u76d1\u6d4b\u8054\u52a8',
+    planName: '雷达监测联动',
     planRule:
-      '1.\u542f\u52a8\u8fb9\u754c\u96f7\u8fbe\u76d1\u6d4b\u5e76\u8bb0\u5f55\u822a\u8ff9\n2.\u4e0d\u4e0b\u53d1\u9a71\u79bb\uff1b\u4ec5\u4f9b\u503c\u73ed\u5224\u65ad\n3.\u5f02\u5e38\u822a\u8ff9\u81ea\u52a8\u6807\u6ce8\u5e76\u63a8\u9001\u544a\u8b66\u9884\u6848',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u5927\u98ce',
-    deviceType: '\u96f7\u8fbe',
-    deviceFunction: 'radar_track',
-    deviceAction: '\u8ddf\u8e2a',
+      '1. 启动边界雷达监测并记录航迹\n2. 不下发驱离，仅供值班判断\n3. 异常轨迹自动标注并推送告警预案',
+    disposalMode: 'auto',
+    manualResponseSeconds: 15,
+    threatLevel: '中',
+    areaLevel: '全部',
+    priority: 45,
     enabled: true,
     updatedAt: '2026-05-20 08:15:00',
-    updatedBy: '\u8d75\u516d'
+    updatedBy: '赵六',
+    triggerRules: [
+      {
+        id: 'ptr-plan-006-1',
+        ruleName: '大风雷达监测',
+        weatherFactor: '大风',
+        deviceGroupId: 'dg-1001',
+        deviceGroupName: '北区探测协同组',
+        deviceGroupType: '探测组',
+        deviceFunction: 'radar_track',
+        deviceAction: '跟踪',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-007',
     planCode: 'contingency-007',
-    planName: '\u8bd5\u98de\u533a\u544a\u8b66\u63d0\u793a',
-    planRule:
-      '1.\u4ec5\u5e73\u53f0\u5f39\u7a97\u4e0e\u58f0\u5149\u63d0\u793a\n2.\u4e0d\u542f\u52a8\u5e72\u6270\n3.\u8bb0\u5f55\u64cd\u4f5c\u5458\u4e0e\u65f6\u95f4',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u5168\u90e8',
-    deviceType: '\u58f0\u5149\u544a\u8b66',
-    deviceFunction: 'alarm_sound_light',
-    deviceAction: '\u544a\u8b66',
+    planName: '试飞区告警提示',
+    planRule: '1. 仅平台弹窗与声光提示\n2. 不启动干扰\n3. 记录操作员与时间',
+    disposalMode: 'manual',
+    manualResponseSeconds: 0,
+    threatLevel: '低',
+    areaLevel: '全部',
+    priority: 20,
     enabled: true,
     updatedAt: '2026-05-20 09:00:00',
-    updatedBy: '\u5f20\u4e09'
+    updatedBy: '张三',
+    triggerRules: [
+      {
+        id: 'ptr-plan-007-1',
+        ruleName: '试飞区低等级提示',
+        weatherFactor: '全部',
+        deviceGroupId: 'dg-1003',
+        deviceGroupName: '南门光电观察组',
+        deviceGroupType: '光电协同组',
+        deviceFunction: 'alarm_sound_light',
+        deviceAction: '告警',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-008',
     planCode: 'contingency-008',
-    planName: '\u8fb9\u754c\u5168\u5411\u5e72\u6270',
-    planRule:
-      '1.\u5168\u5411\u5e72\u6270\u6a21\u5f0f\u6700\u957f60\u79d2\n2.\u76d1\u6d4b\u5468\u8fb9\u8bbe\u5907\u72b6\u6001\n3.\u5f02\u5e38\u81ea\u52a8\u505c\u6b62\u5e76\u544a\u8b66',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u6674\u5929',
-    deviceType: '\u65e0\u7ebf\u7535\u5e72\u6270',
-    deviceFunction: 'jam_omni',
-    deviceAction: '\u9a71\u79bb',
+    planName: '边界全向干扰',
+    planRule: '1. 全向干扰模式最长60秒\n2. 监测周边设备状态\n3. 异常自动停止并告警',
+    disposalMode: 'auto',
+    manualResponseSeconds: 15,
+    threatLevel: '高',
+    areaLevel: '全部',
+    priority: 65,
     enabled: true,
     updatedAt: '2026-05-20 10:00:00',
-    updatedBy: '\u674e\u56db'
+    updatedBy: '李四',
+    triggerRules: [
+      {
+        id: 'ptr-plan-008-1',
+        ruleName: '高等级全向干扰',
+        weatherFactor: '晴天',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'jam_omni',
+        deviceAction: '驱离',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-009',
     planCode: 'contingency-009',
-    planName: '\u5149\u7535\u76d1\u6d4b\u4e0a\u62a5',
-    planRule:
-      '1.\u8fde\u7eed\u76d1\u6d4b\u4e0a\u62a5\u81f3\u6307\u6325\u5e73\u53f0\n2.\u4e0d\u81ea\u52a8\u5347\u7ea7\u5904\u7f6e\n3.\u76ee\u6807\u79bb\u5f00\u540e\u505c\u6b62',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u9634\u5929',
-    deviceType: '\u5149\u7535\u8bbe\u5907',
-    deviceFunction: 'eo_monitor_report',
-    deviceAction: '\u8ddf\u8e2a',
+    planName: '光电监测上报',
+    planRule: '1. 连续监测上报至指挥平台\n2. 不自动升级处置\n3. 目标离开后停止',
+    disposalMode: 'auto',
+    manualResponseSeconds: 5,
+    threatLevel: '低',
+    areaLevel: '全部',
+    priority: 35,
     enabled: true,
     updatedAt: '2026-05-20 11:00:00',
-    updatedBy: '\u7cfb\u7edf\u7ba1\u7406\u5458'
+    updatedBy: '系统管理员',
+    triggerRules: [
+      {
+        id: 'ptr-plan-009-1',
+        ruleName: '低等级光电监测',
+        weatherFactor: '阴天',
+        deviceGroupId: 'dg-1003',
+        deviceGroupName: '南门光电观察组',
+        deviceGroupType: '光电协同组',
+        deviceFunction: 'eo_monitor_report',
+        deviceAction: '跟踪',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-010',
     planCode: 'contingency-010',
-    planName: '\u5bfc\u822a\u8bf1\u9a97\u9a71\u79bb',
-    planRule:
-      '1.\u5bfc\u822a\u8bf1\u9a17\u6a21\u5f0f\u4e0d\u8d85\u8fc745\u79d2\n2.\u6267\u884c\u4e2d\u7981\u6b62\u5207\u6362\u9891\u6bb5\n3.\u7ed3\u675f\u540e\u751f\u6210\u5907\u6ce8',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u5168\u90e8',
-    deviceType: '\u65e0\u7ebf\u7535\u5e72\u6270',
-    deviceFunction: 'jam_nav_spoof',
-    deviceAction: '\u9a71\u79bb',
+    planName: '导航诱骗驱离',
+    planRule: '1. 导航诱骗模式不超过45秒\n2. 执行中禁止切换频段\n3. 结束后生成备注',
+    disposalMode: 'auto',
+    manualResponseSeconds: 10,
+    threatLevel: '中',
+    areaLevel: '全部',
+    priority: 60,
     enabled: true,
     updatedAt: '2026-05-20 12:00:00',
-    updatedBy: '\u738b\u4e94'
+    updatedBy: '王五',
+    triggerRules: [
+      {
+        id: 'ptr-plan-010-1',
+        ruleName: '中等级导航诱骗',
+        weatherFactor: '全部',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'jam_nav_spoof',
+        deviceAction: '驱离',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-011',
     planCode: 'contingency-011',
-    planName: '\u7f51\u7edc\u65ad\u94fe\u8feb\u964d',
-    planRule:
-      '1.\u65ad\u94fe\u6301\u7eed\u81f3\u76ee\u6807\u79bb\u5f00\n2.\u9700\u4e8c\u7ea7\u5ba1\u6279\u540e\u6267\u884c\n3.\u5931\u8d25\u81ea\u52a8\u56de\u9000\u544a\u8b66\u9884\u6848',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u96e8\u5929',
-    deviceType: '\u53cd\u5236\u8bbe\u5907',
-    deviceFunction: 'counter_net_cut',
-    deviceAction: '\u8feb\u964d',
+    planName: '网络断链迫降',
+    planRule: '1. 断链持续至目标离开\n2. 需二级审批后执行\n3. 失败自动回退告警预案',
+    disposalMode: 'manual',
+    manualResponseSeconds: 0,
+    threatLevel: '高',
+    areaLevel: '全部',
+    priority: 75,
     enabled: false,
     updatedAt: '2026-05-20 13:00:00',
-    updatedBy: '\u5b89\u5168\u4fdd\u5bc6\u5458'
+    updatedBy: '安全保密员',
+    triggerRules: [
+      {
+        id: 'ptr-plan-011-1',
+        ruleName: '高等级断链迫降',
+        weatherFactor: '雨天',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'counter_net_cut',
+        deviceAction: '迫降',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-012',
     planCode: 'contingency-012',
-    planName: '\u96f7\u8fbe\u8ddf\u8e2a\u5907\u6ce8',
-    planRule:
-      '1.\u8bb0\u5f55\u822a\u8ff9\u4e0e\u901f\u5ea6\u66f2\u7ebf\n2.\u4e0d\u8054\u52a8\u6253\u51fb\n3.\u5f02\u5e38\u8f68\u8ff9\u6807\u6ce8\u4f20\u503c\u73ed',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u5927\u98ce',
-    deviceType: '\u96f7\u8fbe',
-    deviceFunction: 'radar_track',
-    deviceAction: '\u8ddf\u8e2a',
+    planName: '雷达跟踪备注',
+    planRule: '1. 记录航迹与速度曲线\n2. 不联动打击\n3. 异常轨迹标注传值班',
+    disposalMode: 'auto',
+    manualResponseSeconds: 5,
+    threatLevel: '低',
+    areaLevel: '全部',
+    priority: 25,
     enabled: true,
     updatedAt: '2026-05-20 14:00:00',
-    updatedBy: '\u8d75\u516d'
+    updatedBy: '赵六',
+    triggerRules: [
+      {
+        id: 'ptr-plan-012-1',
+        ruleName: '低等级雷达跟踪',
+        weatherFactor: '大风',
+        deviceGroupId: 'dg-1001',
+        deviceGroupName: '北区探测协同组',
+        deviceGroupType: '探测组',
+        deviceFunction: 'radar_track',
+        deviceAction: '跟踪',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-013',
     planCode: 'contingency-013',
-    planName: '\u8702\u7fa4\u590d\u5408\u53cd\u5236',
+    planName: '蜂群复合反制',
     planRule:
-      '1.\u68c0\u6d4b\u8702\u7fa4\u22653\u67b6\u540e\u81ea\u52a8\u5347\u7ea7\u5a01\u80f1\n2.\u4eba\u5de5\u4e8c\u7ea7\u786e\u8ba4\u540e\u5f00\u5149\n3.\u9a71\u79bb\u5931\u8d25\u65f6\u4e0d\u56de\u9000\u9a71\u79bb\u9884\u6848',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u6674\u5929',
-    deviceType: '\u6fc0\u5149\u6253\u51fb\u8bbe\u5907',
-    deviceFunction: 'laser_precision_strike',
-    deviceAction: '\u6fc0\u5149\u6253\u51fb',
+      '1. 检测蜂群≥3架后自动升级威慑\n2. 大雾天切换微波，其余场景激光打击\n3. 驱离失败时不回退驱离预案',
+    disposalMode: 'manual',
+    manualResponseSeconds: 0,
+    threatLevel: '高',
+    areaLevel: '全部',
+    priority: 90,
     enabled: true,
     updatedAt: '2026-05-20 15:00:00',
-    updatedBy: '\u7cfb\u7edf\u7ba1\u7406\u5458'
+    updatedBy: '系统管理员',
+    triggerRules: [
+      {
+        id: 'ptr-plan-013-1',
+        ruleName: '晴天蜂群激光打击',
+        weatherFactor: '晴天',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'laser_precision_strike',
+        deviceAction: '激光打击',
+        enabled: true
+      },
+      {
+        id: 'ptr-plan-013-2',
+        ruleName: '大雾蜂群微波打击',
+        weatherFactor: '大雾',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'hpm_swarm_burst',
+        deviceAction: '高功率微波',
+        enabled: true
+      }
+    ]
   },
   {
     id: 'plan-014',
     planCode: 'contingency-014',
-    planName: '\u8702\u7fa4\u9ad8\u529f\u7387\u5fae\u6ce2',
-    planRule:
-      '1.\u5bf9\u5165\u4fb5\u8702\u7fa4\u5b9e\u65bd\u533a\u57df\u5fae\u6ce2\n2.\u9700\u6307\u6325\u5458\u4e8c\u7ea7\u6388\u6743\n3.\u6253\u51fb\u540e\u5168\u5411\u76d1\u6d4b\u5907\u6ce8',
-    areaLevel: '\u5168\u90e8',
-    weatherFactor: '\u6674\u5929',
-    deviceType: '\u9ad8\u529f\u7387\u5fae\u6ce2\u8bbe\u5907',
-    deviceFunction: 'hpm_swarm_burst',
-    deviceAction: '\u9ad8\u529f\u7387\u5fae\u6ce2',
+    planName: '蜂群高功率微波',
+    planRule: '1. 对入侵蜂群实施区域微波\n2. 需指挥员二级授权\n3. 打击后全向监测备注',
+    disposalMode: 'manual',
+    manualResponseSeconds: 0,
+    threatLevel: '高',
+    areaLevel: '全部',
+    priority: 95,
     enabled: true,
     updatedAt: '2026-05-20 15:10:00',
-    updatedBy: '\u7cfb\u7edf\u7ba1\u7406\u5458'
+    updatedBy: '系统管理员',
+    triggerRules: [
+      {
+        id: 'ptr-plan-014-1',
+        ruleName: '高等级蜂群微波打击',
+        weatherFactor: '晴天',
+        deviceGroupId: 'dg-1002',
+        deviceGroupName: '核心区反制处置组',
+        deviceGroupType: '反制组',
+        deviceFunction: 'hpm_swarm_burst',
+        deviceAction: '高功率微波',
+        enabled: true
+      }
+    ]
   }
 ]
 
-/** 数据版本：升级后会合并种子数据 */
-export const PLAN_STORE_VERSION = 12
-
-/** 默认兜底规则优先级（低于各场景专用规则，便于「大雾」等覆盖「全部」） */
-export const PLAN_DEFAULT_RULE_PRIORITY = 5
-
-const SWARM_PLAN_013_RULES: PlanTriggerRule[] = [
-  {
-    id: 'ptr-plan-013-1',
-    ruleName: '默认-全部场景',
-    priority: PLAN_DEFAULT_RULE_PRIORITY,
-    weatherFactor: '全部',
-    areaLevel: '全部',
-    deviceType: '激光打击设备',
-    deviceFunction: 'laser_precision_strike',
-    deviceAction: '激光打击',
-    enabled: true
-  },
-  {
-    id: 'ptr-plan-013-2',
-    ruleName: '大雾天',
-    priority: 25,
-    weatherFactor: '大雾',
-    areaLevel: '全部',
-    deviceType: '高功率微波设备',
-    deviceFunction: 'hpm_swarm_burst',
-    deviceAction: '高功率微波',
-    enabled: true,
-    remark: '大雾能见度低时改用区域微波覆盖'
-  }
-]
-
-function triggerRuleId(planId: string, index: number) {
-  return `ptr-${planId}-${index}`
-}
-
-function isLegacyPlanRule(rule?: string) {
-  const text = rule || ''
-  return (
-    /m\/s/i.test(text) ||
-    /\u901f\u5ea6\s*>/.test(text) ||
-    /\u901f\u5ea6>/.test(text) ||
-    /\u9ed1\u540d\u5355\u76ee\u6807/.test(text) ||
-    /\u4e14\u901f\u5ea6</.test(text)
+function enrichPlan(plan: SeedInput | PlanStrategy): PlanStrategy {
+  const triggerRules = (plan.triggerRules || []).map((rule, index) =>
+    normalizeTriggerRule({ ...rule, sortOrder: Number(rule.sortOrder) || index + 1 })
   )
-}
-
-function isLegacyPlanRow(p: PlanStrategy & { triggerRules?: PlanTriggerRule[] }) {
-  return (
-    !p.triggerRules?.length ||
-    !p.deviceType ||
-    !p.deviceFunction ||
-    !p.disposalMode ||
-    isLegacyPlanRule(p.planRule)
-  )
-}
-
-function legacyToTriggerRules(p: PlanStrategy & { triggerRules?: PlanTriggerRule[] }): PlanTriggerRule[] {
-  if (p.triggerRules?.length) {
-    return p.triggerRules.map((r) => ({ ...r }))
-  }
-  const deviceType = p.deviceType || planDeviceTypeOptions[0].value
-  const fn = resolveDeviceFunction(deviceType, p.deviceFunction)
-  return [
-    {
-      id: triggerRuleId(p.id, 1),
-      ruleName: '默认-全部场景',
-      priority: PLAN_DEFAULT_RULE_PRIORITY,
-      weatherFactor: '全部',
-      areaLevel: p.areaLevel || '全部',
-      deviceType,
-      deviceFunction: p.deviceFunction || fn?.value || '',
-      deviceAction: p.deviceAction || fn?.deviceAction || '',
-      enabled: true
-    }
-  ]
-}
-
-function applySeedTriggerOverrides(p: PlanStrategy): PlanStrategy {
-  if (p.id === 'plan-013' && (!p.triggerRules?.length || p.triggerRules.length < 2)) {
-    return {
-      ...p,
-      planName: '蜂群复合反制',
-      planRule:
-        '1.检测蜂群≥3架后自动升级威慑\n2.默认激光打击；大雾天自动切换高功率微波\n3.驱离失败时不回退驱离预案',
-      triggerRules: SWARM_PLAN_013_RULES.map((r) => ({ ...r }))
-    }
-  }
-  return p
-}
-
-function enrichPlan(p: PlanStrategy & { triggerRules?: PlanTriggerRule[] }): PlanStrategy {
-  const base = applySeedTriggerOverrides({ ...p })
-  const triggerRules = legacyToTriggerRules(base).map((r, i) =>
-    normalizeTriggerRule(
-      { ...r, id: r.id || triggerRuleId(base.id, i + 1) },
-      base.deviceType
-    )
-  )
-  const withRules: PlanStrategy = { ...base, triggerRules }
-  const primary = resolvePlanTriggerRule(withRules) || triggerRules[0]
-  const enabledWeathers = [
-    ...new Set(triggerRules.filter((r) => r.enabled).map((r) => r.weatherFactor))
-  ]
-  const safeRules = triggerRules.length
-    ? triggerRules
-    : [normalizeTriggerRule(legacyToTriggerRules(base)[0], base.deviceType)]
-
-  const disposal = normalizePlanDisposal({ ...base, id: base.id })
-
+  const primary = resolvePlanTriggerRule({ triggerRules }) || triggerRules[0]
+  const disposal = normalizePlanDisposal({ ...plan, id: plan.id })
   return {
-    ...withRules,
+    ...(plan as PlanStrategy),
     ...disposal,
-    triggerRules: safeRules,
-    triggerRuleCount: safeRules.length,
-    triggerRulesSummary: formatTriggerRulesSummary(safeRules),
-    areaLevel: primary?.areaLevel || '全部',
+    triggerRules,
+    priority: Number((plan as PlanStrategy).priority) || PLAN_DEFAULT_PRIORITY,
     weatherFactor:
-      enabledWeathers.length > 1 ? '多场景' : primary?.weatherFactor || '全部',
-    deviceType: primary?.deviceType || '',
+      new Set(triggerRules.filter((item) => item.enabled).map((item) => item.weatherFactor)).size >
+      1
+        ? '多场景'
+        : primary?.weatherFactor || '全部',
+    deviceGroupName: primary?.deviceGroupName || '',
+    deviceGroupType: primary?.deviceGroupType || '',
     deviceFunction: primary?.deviceFunction || '',
-    deviceAction: primary?.deviceAction || ''
+    deviceAction: primary?.deviceAction || '',
+    triggerRuleCount: triggerRules.length,
+    triggerRulesSummary: formatTriggerRulesSummary(triggerRules)
   }
 }
+
+let allPlans: PlanStrategy[] = seed.map((item) => enrichPlan(item))
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladPlanStoreVer?: number }
   if (g.__ladPlanStoreVer === PLAN_STORE_VERSION) return
   g.__ladPlanStoreVer = PLAN_STORE_VERSION
-  allPlans = seed.map((p) => enrichPlan(p as PlanStrategy))
+  allPlans = seed.map((item) => enrichPlan(item))
 }
 
-let allPlans: PlanStrategy[] = seed.map((p) => enrichPlan(p as PlanStrategy))
-
-/** 合并种子：补齐缺失字段，替换旧版示例数据 */
 export function syncPlansFromSeed() {
   ensureStoreVersion()
-  const seedIds = new Set(seed.map((s) => s.id))
+  const seedIds = new Set(seed.map((item) => item.id))
   const userCreated = allPlans
-    .filter((p) => !seedIds.has(p.id))
-    .map((p) => enrichPlan(p as PlanStrategy))
-
-  const merged = seed.map((s) => {
-    const existing = allPlans.find((p) => p.id === s.id)
-    const row = enrichPlan({ ...s } as PlanStrategy)
-    if (existing && !isLegacyPlanRow(existing)) {
-      return {
-        ...row,
-        planRule: isLegacyPlanRule(existing.planRule) ? row.planRule : existing.planRule,
-        updatedAt: existing.updatedAt,
-        updatedBy: existing.updatedBy
-      }
-    }
-    return row
-  })
-
-  allPlans = [...merged, ...userCreated]
+    .filter((item) => !seedIds.has(item.id))
+    .map((item) => enrichPlan(item))
+  allPlans = [...seed.map((item) => enrichPlan(item)), ...userCreated]
 }
 
 syncPlansFromSeed()
@@ -411,28 +500,18 @@ function filterPlans(q: PlanStrategyQuery): PlanStrategy[] {
   if (q.disposalMode === 'auto' || q.disposalMode === 'manual') {
     rows = rows.filter((r) => r.disposalMode === q.disposalMode)
   }
-  if (q.deviceType?.trim() && q.deviceType !== '\u5168\u90e8') {
-    const dt = q.deviceType.trim()
-    rows = rows.filter(
-      (r) =>
-        r.deviceType === dt ||
-        r.triggerRules?.some((tr) => tr.deviceType === dt && tr.enabled)
-    )
-  }
-  if (q.weatherFactor?.trim() && q.weatherFactor !== '\u5168\u90e8') {
+  if (q.weatherFactor?.trim() && q.weatherFactor !== '全部') {
     const wf = q.weatherFactor.trim()
     rows = rows.filter(
       (r) =>
         r.weatherFactor === wf ||
-        r.weatherFactor === '\u591a\u573a\u666f' ||
-        r.triggerRules?.some(
-          (tr) =>
-            tr.enabled &&
-            (tr.weatherFactor === wf || tr.weatherFactor === '\u5168\u90e8')
+        r.weatherFactor === '多场景' ||
+        r.triggerRules.some(
+          (tr) => tr.enabled && (tr.weatherFactor === wf || tr.weatherFactor === '全部')
         )
     )
   }
-  if (q.deviceAction?.trim() && q.deviceAction !== '\u5168\u90e8') {
+  if (q.deviceAction?.trim() && q.deviceAction !== '全部') {
     rows = rows.filter((r) => r.deviceAction === q.deviceAction)
   }
   if (q.planRule?.trim()) {
@@ -443,8 +522,8 @@ function filterPlans(q: PlanStrategyQuery): PlanStrategy[] {
     const kw = q.updatedBy.trim().toLowerCase()
     rows = rows.filter((r) => r.updatedBy.toLowerCase().includes(kw))
   }
-  if (q.updatedAtStart) rows = rows.filter((r) => r.updatedAt >= q.updatedAtStart!)
-  if (q.updatedAtEnd) rows = rows.filter((r) => r.updatedAt <= q.updatedAtEnd!)
+  if (q.updatedAtStart) rows = rows.filter((r) => r.updatedAt >= q.updatedAtStart)
+  if (q.updatedAtEnd) rows = rows.filter((r) => r.updatedAt <= q.updatedAtEnd)
   return rows
 }
 
@@ -452,7 +531,7 @@ export function queryPlanList(q: PlanStrategyQuery): PlanStrategyListResult {
   syncPlansFromSeed()
   const pageIndex = Number(q.pageIndex) || 1
   const pageSize = Number(q.pageSize) || 10
-  const filtered = filterPlans(q).map((p) => enrichPlan({ ...p }))
+  const filtered = filterPlans(q).map((item) => enrichPlan(item))
   const start = (pageIndex - 1) * pageSize
   return { list: filtered.slice(start, start + pageSize), total: filtered.length }
 }
@@ -470,7 +549,7 @@ export function listPlanOptions() {
 export function getPlan(id: string): PlanStrategy | null {
   syncPlansFromSeed()
   const row = allPlans.find((p) => p.id === id)
-  return row ? enrichPlan({ ...row }) : null
+  return row ? enrichPlan(row) : null
 }
 
 export function buildPlanExecutionPayload(
@@ -489,7 +568,7 @@ export function buildPlanExecutionPayload(
     triggerRuleId: matched.id,
     triggerRuleName: matched.ruleName,
     weatherFactor: matched.weatherFactor,
-    deviceType: matched.deviceType,
+    deviceGroupName: matched.deviceGroupName,
     deviceFunction: matched.deviceFunction,
     deviceAction: matched.deviceAction,
     execNote: enriched.planRule,
@@ -503,22 +582,24 @@ function normalizeSaveBody(body: PlanStrategySavePayload): PlanStrategySavePaylo
   if (!body.triggerRules?.length) {
     throw new Error('请至少配置一条触发策略规则')
   }
+  const groups = groupMap()
   const names = new Set<string>()
-  const triggerRules = body.triggerRules.map((r, i) => {
-    const name = (r.ruleName || '').trim()
+  const triggerRules = body.triggerRules.map((rule, index) => {
+    const name = (rule.ruleName || '').trim()
     if (!name) throw new Error('请填写每条触发规则的名称')
-    if (names.has(name)) throw new Error(`触发规则名称「${name}」重复`)
+    if (names.has(name)) throw new Error(`触发规则名称“${name}”重复`)
     names.add(name)
-    return normalizeTriggerRule(
-      {
-        ...r,
-        id: r.id || `ptr-new-${i + 1}`,
-        ruleName: name,
-        priority: Number(r.priority) || 10,
-        enabled: r.enabled !== false
-      },
-      r.deviceType
-    )
+    const group = groups.get(rule.deviceGroupId)
+    if (!group) throw new Error('请选择有效的执行设备组')
+    return normalizeTriggerRule({
+      ...rule,
+      id: rule.id || `ptr-new-${index + 1}`,
+      ruleName: name,
+      sortOrder: Number(rule.sortOrder) || index + 1,
+      deviceGroupName: group.groupName,
+      deviceGroupType: group.groupType,
+      enabled: rule.enabled !== false
+    })
   })
   const disposal = normalizePlanDisposal({
     id: body.id || 'plan-new',
@@ -531,17 +612,21 @@ function normalizeSaveBody(body: PlanStrategySavePayload): PlanStrategySavePaylo
 export function savePlan(body: PlanStrategySavePayload): PlanStrategy {
   const normalized = normalizeSaveBody(body)
   const now = formatNow()
+  const planCode = normalized.planCode.trim() || generatePlanCode()
   const draft: PlanStrategy = {
     id: normalized.id || `plan-${Date.now()}`,
-    planCode: normalized.planCode.trim(),
+    planCode,
     planName: normalized.planName.trim(),
     planRule: normalized.planRule?.trim() || '-',
     disposalMode: normalized.disposalMode,
     manualResponseSeconds: normalized.manualResponseSeconds,
+    threatLevel: normalized.threatLevel || '全部',
+    areaLevel: normalized.areaLevel || '全部',
+    priority: Number(normalized.priority) || PLAN_DEFAULT_PRIORITY,
     triggerRules: normalized.triggerRules,
-    areaLevel: '全部',
     weatherFactor: '全部',
-    deviceType: '',
+    deviceGroupName: '',
+    deviceGroupType: '',
     deviceFunction: '',
     deviceAction: '',
     enabled: normalized.enabled,
@@ -572,17 +657,16 @@ export function deletePlans(ids: string[]) {
 
 export function togglePlanEnabled(id: string, enabled: boolean) {
   const idx = allPlans.findIndex((p) => p.id === id)
-  if (idx < 0) throw new Error('\u9884\u6848\u4e0d\u5b58\u5728')
+  if (idx < 0) throw new Error('预案不存在')
   allPlans[idx] = { ...allPlans[idx], enabled, updatedAt: formatNow() }
 }
 
 export function formatPlanExecBrief(plan: PlanStrategy, ctx: PlanTriggerContext = {}) {
   const enriched = enrichPlan(plan)
   const matched = resolvePlanTriggerRule(enriched, ctx) || enriched.triggerRules[0]
-  const fn = functionLabel(matched.deviceType, matched.deviceFunction)
-  const rulePart =
-    enriched.triggerRules.length > 1 ? `（${matched.ruleName}）` : ''
-  return `${matched.deviceType} / ${fn}${rulePart}`
+  const fn = functionLabel(matched.deviceGroupType, matched.deviceFunction)
+  const rulePart = enriched.triggerRules.length > 1 ? `（${matched.ruleName}）` : ''
+  return `${matched.deviceGroupName} / ${fn}${rulePart}`
 }
 
 export { resolvePlanTriggerRule } from './planTrigger'

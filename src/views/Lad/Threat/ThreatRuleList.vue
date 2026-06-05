@@ -1,4 +1,6 @@
 <script setup lang="tsx">
+import { computed, reactive, ref, unref } from 'vue'
+import { ElLink, ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
@@ -14,29 +16,26 @@ import type { ThreatRule } from '@/api/lad/threat/types'
 import ThreatRuleFormDialog from './components/ThreatRuleFormDialog.vue'
 import ThreatSimulateDialog from './components/ThreatSimulateDialog.vue'
 import ThreatRuleDetailDialog from './components/ThreatRuleDetailDialog.vue'
-import { THREAT_SEARCH_COL, UI } from './threatConstants'
+import { THREAT_SEARCH_COL } from './threatConstants'
 import {
-  areaRegionTypeDisplay,
-  dictEntriesToOptions,
-  LAD_DICT_AREA_REGION_TYPE,
   LAD_DICT_THREAT_LEVEL,
   threatLevelForRule,
   threatLevelTagTypeForRule
 } from '../shared/ladDictHelpers'
 import { useLadDictOptions } from '../shared/useLadDictOptions'
-import { conditionPropertyOptions, ruleStatusOptions, targetTypeOptions } from '../shared/ladOptionConstants'
-import { computed, reactive, ref, unref } from 'vue'
-import { ElLink, ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
+import {
+  conditionPropertyOptions,
+  ruleStatusOptions,
+  targetTypeOptions
+} from '../shared/ladOptionConstants'
 
 defineOptions({ name: 'LadThreatRuleList' })
 
-const { entries: areaTypeEntries } = useLadDictOptions(LAD_DICT_AREA_REGION_TYPE)
 const { entries: threatLevelEntries } = useLadDictOptions(LAD_DICT_THREAT_LEVEL)
 
-const areaRegionTypeOptions = computed(() => dictEntriesToOptions(areaTypeEntries.value, true))
 const threatLevelFilterOptions = computed(() => [
   { label: '全部', value: '全部' },
-  ...dictEntriesToOptions(threatLevelEntries.value)
+  ...threatLevelEntries.value.map((item) => ({ label: item.label, value: item.label }))
 ])
 
 const searchParams = ref<Recordable>({})
@@ -54,7 +53,6 @@ const setSearchParams = (params: Recordable) => {
   searchParams.value = {
     ruleCode: params.ruleCode,
     ruleName: params.ruleName,
-    areaRegionType: params.areaRegionType === '全部' ? undefined : params.areaRegionType,
     threatLevel: params.threatLevel === '全部' ? undefined : params.threatLevel,
     targetType: params.targetType === '全部' ? undefined : params.targetType,
     status: !params.status || params.status === '全部' ? undefined : params.status,
@@ -65,8 +63,8 @@ const setSearchParams = (params: Recordable) => {
   getList()
 }
 
-function onSelectionChange(rows: ThreatRule[]) {
-  selectedIds.value = rows.map((r) => r.id)
+const onSelectionChange = (rows: ThreatRule[]) => {
+  selectedIds.value = rows.map((row) => row.id)
 }
 
 const openAdd = () => {
@@ -105,28 +103,30 @@ async function batchRemove() {
   try {
     await ElMessageBox.confirm(
       `确认删除选中的 ${selectedIds.value.length} 条规则吗？`,
-      UI.btnBatchDelete,
-      { type: 'warning' }
+      '批量删除',
+      {
+        type: 'warning'
+      }
     )
   } catch {
     return
   }
   await deleteThreatRuleApi({ ids: [...selectedIds.value] })
   selectedIds.value = []
-  ElMessage.success(UI.deleteOk)
+  ElMessage.success('已删除')
   getList()
 }
 
 async function removeRow(row: ThreatRule) {
   try {
-    await ElMessageBox.confirm(`确认删除规则「${row.ruleName}」吗？`, UI.btnDelete, {
+    await ElMessageBox.confirm(`确认删除规则“${row.ruleName}”吗？`, '删除', {
       type: 'warning'
     })
   } catch {
     return
   }
   await deleteThreatRuleApi({ ids: [row.id] })
-  ElMessage.success(UI.deleteOk)
+  ElMessage.success('已删除')
   getList()
 }
 
@@ -159,7 +159,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'ruleCode',
-    label: UI.ruleCode,
+    label: '规则编号',
     search: {
       component: 'Input',
       colProps: THREAT_SEARCH_COL,
@@ -169,11 +169,11 @@ const crudSchemas = reactive<CrudSchema[]>([
         style: searchFieldStyle
       }
     },
-    table: { minWidth: 110, showOverflowTooltip: true }
+    table: { minWidth: 128, showOverflowTooltip: true }
   },
   {
     field: 'ruleName',
-    label: UI.ruleName,
+    label: '规则名称',
     search: {
       component: 'Input',
       colProps: THREAT_SEARCH_COL,
@@ -184,20 +184,41 @@ const crudSchemas = reactive<CrudSchema[]>([
       }
     },
     table: {
-      minWidth: 150,
+      minWidth: 180,
       showOverflowTooltip: true,
       slots: {
-        default: (data: { row: ThreatRule }) => (
-          <ElLink type="primary" underline={false} onClick={() => openDetail(data.row)}>
-            {data.row.ruleName}
+        default: ({ row }: { row: ThreatRule }) => (
+          <ElLink type="primary" underline={false} onClick={() => openDetail(row)}>
+            {row.ruleName}
           </ElLink>
         )
       }
     }
   },
   {
+    field: 'targetType',
+    label: '目标类型',
+    search: {
+      component: 'Select',
+      colProps: THREAT_SEARCH_COL,
+      componentProps: {
+        options: targetTypeOptions,
+        clearable: true,
+        placeholder: '全部',
+        style: searchFieldStyle
+      }
+    },
+    table: { width: 110, showOverflowTooltip: true }
+  },
+  {
+    field: 'conditionSummary',
+    label: '判级条件',
+    search: { hidden: true },
+    table: { minWidth: 260, showOverflowTooltip: true }
+  },
+  {
     field: 'threatLevel',
-    label: UI.threatLevel,
+    label: '威胁等级',
     search: {
       component: 'Select',
       colProps: THREAT_SEARCH_COL,
@@ -212,75 +233,17 @@ const crudSchemas = reactive<CrudSchema[]>([
       minWidth: 96,
       align: 'center',
       slots: {
-        default: ({ row }: { row: ThreatRule }) => {
-          const label = threatLevelForRule(row)
-          return (
-            <ElTag type={threatLevelTagTypeForRule(row)} size="small" effect="light">
-              {label}
-            </ElTag>
-          )
-        }
+        default: ({ row }: { row: ThreatRule }) => (
+          <ElTag type={threatLevelTagTypeForRule(row)} size="small" effect="light">
+            {threatLevelForRule(row)}
+          </ElTag>
+        )
       }
     }
-  },
-  {
-    field: 'areaRegionType',
-    label: UI.areaRegionType,
-    search: {
-      component: 'Select',
-      colProps: THREAT_SEARCH_COL,
-      componentProps: {
-        options: areaRegionTypeOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: searchFieldStyle
-      }
-    },
-    table: {
-      width: 120,
-      showOverflowTooltip: true,
-      slots: {
-        default: (data: { row: ThreatRule }) =>
-          areaRegionTypeDisplay(data.row.areaRegionType, areaTypeEntries.value)
-      }
-    }
-  },
-  {
-    field: 'targetType',
-    label: UI.targetType,
-    search: {
-      component: 'Select',
-      colProps: THREAT_SEARCH_COL,
-      componentProps: {
-        options: targetTypeOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: searchFieldStyle
-      }
-    },
-    table: { width: 96, showOverflowTooltip: true }
-  },
-  {
-    field: 'conditionSummary',
-    label: UI.conditions,
-    search: { hidden: true },
-    table: { minWidth: 180, showOverflowTooltip: true }
-  },
-  {
-    field: 'planName',
-    label: UI.triggerPlan,
-    search: { hidden: true },
-    table: { minWidth: 120, showOverflowTooltip: true }
-  },
-  {
-    field: 'priority',
-    label: UI.priority,
-    search: { hidden: true },
-    table: { width: 72, align: 'center' }
   },
   {
     field: 'status',
-    label: UI.status,
+    label: '状态',
     search: {
       component: 'Select',
       colProps: THREAT_SEARCH_COL,
@@ -295,7 +258,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'targetProperty',
-    label: UI.targetProperty,
+    label: '目标属性',
     search: {
       component: 'Select',
       colProps: THREAT_SEARCH_COL,
@@ -310,7 +273,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'updatedBy',
-    label: UI.updatedBy,
+    label: '修改人',
     search: {
       component: 'Input',
       colProps: THREAT_SEARCH_COL,
@@ -330,19 +293,19 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'enabled',
-    label: UI.enabled,
+    label: '启停',
     search: { hidden: true },
     table: {
       width: 88,
       slots: {
-        default: (data: { row: ThreatRule }) => (
+        default: ({ row }: { row: ThreatRule }) => (
           <ElSwitch
-            modelValue={data.row.enabled}
+            modelValue={row.enabled}
             inline-prompt
             active-text="ON"
             inactive-text="OFF"
-            loading={togglingId.value === data.row.id}
-            onChange={(val: boolean) => onToggle(data.row, val)}
+            loading={togglingId.value === row.id}
+            onChange={(value: boolean) => onToggle(row, value)}
           />
         )
       }
@@ -350,22 +313,22 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'action',
-    label: UI.action,
+    label: '操作',
     search: { hidden: true },
     table: {
       width: 260,
       fixed: 'right',
       slots: {
-        default: (data: { row: ThreatRule }) => (
+        default: ({ row }: { row: ThreatRule }) => (
           <>
-            <BaseButton type="primary" onClick={() => openDetail(data.row)}>
-              {UI.btnDetail}
+            <BaseButton type="primary" onClick={() => openDetail(row)}>
+              详情
             </BaseButton>
-            <BaseButton type="primary" class="ml-8px" onClick={() => openEdit(data.row)}>
-              {UI.btnEdit}
+            <BaseButton type="primary" class="ml-8px" onClick={() => openEdit(row)}>
+              编辑
             </BaseButton>
-            <BaseButton type="danger" class="ml-8px" onClick={() => removeRow(data.row)}>
-              {UI.btnDelete}
+            <BaseButton type="danger" class="ml-8px" onClick={() => removeRow(row)}>
+              删除
             </BaseButton>
           </>
         )
@@ -389,11 +352,11 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       @reset="setSearchParams"
     />
     <div class="mb-10px">
-      <BaseButton type="primary" @click="openAdd">{{ UI.btnAdd }}</BaseButton>
+      <BaseButton type="primary" @click="openAdd">新增规则</BaseButton>
       <BaseButton type="primary" class="ml-8px" @click="simulateVisible = true">
-        {{ UI.btnSimulate }}
+        模拟测试
       </BaseButton>
-      <BaseButton type="danger" class="ml-8px" @click="batchRemove">{{ UI.btnBatchDelete }}</BaseButton>
+      <BaseButton type="danger" class="ml-8px" @click="batchRemove">批量删除</BaseButton>
     </div>
     <Table
       v-model:currentPage="currentPage"
@@ -401,7 +364,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       :columns="allSchemas.tableColumns"
       :data="dataList"
       :loading="loading"
-      :pagination="{ total: total }"
+      :pagination="{ total }"
       @register="tableRegister"
       @selection-change="onSelectionChange"
     />

@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { ElForm, ElFormItem, ElInput, ElInputNumber, ElMessage, ElSwitch } from 'element-plus'
 import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveSystemParamApi } from '@/api/lad/system'
 import type { SystemParam } from '@/api/lad/system/types'
-import {
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElInputNumber,
-  ElMessage,
-  ElSwitch
-} from 'element-plus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -37,10 +30,10 @@ watch(
   () => props.modelValue,
   (open) => {
     if (!open || !props.row) return
-    const v = props.row.paramValue
-    if (props.row.valueType === 'boolean') boolValue.value = Boolean(v)
-    else if (props.row.valueType === 'number') numValue.value = Number(v)
-    else strValue.value = String(v ?? '')
+    const value = props.row.paramValue
+    if (props.row.valueType === 'boolean') boolValue.value = Boolean(value)
+    else if (props.row.valueType === 'number') numValue.value = Number(value)
+    else strValue.value = String(value ?? '')
   }
 )
 
@@ -67,17 +60,11 @@ async function onSave() {
   <Dialog v-model="visible" title="编辑系统参数" width="640px" max-height="70vh">
     <ElForm v-if="row" label-width="100px" class="lad-param-edit-form">
       <div class="lad-param-edit-form__grid">
-        <ElFormItem label="参数键">
-          <ElInput :model-value="row.paramKey" readonly />
-        </ElFormItem>
         <ElFormItem label="参数名称">
-          <ElInput :model-value="row.paramName" readonly />
+          <ElInput :model-value="row.paramName" disabled />
         </ElFormItem>
         <ElFormItem label="分组">
-          <ElInput :model-value="row.group" readonly />
-        </ElFormItem>
-        <ElFormItem label="值类型">
-          <ElInput :model-value="row.valueType" readonly />
+          <ElInput :model-value="row.group" disabled />
         </ElFormItem>
         <ElFormItem label="参数值" class="lad-param-edit-form__value">
           <ElSwitch v-if="row.valueType === 'boolean'" v-model="boolValue" />
@@ -104,6 +91,7 @@ async function onSave() {
   grid-template-columns: 1fr 1fr;
   gap: 0 16px;
 }
+
 .lad-param-edit-form__value {
   grid-column: 1 / -1;
 }

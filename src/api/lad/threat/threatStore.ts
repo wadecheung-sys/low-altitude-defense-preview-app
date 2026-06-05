@@ -2,6 +2,7 @@ import { functionLabel } from '../plan/planDeviceCatalog'
 import { getPlan, listPlanOptions } from '../plan/planStore'
 import { formatDisposalExecNote } from '../plan/planDisposal'
 import { resolvePlanTriggerRule } from '../plan/planTrigger'
+import { listAreaRegions } from '../area/areaStore'
 import { coerceThreatLevelLabel } from './threatLevelUtils'
 import {
   deriveThreatLevel,
@@ -31,7 +32,30 @@ const propertyLabel: Record<string, string> = {
   intrusionCount: '\u5165\u4fb5\u6b21\u6570',
   swarmCount: '\u8702\u7fa4\u673a\u6570',
   altitude: '\u98de\u884c\u9ad8\u5ea6',
-  signalStrength: '\u4fe1\u53f7\u5f3a\u5ea6'
+  signalStrength: '\u4fe1\u53f7\u5f3a\u5ea6',
+  locatedArea: '\u6240\u5904\u533a\u57df'
+}
+
+function normalizeThreatTargetType(value?: string) {
+  if (
+    value === '\u5168\u90e8' ||
+    value === '\u9ed1\u540d\u5355' ||
+    value === '\u767d\u540d\u5355'
+  ) {
+    return value
+  }
+  return '\u672a\u77e5'
+}
+
+function formatAreaConditionValue(value: string) {
+  const ids = value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  if (!ids.length) return value
+  const areaMap = new Map(listAreaRegions().map((item) => [item.id, item.name]))
+  const names = ids.map((id) => areaMap.get(id) || id)
+  return names.join('、')
 }
 
 function formatNow() {
@@ -40,10 +64,25 @@ function formatNow() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
+function generateThreatRuleCode() {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  let code = ''
+  do {
+    code = `THREAT-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(
+      d.getHours()
+    )}${p(d.getMinutes())}${p(d.getSeconds())}${p(Math.floor(Math.random() * 100))}`
+  } while (allRules.some((rule) => rule.ruleCode === code))
+  return code
+}
+
 function buildSummary(conditions: RuleCondition[]) {
   return conditions
     .map((c) => {
       const prop = propertyLabel[c.property] || c.property
+      if (c.property === 'locatedArea') {
+        return `${prop} = ${formatAreaConditionValue(c.value)}`
+      }
       const unit =
         c.property === 'speed'
           ? 'm/s'
@@ -110,13 +149,20 @@ function ruleMatches(rule: ThreatRule, input: ThreatSimulateInput): boolean {
   ) {
     return false
   }
-  if (input.targetType && rule.targetType !== '\u5168\u90e8' && rule.targetType !== input.targetType) {
+  if (
+    input.targetType &&
+    rule.targetType !== '\u5168\u90e8' &&
+    rule.targetType !== input.targetType
+  ) {
     return false
   }
   return rule.conditions.every((c) => evalCondition(c, input))
 }
 
-function normalizeThreatLevel(level: string | undefined, rule: ThreatRuleSavePayload): ThreatLevelLabel {
+function normalizeThreatLevel(
+  level: string | undefined,
+  rule: ThreatRuleSavePayload
+): ThreatLevelLabel {
   const coerced = coerceThreatLevelLabel(level) as ThreatLevelLabel | undefined
   if (coerced && coerced !== '\u65e0') return coerced
   if (coerced === '\u65e0' && !rule.enabled) return '\u65e0'
@@ -132,7 +178,8 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
     '\u4e09\u7ea7': 'warning',
     '\u8bd5\u98de\u533a': 'testflight'
   }
-  let areaRegionType = (row.areaRegionType as ThreatAreaScope) || areaMap[legacyArea || ''] || 'warning'
+  let areaRegionType =
+    (row.areaRegionType as ThreatAreaScope) || areaMap[legacyArea || ''] || 'warning'
   if (!row.areaRegionType && legacyArea === '\u5168\u90e8') areaRegionType = '\u5168\u90e8'
   let threatLevel = coerceThreatLevelLabel(row.threatLevel as string | undefined) as
     | ThreatLevelLabel
@@ -149,7 +196,12 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
   void _a
   void _s
   void legacyScenario
-  return { ...rest, areaRegionType, threatLevel } as ThreatRule
+  return {
+    ...rest,
+    areaRegionType,
+    threatLevel,
+    targetType: normalizeThreatTargetType(row.targetType as string | undefined)
+  } as ThreatRule
 }
 
 type SeedRow = Omit<ThreatRule, 'conditionSummary'> & { conditions: RuleCondition[] }
@@ -162,28 +214,235 @@ function buildSeedRow(row: SeedRow): ThreatRule {
 }
 
 const seed: ThreatRule[] = [
-  buildSeedRow({ id: 'rule-001', ruleCode: 'PLAN-001', ruleName: '保护区-自动驱离', areaRegionType: 'warning', threatLevel: '高', targetType: '多旋翼', areaName: '保护区', conditions: [{ id: 'c1', property: 'speed', operator: '>', value: '5' }, { id: 'c2', property: 'stayDuration', operator: '>', value: '10' }], priority: 10, planId: 'plan-001', planName: '自动驱离', enabled: true, updatedAt: '2026-05-20 10:00:00', updatedBy: '张三' }),
-  buildSeedRow({ id: 'rule-002', ruleCode: 'PLAN-002', ruleName: '核心区-黑名单高级告警', areaRegionType: 'nuclear', threatLevel: '高', targetType: '黑名单', areaName: '核心保护区', conditions: [{ id: 'c3', property: 'intrusionCount', operator: '>=', value: '1' }, { id: 'c4', property: 'speed', operator: '>', value: '3' }], priority: 1, planId: 'plan-002', planName: '迫降反制', enabled: true, updatedAt: '2026-05-19 15:30:00', updatedBy: '李四' }),
-  buildSeedRow({ id: 'rule-003', ruleCode: 'PLAN-003', ruleName: '缓冲区-跟踪联动', areaRegionType: 'alert', threatLevel: '中', targetType: '全部', areaName: '缓冲区', conditions: [{ id: 'c5', property: 'speed', operator: '>', value: '8' }], priority: 20, planId: 'plan-003', planName: '光电跟踪联动', enabled: true, updatedAt: '2026-05-18 09:00:00', updatedBy: '系统管理员' }),
-  buildSeedRow({ id: 'rule-004', ruleCode: 'PLAN-004', ruleName: '试飞区-仅告警', areaRegionType: 'testflight', threatLevel: '无', targetType: '全部', areaName: '试飞区', conditions: [{ id: 'c6', property: 'stayDuration', operator: '>', value: '5' }], priority: 99, planId: 'plan-004', planName: '人工复核告警', enabled: false, updatedAt: '2026-05-01 12:00:00', updatedBy: '安全保密员' }),
-  buildSeedRow({ id: 'rule-006', ruleCode: 'PLAN-006', ruleName: '核心区-雷达联动告警', areaRegionType: 'nuclear', threatLevel: '高', targetType: '黑名单', areaName: '核心保护区', conditions: [{ id: 'c8', property: 'intrusionCount', operator: '>=', value: '1' }], priority: 2, planId: 'plan-006', planName: '雷达监测联动', enabled: true, updatedAt: '2026-05-16 14:00:00', updatedBy: '李四' }),
-  buildSeedRow({ id: 'rule-007', ruleCode: 'PLAN-007', ruleName: '试飞区-告警提示', areaRegionType: 'testflight', threatLevel: '低', targetType: '全部', areaName: '试飞区', conditions: [{ id: 'c9', property: 'speed', operator: '>', value: '2' }], priority: 50, planId: 'plan-007', planName: '试飞区告警提示', enabled: true, updatedAt: '2026-05-15 09:30:00', updatedBy: '系统管理员' }),
-  buildSeedRow({ id: 'rule-008', ruleCode: 'PLAN-008', ruleName: '边界区-全向干扰', areaRegionType: 'alert', threatLevel: '高', targetType: '全部', areaName: '边界缓冲区', conditions: [{ id: 'c10', property: 'speed', operator: '>', value: '6' }], priority: 15, planId: 'plan-008', planName: '边界全向干扰', enabled: true, updatedAt: '2026-05-14 16:45:00', updatedBy: '赵六' }),
-  buildSeedRow({ id: 'rule-009', ruleCode: 'PLAN-009', ruleName: '光电监测上报', areaRegionType: 'warning', threatLevel: '高', targetType: '多旋翼', areaName: '保护区', conditions: [{ id: 'c11', property: 'stayDuration', operator: '>', value: '3' }], priority: 25, planId: 'plan-009', planName: '光电监测上报', enabled: true, updatedAt: '2026-05-13 10:10:00', updatedBy: '张三' }),
-  buildSeedRow({ id: 'rule-010', ruleCode: 'PLAN-010', ruleName: '导航诱骗驱离', areaRegionType: 'nuclear', threatLevel: '高', targetType: '黑名单', areaName: '核心保护区', conditions: [{ id: 'c12', property: 'speed', operator: '>', value: '2' }], priority: 3, planId: 'plan-010', planName: '导航诱骗驱离', enabled: true, updatedAt: '2026-05-12 08:00:00', updatedBy: '李四' }),
-  buildSeedRow({ id: 'rule-011', ruleCode: 'PLAN-011', ruleName: '网络断链迫降', areaRegionType: 'alert', threatLevel: '中', targetType: '全部', areaName: '缓冲区', conditions: [{ id: 'c13', property: 'intrusionCount', operator: '>=', value: '2' }], priority: 8, planId: 'plan-011', planName: '网络断链迫降', enabled: true, updatedAt: '2026-05-11 13:25:00', updatedBy: '王五' }),
-  buildSeedRow({ id: 'rule-012', ruleCode: 'PLAN-012', ruleName: '雷达跟踪备注', areaRegionType: 'warning', threatLevel: '低', targetType: '多旋翼', areaName: '保护区', conditions: [{ id: 'c14', property: 'speed', operator: '>', value: '7' }], priority: 18, planId: 'plan-012', planName: '雷达跟踪备注', enabled: true, updatedAt: '2026-05-10 17:50:00', updatedBy: '系统管理员' }),
-  buildSeedRow({ id: 'rule-013', ruleCode: 'SWARM-001', ruleName: '蜂群入侵-复合反制', areaRegionType: 'nuclear', threatLevel: '高', targetType: '无人机蜂群', areaName: '核心保护区', conditions: [{ id: 'c15', property: 'swarmCount', operator: '>=', value: '3' }, { id: 'c16', property: 'speed', operator: '>', value: '2' }], priority: 2, planId: 'plan-013', planName: '蜂群复合反制', enabled: true, updatedAt: '2026-05-20 16:00:00', updatedBy: '系统管理员' }),
-  buildSeedRow({ id: 'rule-014', ruleCode: 'SWARM-002', ruleName: '蜂群入侵-高功率微波', areaRegionType: 'alert', threatLevel: '高', targetType: '无人机蜂群', areaName: '缓冲区', conditions: [{ id: 'c17', property: 'swarmCount', operator: '>=', value: '5' }], priority: 3, planId: 'plan-014', planName: '蜂群高功率微波', enabled: true, updatedAt: '2026-05-20 16:05:00', updatedBy: '安全保密员' })
+  buildSeedRow({
+    id: 'rule-001',
+    ruleCode: 'PLAN-001',
+    ruleName: '保护区-自动驱离',
+    areaRegionType: 'warning',
+    threatLevel: '高',
+    targetType: '多旋翼',
+    areaName: '保护区',
+    conditions: [
+      { id: 'c1', property: 'speed', operator: '>', value: '5' },
+      { id: 'c2', property: 'stayDuration', operator: '>', value: '10' }
+    ],
+    priority: 10,
+    planId: 'plan-001',
+    planName: '自动驱离',
+    enabled: true,
+    updatedAt: '2026-05-20 10:00:00',
+    updatedBy: '张三'
+  }),
+  buildSeedRow({
+    id: 'rule-002',
+    ruleCode: 'PLAN-002',
+    ruleName: '核心区-黑名单高级告警',
+    areaRegionType: 'nuclear',
+    threatLevel: '高',
+    targetType: '黑名单',
+    areaName: '核心保护区',
+    conditions: [
+      { id: 'c3', property: 'intrusionCount', operator: '>=', value: '1' },
+      { id: 'c4', property: 'speed', operator: '>', value: '3' }
+    ],
+    priority: 1,
+    planId: 'plan-002',
+    planName: '迫降反制',
+    enabled: true,
+    updatedAt: '2026-05-19 15:30:00',
+    updatedBy: '李四'
+  }),
+  buildSeedRow({
+    id: 'rule-003',
+    ruleCode: 'PLAN-003',
+    ruleName: '缓冲区-跟踪联动',
+    areaRegionType: 'alert',
+    threatLevel: '中',
+    targetType: '全部',
+    areaName: '缓冲区',
+    conditions: [{ id: 'c5', property: 'speed', operator: '>', value: '8' }],
+    priority: 20,
+    planId: 'plan-003',
+    planName: '光电跟踪联动',
+    enabled: true,
+    updatedAt: '2026-05-18 09:00:00',
+    updatedBy: '系统管理员'
+  }),
+  buildSeedRow({
+    id: 'rule-004',
+    ruleCode: 'PLAN-004',
+    ruleName: '试飞区-仅告警',
+    areaRegionType: 'testflight',
+    threatLevel: '无',
+    targetType: '全部',
+    areaName: '试飞区',
+    conditions: [{ id: 'c6', property: 'stayDuration', operator: '>', value: '5' }],
+    priority: 99,
+    planId: 'plan-004',
+    planName: '人工复核告警',
+    enabled: false,
+    updatedAt: '2026-05-01 12:00:00',
+    updatedBy: '安全保密员'
+  }),
+  buildSeedRow({
+    id: 'rule-006',
+    ruleCode: 'PLAN-006',
+    ruleName: '核心区-雷达联动告警',
+    areaRegionType: 'nuclear',
+    threatLevel: '高',
+    targetType: '黑名单',
+    areaName: '核心保护区',
+    conditions: [{ id: 'c8', property: 'intrusionCount', operator: '>=', value: '1' }],
+    priority: 2,
+    planId: 'plan-006',
+    planName: '雷达监测联动',
+    enabled: true,
+    updatedAt: '2026-05-16 14:00:00',
+    updatedBy: '李四'
+  }),
+  buildSeedRow({
+    id: 'rule-007',
+    ruleCode: 'PLAN-007',
+    ruleName: '试飞区-告警提示',
+    areaRegionType: 'testflight',
+    threatLevel: '低',
+    targetType: '全部',
+    areaName: '试飞区',
+    conditions: [{ id: 'c9', property: 'speed', operator: '>', value: '2' }],
+    priority: 50,
+    planId: 'plan-007',
+    planName: '试飞区告警提示',
+    enabled: true,
+    updatedAt: '2026-05-15 09:30:00',
+    updatedBy: '系统管理员'
+  }),
+  buildSeedRow({
+    id: 'rule-008',
+    ruleCode: 'PLAN-008',
+    ruleName: '边界区-全向干扰',
+    areaRegionType: 'alert',
+    threatLevel: '高',
+    targetType: '全部',
+    areaName: '边界缓冲区',
+    conditions: [{ id: 'c10', property: 'speed', operator: '>', value: '6' }],
+    priority: 15,
+    planId: 'plan-008',
+    planName: '边界全向干扰',
+    enabled: true,
+    updatedAt: '2026-05-14 16:45:00',
+    updatedBy: '赵六'
+  }),
+  buildSeedRow({
+    id: 'rule-009',
+    ruleCode: 'PLAN-009',
+    ruleName: '光电监测上报',
+    areaRegionType: 'warning',
+    threatLevel: '高',
+    targetType: '多旋翼',
+    areaName: '保护区',
+    conditions: [{ id: 'c11', property: 'stayDuration', operator: '>', value: '3' }],
+    priority: 25,
+    planId: 'plan-009',
+    planName: '光电监测上报',
+    enabled: true,
+    updatedAt: '2026-05-13 10:10:00',
+    updatedBy: '张三'
+  }),
+  buildSeedRow({
+    id: 'rule-010',
+    ruleCode: 'PLAN-010',
+    ruleName: '导航诱骗驱离',
+    areaRegionType: 'nuclear',
+    threatLevel: '高',
+    targetType: '黑名单',
+    areaName: '核心保护区',
+    conditions: [{ id: 'c12', property: 'speed', operator: '>', value: '2' }],
+    priority: 3,
+    planId: 'plan-010',
+    planName: '导航诱骗驱离',
+    enabled: true,
+    updatedAt: '2026-05-12 08:00:00',
+    updatedBy: '李四'
+  }),
+  buildSeedRow({
+    id: 'rule-011',
+    ruleCode: 'PLAN-011',
+    ruleName: '网络断链迫降',
+    areaRegionType: 'alert',
+    threatLevel: '中',
+    targetType: '全部',
+    areaName: '缓冲区',
+    conditions: [{ id: 'c13', property: 'intrusionCount', operator: '>=', value: '2' }],
+    priority: 8,
+    planId: 'plan-011',
+    planName: '网络断链迫降',
+    enabled: true,
+    updatedAt: '2026-05-11 13:25:00',
+    updatedBy: '王五'
+  }),
+  buildSeedRow({
+    id: 'rule-012',
+    ruleCode: 'PLAN-012',
+    ruleName: '雷达跟踪备注',
+    areaRegionType: 'warning',
+    threatLevel: '低',
+    targetType: '多旋翼',
+    areaName: '保护区',
+    conditions: [{ id: 'c14', property: 'speed', operator: '>', value: '7' }],
+    priority: 18,
+    planId: 'plan-012',
+    planName: '雷达跟踪备注',
+    enabled: true,
+    updatedAt: '2026-05-10 17:50:00',
+    updatedBy: '系统管理员'
+  }),
+  buildSeedRow({
+    id: 'rule-013',
+    ruleCode: 'SWARM-001',
+    ruleName: '蜂群入侵-复合反制',
+    areaRegionType: 'nuclear',
+    threatLevel: '高',
+    targetType: '无人机蜂群',
+    areaName: '核心保护区',
+    conditions: [
+      { id: 'c15', property: 'swarmCount', operator: '>=', value: '3' },
+      { id: 'c16', property: 'speed', operator: '>', value: '2' }
+    ],
+    priority: 2,
+    planId: 'plan-013',
+    planName: '蜂群复合反制',
+    enabled: true,
+    updatedAt: '2026-05-20 16:00:00',
+    updatedBy: '系统管理员'
+  }),
+  buildSeedRow({
+    id: 'rule-014',
+    ruleCode: 'SWARM-002',
+    ruleName: '蜂群入侵-高功率微波',
+    areaRegionType: 'alert',
+    threatLevel: '高',
+    targetType: '无人机蜂群',
+    areaName: '缓冲区',
+    conditions: [{ id: 'c17', property: 'swarmCount', operator: '>=', value: '5' }],
+    priority: 3,
+    planId: 'plan-014',
+    planName: '蜂群高功率微波',
+    enabled: true,
+    updatedAt: '2026-05-20 16:05:00',
+    updatedBy: '安全保密员'
+  })
 ]
 
 export const THREAT_STORE_VERSION = 8
 
-const seedThreatLevelById = Object.fromEntries(
-  seed.map((s) => [s.id, s.threatLevel])
-) as Record<string, ThreatLevelLabel>
+const seedThreatLevelById = Object.fromEntries(seed.map((s) => [s.id, s.threatLevel])) as Record<
+  string,
+  ThreatLevelLabel
+>
 
-let allRules: ThreatRule[] = seed.map((r) => migrateLegacyRule(r as ThreatRule & Record<string, unknown>))
+let allRules: ThreatRule[] = seed.map((r) =>
+  migrateLegacyRule(r as ThreatRule & Record<string, unknown>)
+)
 
 /** 开发热更新时重置内存规则，避免旧结构缺少 threatLevel 导致列表显示空标签 */
 function ensureStoreVersion() {
@@ -224,7 +483,10 @@ export function syncRulesFromSeed() {
     } as ThreatRule & Record<string, unknown>)
   })
 
-  allRules = [...merged, ...userCreated.map((r) => migrateLegacyRule(r as ThreatRule & Record<string, unknown>))]
+  allRules = [
+    ...merged,
+    ...userCreated.map((r) => migrateLegacyRule(r as ThreatRule & Record<string, unknown>))
+  ]
 }
 
 ensureStoreVersion()
@@ -289,16 +551,17 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
   if (body.id) {
     const idx = allRules.findIndex((r) => r.id === body.id)
     if (idx < 0) throw new Error('\u89c4\u5219\u4e0d\u5b58\u5728')
-    if (allRules.some((r) => r.ruleCode === body.ruleCode && r.id !== body.id)) {
+    const ruleCode = body.ruleCode.trim() || allRules[idx].ruleCode || generateThreatRuleCode()
+    if (allRules.some((r) => r.ruleCode === ruleCode && r.id !== body.id)) {
       throw new Error('\u89c4\u5219\u7f16\u53f7\u5df2\u5b58\u5728')
     }
     const row: ThreatRule = {
       ...allRules[idx],
-      ruleCode: body.ruleCode.trim(),
+      ruleCode,
       ruleName: body.ruleName.trim(),
       areaRegionType: body.areaRegionType,
       threatLevel: normalizeThreatLevel(body.threatLevel, body),
-      targetType: body.targetType,
+      targetType: normalizeThreatTargetType(body.targetType),
       areaName: body.areaName?.trim() || allRules[idx].areaName,
       conditions: body.conditions.map((c) => ({ ...c })),
       conditionSummary: summary,
@@ -312,16 +575,17 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
     allRules[idx] = row
     return { ...row }
   }
-  if (allRules.some((r) => r.ruleCode === body.ruleCode)) {
+  const ruleCode = body.ruleCode.trim() || generateThreatRuleCode()
+  if (allRules.some((r) => r.ruleCode === ruleCode)) {
     throw new Error('\u89c4\u5219\u7f16\u53f7\u5df2\u5b58\u5728')
   }
   const row: ThreatRule = {
     id: `rule-${Date.now()}`,
-    ruleCode: body.ruleCode.trim(),
+    ruleCode,
     ruleName: body.ruleName.trim(),
     areaRegionType: body.areaRegionType,
     threatLevel: normalizeThreatLevel(body.threatLevel, body),
-    targetType: body.targetType,
+    targetType: normalizeThreatTargetType(body.targetType),
     areaName: body.areaName?.trim() || '-',
     conditions: body.conditions.map((c) => ({ ...c })),
     conditionSummary: summary,
@@ -355,18 +619,18 @@ export function toggleThreatRuleEnabled(id: string, enabled: boolean) {
 export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult {
   const simInput: ThreatSimulateInput = {
     ...input,
-    targetType:
-      input.targetType ||
-      ((input.swarmCount ?? 0) >= 3 ? SWARM_TARGET_TYPE : undefined)
+    targetType: input.targetType || ((input.swarmCount ?? 0) >= 3 ? SWARM_TARGET_TYPE : undefined)
   }
   const enabled = allRules
     .filter((r) => r.enabled)
-    .sort(
-      (a, b) => effectiveRulePriority(a, simInput) - effectiveRulePriority(b, simInput)
-    )
+    .sort((a, b) => effectiveRulePriority(a, simInput) - effectiveRulePriority(b, simInput))
   const matched = enabled.find((r) => ruleMatches(r, simInput))
   if (!matched) {
-    return { matched: false, message: '\u672a\u5339\u914d\u5230\u542f\u7528\u89c4\u5219\uff0c\u4e0d\u89e6\u53d1\u9884\u6848' }
+    return {
+      matched: false,
+      message:
+        '\u672a\u5339\u914d\u5230\u542f\u7528\u89c4\u5219\uff0c\u4e0d\u89e6\u53d1\u9884\u6848'
+    }
   }
   const plan = getPlan(matched.planId)
   if (!plan?.enabled) {
@@ -381,7 +645,8 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
   if (!triggerRule) {
     return {
       matched: false,
-      message: '\u5339\u914d\u89c4\u5219\u4f46\u9884\u6848\u65e0\u53ef\u7528\u89e6\u53d1\u7b56\u7565'
+      message:
+        '\u5339\u914d\u89c4\u5219\u4f46\u9884\u6848\u65e0\u53ef\u7528\u89e6\u53d1\u7b56\u7565'
     }
   }
   const fnLabel = functionLabel(triggerRule.deviceType, triggerRule.deviceFunction)
@@ -389,8 +654,7 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
     isSwarmRule(matched) || isSwarmSimulateInput(simInput)
       ? swarmEscalationNote(triggerRule.deviceAction)
       : undefined
-  const swarmPrefix =
-    isSwarmSimulateInput(simInput) ? '\u3010\u8702\u7fa4\u5347\u7ea7\u3011' : ''
+  const swarmPrefix = isSwarmSimulateInput(simInput) ? '\u3010\u8702\u7fa4\u5347\u7ea7\u3011' : ''
   const scene =
     simInput.weatherFactor && simInput.weatherFactor !== '\u5168\u90e8'
       ? `\uff08\u573a\u666f\u300c${simInput.weatherFactor}\u300d\u2192 \u89c4\u5219\u300c${triggerRule.ruleName}\u300d\uff09`
@@ -435,9 +699,10 @@ export function assessThreatRule(id: string): ThreatAssessResult {
     alarmLevel: levelKey === 'high' ? '\u4e00\u7ea7\u544a\u8b66' : '\u4e8c\u7ea7\u9884\u8b66',
     summary: `${swarmSummary}\u89c4\u5219\u5a01\u80f1\u7b49\u7ea7\u300c${rule.threatLevel}\u300d\uff1b\u76ee\u6807\u7c7b\u578b\u300c${rule.targetType}\u300d\uff1b\u89e6\u53d1\u6761\u4ef6\uff1a${rule.conditionSummary}`,
     swarmNote,
-    triggerNote: plan && triggerRule
-      ? `\u89c4\u5219\u547d\u4e2d\u540e\u89e6\u53d1\u9884\u6848${planLabel}\uff1b${formatDisposalExecNote(plan)}\uff1b\u89e6\u53d1\u300c${triggerRule.ruleName}\u300d\uff08${triggerRule.weatherFactor}\uff09\u2192 ${triggerRule.deviceType} / ${fnLabel}\uff1b\u5904\u7f6e\u300c${triggerRule.deviceAction}\u300d${plan.triggerRules.length > 1 ? '\uff1b\u591a\u573a\u666f\u6309\u5929\u6c14\u5207\u6362' : ''}${swarmNote ? `\uff1b${swarmNote}` : ''}`
-      : '\u672a\u5173\u8054\u6709\u6548\u9884\u6848'
+    triggerNote:
+      plan && triggerRule
+        ? `\u89c4\u5219\u547d\u4e2d\u540e\u89e6\u53d1\u9884\u6848${planLabel}\uff1b${formatDisposalExecNote(plan)}\uff1b\u89e6\u53d1\u300c${triggerRule.ruleName}\u300d\uff08${triggerRule.weatherFactor}\uff09\u2192 ${triggerRule.deviceType} / ${fnLabel}\uff1b\u5904\u7f6e\u300c${triggerRule.deviceAction}\u300d${plan.triggerRules.length > 1 ? '\uff1b\u591a\u573a\u666f\u6309\u5929\u6c14\u5207\u6362' : ''}${swarmNote ? `\uff1b${swarmNote}` : ''}`
+        : '\u672a\u5173\u8054\u6709\u6548\u9884\u6848'
   }
 }
 

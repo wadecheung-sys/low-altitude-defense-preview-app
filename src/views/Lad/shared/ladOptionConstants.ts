@@ -12,7 +12,10 @@ export const areaLevelOptions = [
 
 export const scenarioOptions = [
   { label: '\u7535\u5b50\u56f4\u680f\u5165\u4fb5', value: '\u7535\u5b50\u56f4\u680f\u5165\u4fb5' },
-  { label: '\u591a\u65e0\u4eba\u673a\u8702\u7fa4\u5165\u4fb5', value: '\u591a\u65e0\u4eba\u673a\u8702\u7fa4\u5165\u4fb5' },
+  {
+    label: '\u591a\u65e0\u4eba\u673a\u8702\u7fa4\u5165\u4fb5',
+    value: '\u591a\u65e0\u4eba\u673a\u8702\u7fa4\u5165\u4fb5'
+  },
   { label: '\u6838\u4fdd\u573a\u666f', value: '\u6838\u4fdd\u573a\u666f' },
   { label: '\u5927\u578b\u6d3b\u52a8', value: '\u5927\u578b\u6d3b\u52a8' },
   { label: '\u8bd5\u98de\u533a', value: '\u8bd5\u98de\u533a' }
@@ -20,11 +23,9 @@ export const scenarioOptions = [
 
 export const targetTypeOptions = [
   allOption,
-  { label: '\u591a\u65cb\u7ffc', value: '\u591a\u65cb\u7ffc' },
-  { label: '\u56fa\u5b9a\u7ffc', value: '\u56fa\u5b9a\u7ffc' },
-  { label: '\u65e0\u4eba\u673a\u8702\u7fa4', value: '\u65e0\u4eba\u673a\u8702\u7fa4' },
   { label: '\u9ed1\u540d\u5355', value: '\u9ed1\u540d\u5355' },
-  { label: '\u767d\u540d\u5355', value: '\u767d\u540d\u5355' }
+  { label: '\u767d\u540d\u5355', value: '\u767d\u540d\u5355' },
+  { label: '\u672a\u77e5', value: '\u672a\u77e5' }
 ]
 
 export const weatherOptions = [
@@ -55,7 +56,7 @@ export const conditionPropertyOptions = [
   { label: '\u5165\u4fb5\u6b21\u6570', value: 'intrusionCount' },
   { label: '\u8702\u7fa4\u673a\u6570', value: 'swarmCount' },
   { label: '\u98de\u884c\u9ad8\u5ea6', value: 'altitude' },
-  { label: '\u4fe1\u53f7\u5f3a\u5ea6', value: 'signalStrength' }
+  { label: '\u6240\u5904\u533a\u57df', value: 'locatedArea' }
 ]
 
 export const conditionOperatorOptions = [

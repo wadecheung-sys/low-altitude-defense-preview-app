@@ -1,22 +1,19 @@
 <script setup lang="tsx">
+import { onMounted, reactive, ref, unref } from 'vue'
+import { ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import {
-  deletePlanApi,
-  getPlanListApi,
-  togglePlanEnabledApi
-} from '@/api/lad/plan'
+import { deletePlanApi, getPlanListApi, togglePlanEnabledApi } from '@/api/lad/plan'
+import { getAreaRegionListApi } from '@/api/lad/area'
 import type { PlanStrategy } from '@/api/lad/plan/types'
 import PlanFormDialog from './components/PlanFormDialog.vue'
 import PlanDetailDialog from './components/PlanDetailDialog.vue'
 import { PLAN_SEARCH_COL, PLAN_SEARCH_DATE_COL, UI } from './planConstants'
 import { allOption } from '../shared/ladOptionConstants'
-import { reactive, ref, unref } from 'vue'
-import { ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
 
 defineOptions({ name: 'LadPlanStrategyList' })
 
@@ -27,6 +24,7 @@ const formRow = ref<PlanStrategy>()
 const detailVisible = ref(false)
 const detailId = ref<string>()
 const togglingId = ref<string | null>(null)
+const areaLabelMap = ref<Record<string, string>>({})
 
 const disposalFilterOptions = [
   allOption,
@@ -34,7 +32,36 @@ const disposalFilterOptions = [
   { label: UI.disposalModeManual, value: 'manual' }
 ]
 
-const searchFieldStyle = { width: '100%' }
+function formatAreaLabel(value?: string) {
+  if (!value || value === '全部') return '全部'
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((id) => areaLabelMap.value[id] || id)
+    .join('、')
+}
+
+function primaryRule(row: PlanStrategy) {
+  const enabled = (row.triggerRules || []).filter((item) => item.enabled)
+  return (enabled.length ? enabled : row.triggerRules || [])[0]
+}
+
+function primaryRuleLabel(row: PlanStrategy) {
+  const rule = primaryRule(row)
+  if (!rule) return '-'
+  return `${rule.ruleName} / ${rule.deviceGroupName}`
+}
+
+function formatPlanRule(value?: string) {
+  if (!value || value === '-') return '-'
+  return value.replace(/\n/g, ' ')
+}
+
+async function loadAreas() {
+  const res = await getAreaRegionListApi({ pageIndex: 1, pageSize: 200 })
+  areaLabelMap.value = Object.fromEntries(res.data.list.map((item) => [item.id, item.name]))
+}
 
 const setSearchParams = (params: Recordable) => {
   const range = params.updatedAtRange as string[] | undefined
@@ -52,7 +79,7 @@ const setSearchParams = (params: Recordable) => {
 }
 
 function onSelectionChange(rows: PlanStrategy[]) {
-  selectedIds.value = rows.map((r) => r.id)
+  selectedIds.value = rows.map((row) => row.id)
 }
 
 const openAdd = () => {
@@ -91,7 +118,9 @@ async function batchRemove() {
     await ElMessageBox.confirm(
       `确认删除选中的 ${selectedIds.value.length} 条预案吗？`,
       UI.btnBatchDelete,
-      { type: 'warning' }
+      {
+        type: 'warning'
+      }
     )
   } catch {
     return
@@ -104,11 +133,9 @@ async function batchRemove() {
 
 async function removeRow(row: PlanStrategy) {
   try {
-    await ElMessageBox.confirm(
-      `确认删除预案「${row.planName}」吗？`,
-      UI.btnDelete,
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确认删除预案“${row.planName}”吗？`, UI.btnDelete, {
+      type: 'warning'
+    })
   } catch {
     return
   }
@@ -132,29 +159,20 @@ const { tableRegister, tableState, tableMethods } = useTable({
 const { loading, dataList, total, currentPage, pageSize } = tableState
 const { getList } = tableMethods
 
+onMounted(() => {
+  loadAreas()
+})
+
 const crudSchemas = reactive<CrudSchema[]>([
-  {
-    field: 'selection',
-    search: { hidden: true },
-    table: { type: 'selection' }
-  },
-  {
-    field: 'index',
-    label: '序号',
-    type: 'index',
-    search: { hidden: true }
-  },
+  { field: 'selection', search: { hidden: true }, table: { type: 'selection' } },
+  { field: 'index', label: '序号', type: 'index', search: { hidden: true } },
   {
     field: 'planCode',
     label: UI.planCode,
     search: {
       component: 'Input',
       colProps: PLAN_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入预案编号',
-        style: searchFieldStyle
-      }
+      componentProps: { clearable: true, placeholder: '请输入预案编号', style: { width: '100%' } }
     },
     table: { minWidth: 128, showOverflowTooltip: true }
   },
@@ -164,13 +182,55 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: {
       component: 'Input',
       colProps: PLAN_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入预案名称',
-        style: searchFieldStyle
-      }
+      componentProps: { clearable: true, placeholder: '请输入预案名称', style: { width: '100%' } }
     },
-    table: { minWidth: 140, showOverflowTooltip: true }
+    table: { minWidth: 160, showOverflowTooltip: true }
+  },
+  {
+    field: 'planRule',
+    label: UI.planRule,
+    search: { hidden: true },
+    table: {
+      minWidth: 260,
+      showOverflowTooltip: true,
+      slots: { default: ({ row }: { row: PlanStrategy }) => formatPlanRule(row.planRule) }
+    }
+  },
+  {
+    field: 'threatLevel',
+    label: UI.alarmLevel,
+    search: { hidden: true },
+    table: { width: 100, align: 'center' }
+  },
+  {
+    field: 'areaLevel',
+    label: UI.locatedArea,
+    search: { hidden: true },
+    table: {
+      minWidth: 140,
+      showOverflowTooltip: true,
+      slots: { default: ({ row }: { row: PlanStrategy }) => formatAreaLabel(row.areaLevel) }
+    }
+  },
+  {
+    field: 'triggerRuleName',
+    label: UI.primaryRule,
+    search: { hidden: true },
+    table: {
+      minWidth: 180,
+      showOverflowTooltip: true,
+      slots: { default: ({ row }: { row: PlanStrategy }) => primaryRuleLabel(row) }
+    }
+  },
+  {
+    field: 'priority',
+    label: UI.planPriority,
+    search: { hidden: true },
+    table: {
+      width: 90,
+      align: 'center',
+      slots: { default: ({ row }: { row: PlanStrategy }) => row.priority ?? '-' }
+    }
   },
   {
     field: 'disposalMode',
@@ -182,18 +242,17 @@ const crudSchemas = reactive<CrudSchema[]>([
         options: disposalFilterOptions,
         clearable: true,
         placeholder: '全部',
-        style: searchFieldStyle
+        style: { width: '100%' }
       }
     },
     table: {
       width: 148,
       slots: {
-        default: (data: { row: PlanStrategy }) => {
-          const mode = data.row.disposalMode
-          const tagType =
-            mode === 'auto' ? 'success' : mode === 'manual' ? 'warning' : 'info'
+        default: ({ row }: { row: PlanStrategy }) => {
+          const mode = row.disposalMode
+          const tagType = mode === 'auto' ? 'success' : mode === 'manual' ? 'warning' : 'info'
           const label =
-            data.row.disposalModeLabel ||
+            row.disposalModeLabel ||
             (mode === 'auto'
               ? UI.disposalModeAuto
               : mode === 'manual'
@@ -209,37 +268,20 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'triggerRuleCount',
-    label: UI.triggerRules,
-    search: { hidden: true },
-    table: {
-      width: 72,
-      align: 'center',
-      slots: {
-        default: (data: { row: PlanStrategy }) => {
-          const count =
-            data.row.triggerRuleCount ??
-            (Array.isArray(data.row.triggerRules) ? data.row.triggerRules.length : 0)
-          return <span>{count}条</span>
-        }
-      }
-    }
-  },
-  {
     field: 'enabled',
     label: UI.enabled,
     search: { hidden: true },
     table: {
       width: 88,
       slots: {
-        default: (data: { row: PlanStrategy }) => (
+        default: ({ row }: { row: PlanStrategy }) => (
           <ElSwitch
-            modelValue={data.row.enabled}
+            modelValue={row.enabled}
             inline-prompt
             active-text="ON"
             inactive-text="OFF"
-            loading={togglingId.value === data.row.id}
-            onChange={(val: boolean) => onToggle(data.row, val)}
+            loading={togglingId.value === row.id}
+            onChange={(value: boolean) => onToggle(row, value)}
           />
         )
       }
@@ -257,11 +299,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: {
       component: 'Input',
       colProps: PLAN_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入修改人',
-        style: searchFieldStyle
-      }
+      componentProps: { clearable: true, placeholder: '请输入修改人', style: { width: '100%' } }
     },
     table: { hidden: true }
   },
@@ -276,7 +314,7 @@ const crudSchemas = reactive<CrudSchema[]>([
         valueFormat: 'YYYY-MM-DD HH:mm:ss',
         startPlaceholder: '开始日期',
         endPlaceholder: '结束日期',
-        style: searchFieldStyle
+        style: { width: '100%' }
       }
     },
     table: { hidden: true }
@@ -289,15 +327,15 @@ const crudSchemas = reactive<CrudSchema[]>([
       width: 260,
       fixed: 'right',
       slots: {
-        default: (data: { row: PlanStrategy }) => (
+        default: ({ row }: { row: PlanStrategy }) => (
           <>
-            <BaseButton type="primary" onClick={() => openDetail(data.row)}>
+            <BaseButton type="primary" onClick={() => openDetail(row)}>
               {UI.btnDetail}
             </BaseButton>
-            <BaseButton type="primary" class="ml-8px" onClick={() => openEdit(data.row)}>
+            <BaseButton type="primary" class="ml-8px" onClick={() => openEdit(row)}>
               {UI.btnEdit}
             </BaseButton>
-            <BaseButton type="danger" class="ml-8px" onClick={() => removeRow(data.row)}>
+            <BaseButton type="danger" class="ml-8px" onClick={() => removeRow(row)}>
               {UI.btnDelete}
             </BaseButton>
           </>
@@ -323,7 +361,9 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     />
     <div class="mb-10px">
       <BaseButton type="primary" @click="openAdd">{{ UI.btnAdd }}</BaseButton>
-      <BaseButton type="danger" class="ml-8px" @click="batchRemove">{{ UI.btnBatchDelete }}</BaseButton>
+      <BaseButton type="danger" class="ml-8px" @click="batchRemove">{{
+        UI.btnBatchDelete
+      }}</BaseButton>
     </div>
     <Table
       v-model:currentPage="currentPage"
@@ -331,7 +371,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       :columns="allSchemas.tableColumns"
       :data="dataList"
       :loading="loading"
-      :pagination="{ total: total }"
+      :pagination="{ total }"
       @register="tableRegister"
       @selection-change="onSelectionChange"
     />

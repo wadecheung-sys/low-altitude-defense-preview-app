@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { getDeviceInfoDetailApi, runDeviceSelfCheckApi, saveDeviceInfoApi } from '@/api/lad/device-info'
+import { getDeviceArchiveDetailApi, getDeviceArchiveListApi } from '@/api/lad/device'
+import type { DeviceArchiveItem } from '@/api/lad/device'
+import {
+  getDeviceInfoDetailApi,
+  runDeviceSelfCheckApi,
+  saveDeviceInfoApi
+} from '@/api/lad/device-info'
 import { deviceSupportsSelfCheck } from '@/api/lad/device-info/deviceSelfCheck'
 import type {
   DeviceExtendedField,
   DeviceInfoDetail,
+  DeviceLinkedArchive,
   DeviceSelfCheckResult
 } from '@/api/lad/device-info/types'
-import { DEVICE_ARCHIVE_PLACEHOLDER } from './constants'
 import DeviceRemoteControlPanel from '@/views/Lad/shared/DeviceRemoteControlPanel.vue'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
+import { DEVICE_ARCHIVE_PLACEHOLDER } from './constants'
 import { deviceInfoTypeOptions } from './deviceInfoConstants'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
@@ -41,7 +48,10 @@ const { push, go } = useRouter()
 
 const loading = ref(false)
 const saveLoading = ref(false)
+const archiveLoading = ref(false)
 const detail = ref<DeviceInfoDetail | null>(null)
+const currentLinkedArchive = ref<DeviceLinkedArchive | null>(null)
+const archiveOptions = ref<DeviceArchiveItem[]>([])
 const formRef = ref<FormInstance>()
 const metricsTab = ref<'archive' | 'extend'>('archive')
 const extendedRows = ref<DeviceExtendedField[]>([])
@@ -52,25 +62,24 @@ const selfCheckResult = ref<DeviceSelfCheckResult | null>(null)
 const isCreateMode = computed(() => route.name === 'LadDeviceInfoAdd')
 const isViewMode = computed(() => route.name === 'LadDeviceDetail')
 const isEditable = computed(() => !isViewMode.value)
-
 const recordId = computed(() => (route.params.id as string) || '')
 
-const linkedArchive = computed(() => detail.value?.linkedArchive ?? null)
-const deviceImageUrl = computed(
-  () => linkedArchive.value?.imageUrl || DEVICE_ARCHIVE_PLACEHOLDER
-)
+const linkedArchive = computed(() => currentLinkedArchive.value)
+const deviceImageUrl = computed(() => linkedArchive.value?.imageUrl || DEVICE_ARCHIVE_PLACEHOLDER)
+const archiveSelectOptions = computed(() => {
+  const selectedArchiveId = form.archiveId
+  return archiveOptions.value.filter((item) => item.enabled || item.id === selectedArchiveId)
+})
 
 const supportsSelfCheck = computed(
-  () =>
-    detail.value?.supportsSelfCheck ??
-    deviceSupportsSelfCheck(form.deviceType)
+  () => detail.value?.supportsSelfCheck ?? deviceSupportsSelfCheck(form.deviceType)
 )
 
 const selfCheckOverallTag = computed(() => {
-  const o = selfCheckResult.value?.overall
-  if (o === 'healthy') return { type: 'success' as const, label: '健康' }
-  if (o === 'degraded') return { type: 'warning' as const, label: '告警' }
-  if (o === 'fault') return { type: 'danger' as const, label: '故障' }
+  const overall = selfCheckResult.value?.overall
+  if (overall === 'healthy') return { type: 'success' as const, label: '健康' }
+  if (overall === 'degraded') return { type: 'warning' as const, label: '告警' }
+  if (overall === 'fault') return { type: 'danger' as const, label: '故障' }
   return { type: 'info' as const, label: '不支持' }
 })
 
@@ -84,6 +93,7 @@ const form = reactive({
   deviceId: '',
   ipAddress: '',
   deviceName: '',
+  archiveId: '',
   serialNo: '',
   deviceType: '',
   lastHeartbeat: '',
@@ -99,7 +109,7 @@ const rules: FormRules = {
   deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
   deployLocation: [{ required: true, message: '请输入部署位置', trigger: 'blur' }],
   deployAddress: [{ required: true, message: '请填写详细部署地址', trigger: 'blur' }],
-  ipAddress: [{ required: true, message: '请输入IP地址', trigger: 'blur' }],
+  ipAddress: [{ required: true, message: '请输入 IP 地址', trigger: 'blur' }],
   serialNo: [{ required: true, message: '请输入序列号', trigger: 'blur' }],
   personInCharge: [{ required: true, message: '请输入负责人', trigger: 'blur' }]
 }
@@ -110,11 +120,28 @@ function nextExtendId() {
   return `ext-${Date.now()}-${extendSeq}`
 }
 
-const applyDetail = (data: DeviceInfoDetail) => {
+function mapArchiveDetailToLinkedArchive(
+  data: Awaited<ReturnType<typeof getDeviceArchiveDetailApi>>['data']
+) {
+  return {
+    id: data.id,
+    archiveNo: data.archiveNo,
+    archiveName: data.archiveName,
+    deviceType: data.deviceType,
+    vendor: data.vendor,
+    deviceModel: data.deviceModel,
+    imageUrl: data.imageUrl,
+    indicators: data.indicators.map((item) => ({ ...item }))
+  } satisfies DeviceLinkedArchive
+}
+
+function applyDetail(data: DeviceInfoDetail) {
   detail.value = data
+  currentLinkedArchive.value = data.linkedArchive
   form.deviceId = data.deviceId
   form.ipAddress = data.ipAddress
   form.deviceName = data.deviceName
+  form.archiveId = data.archiveId || ''
   form.serialNo = data.serialNo
   form.deviceType = data.deviceType
   form.lastHeartbeat = data.lastHeartbeat
@@ -123,14 +150,16 @@ const applyDetail = (data: DeviceInfoDetail) => {
   form.personInCharge = data.personInCharge
   form.contactPhone = data.contactPhone
   form.remark = data.remark
-  extendedRows.value = data.extendedFields.map((f) => ({ ...f }))
+  extendedRows.value = data.extendedFields.map((field) => ({ ...field }))
 }
 
-const resetCreate = () => {
+function resetCreate() {
   detail.value = null
+  currentLinkedArchive.value = null
   form.deviceId = ''
   form.ipAddress = ''
   form.deviceName = ''
+  form.archiveId = ''
   form.serialNo = ''
   form.deviceType = '无线电干扰'
   form.lastHeartbeat = ''
@@ -145,7 +174,30 @@ const resetCreate = () => {
   ]
 }
 
-const fetchDetail = async () => {
+async function loadArchiveOptions() {
+  const res = await getDeviceArchiveListApi({ pageIndex: 1, pageSize: 200 })
+  archiveOptions.value = res.data.list
+}
+
+async function syncLinkedArchive(archiveId?: string) {
+  if (!archiveId) {
+    currentLinkedArchive.value = null
+    return
+  }
+  archiveLoading.value = true
+  try {
+    const res = await getDeviceArchiveDetailApi(archiveId)
+    currentLinkedArchive.value = mapArchiveDetailToLinkedArchive(res.data)
+  } catch {
+    currentLinkedArchive.value = null
+    ElMessage.warning('关联档案加载失败')
+  } finally {
+    archiveLoading.value = false
+  }
+}
+
+async function fetchDetail() {
+  await loadArchiveOptions()
   if (isCreateMode.value) {
     resetCreate()
     return
@@ -166,7 +218,7 @@ const fetchDetail = async () => {
 function validateExtended(): string | null {
   for (const row of extendedRows.value) {
     if (!row.label.trim() || !row.value.trim()) {
-      return '扩展信息的信息项与内容不能为空'
+      return '扩展信息的条目名称与内容不能为空'
     }
   }
   return null
@@ -177,7 +229,7 @@ function addExtendedRow() {
 }
 
 function removeExtendedRow(row: DeviceExtendedField) {
-  extendedRows.value = extendedRows.value.filter((r) => r.id !== row.id)
+  extendedRows.value = extendedRows.value.filter((item) => item.id !== row.id)
 }
 
 function goArchiveDetail() {
@@ -229,7 +281,7 @@ async function save() {
       deviceId: form.deviceId || undefined,
       deviceName: form.deviceName.trim(),
       archiveInfo,
-      archiveId: detail.value?.archiveId,
+      archiveId: form.archiveId || undefined,
       deviceType: form.deviceType,
       deployLocation: form.deployLocation.trim(),
       deployAddress: form.deployAddress.trim(),
@@ -238,10 +290,10 @@ async function save() {
       personInCharge: form.personInCharge.trim(),
       contactPhone: form.contactPhone.trim(),
       remark: form.remark,
-      extendedFields: extendedRows.value.map((r) => ({
-        id: r.id,
-        label: r.label.trim(),
-        value: r.value.trim()
+      extendedFields: extendedRows.value.map((row) => ({
+        id: row.id,
+        label: row.label.trim(),
+        value: row.value.trim()
       }))
     })
     ElMessage.success(isCreateMode.value ? '新增成功' : '保存成功')
@@ -257,6 +309,13 @@ async function save() {
 }
 
 onMounted(fetchDetail)
+
+watch(
+  () => form.archiveId,
+  (archiveId) => {
+    syncLinkedArchive(archiveId)
+  }
+)
 
 watch(
   () => `${String(route.name)}|${recordId.value}`,
@@ -293,21 +352,19 @@ watch(
       <section class="device-detail-panel">
         <div class="device-detail-panel__title">设备图像</div>
         <div class="device-detail-image">
-          <ElImage
-            :src="deviceImageUrl"
-            fit="contain"
-            class="device-detail-image__img"
-          />
+          <ElImage :src="deviceImageUrl" fit="contain" class="device-detail-image__img" />
         </div>
         <p v-if="linkedArchive" class="device-detail-image__hint">
-          取自关联档案「{{ linkedArchive.archiveName }}」
+          取自关联档案“{{ linkedArchive.archiveName }}”
         </p>
         <p v-else class="device-detail-image__hint">关联档案后可展示档案图像</p>
       </section>
 
       <section class="device-detail-panel">
         <div class="device-detail-panel__title">基本信息</div>
-        <p class="device-detail-panel__hint">设备台账核心字段（含 IP、序列号等），与扩展信息区分。</p>
+        <p class="device-detail-panel__hint">
+          设备台账核心字段（含 IP、序列号等），与扩展信息区分。
+        </p>
         <ElForm
           ref="formRef"
           label-position="top"
@@ -316,7 +373,7 @@ watch(
           class="device-detail-form"
           :disabled="!isEditable"
         >
-          <ElFormItem label="设备ID">
+          <ElFormItem label="设备 ID">
             <ElInput
               v-model="form.deviceId"
               :placeholder="isCreateMode ? '保存后自动生成' : ''"
@@ -326,8 +383,8 @@ watch(
           <ElFormItem label="设备名称" prop="deviceName" required>
             <ElInput v-model="form.deviceName" placeholder="请输入设备名称" clearable />
           </ElFormItem>
-          <ElFormItem label="IP地址" prop="ipAddress" required>
-            <ElInput v-model="form.ipAddress" placeholder="请输入IP地址" clearable />
+          <ElFormItem label="IP 地址" prop="ipAddress" required>
+            <ElInput v-model="form.ipAddress" placeholder="请输入 IP 地址" clearable />
           </ElFormItem>
           <ElFormItem label="序列号" prop="serialNo" required>
             <ElInput v-model="form.serialNo" placeholder="请输入序列号" clearable />
@@ -335,29 +392,47 @@ watch(
           <ElFormItem label="设备类型" prop="deviceType" required>
             <ElSelect v-model="form.deviceType" placeholder="请选择" class="w-100%" clearable>
               <ElOption
-                v-for="o in deviceInfoTypeOptions"
-                :key="o.value"
-                :label="o.label"
-                :value="o.value"
+                v-for="option in deviceInfoTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
               />
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="关联档案">
-            <template v-if="linkedArchive">
+            <ElSelect
+              v-if="isEditable"
+              v-model="form.archiveId"
+              class="w-100%"
+              clearable
+              filterable
+              :loading="archiveLoading"
+              placeholder="请选择设备档案"
+            >
+              <ElOption
+                v-for="item in archiveSelectOptions"
+                :key="item.id"
+                :label="`${item.archiveName} (${item.archiveNo})`"
+                :value="item.id"
+              />
+            </ElSelect>
+            <template v-else-if="linkedArchive">
               <ElLink type="primary" :underline="false" @click="goArchiveDetail">
                 {{ linkedArchive.archiveName }}
               </ElLink>
-              <span class="device-detail-form__sub">{{ linkedArchive.archiveNo }}</span>
             </template>
             <span v-else class="text-[var(--el-text-color-secondary)]">
               {{ detail?.archiveInfo || '未关联' }}
+            </span>
+            <span v-if="linkedArchive" class="device-detail-form__sub">
+              {{ linkedArchive.archiveNo }} / {{ linkedArchive.deviceModel }}
             </span>
           </ElFormItem>
           <ElFormItem v-if="!isCreateMode" label="最后心跳">
             <ElInput v-model="form.lastHeartbeat" disabled />
           </ElFormItem>
           <ElFormItem label="部署位置" prop="deployLocation" required>
-            <ElInput v-model="form.deployLocation" placeholder="如：楼顶A区" clearable />
+            <ElInput v-model="form.deployLocation" placeholder="如：楼顶 A 区" clearable />
           </ElFormItem>
           <ElFormItem label="详细地址" prop="deployAddress" required>
             <ElInput
@@ -383,19 +458,15 @@ watch(
         <ElTabs v-model="metricsTab" class="device-detail-metrics-tabs">
           <ElTabPane label="档案指标" name="archive">
             <p v-if="!linkedArchive" class="device-detail-metrics-empty">
-              未关联设备档案，暂无档案指标。请在台账中绑定档案后查看（只读）。
+              未关联设备档案，暂无档案指标。请在台账中绑定档案后查看。
             </p>
             <template v-else>
               <p class="device-detail-metrics-tip">
-                以下指标来自关联档案「{{ linkedArchive.archiveName }}」，随档案维护更新，本页不可编辑。
+                以下指标来自关联档案“{{
+                  linkedArchive.archiveName
+                }}”，随档案维护更新，本页不直接编辑。
               </p>
-              <ElTable
-                :data="linkedArchive.indicators"
-                border
-                stripe
-                row-key="id"
-                max-height="360"
-              >
+              <ElTable :data="linkedArchive.indicators" border stripe row-key="id" max-height="360">
                 <ElTableColumn type="index" label="序号" width="64" />
                 <ElTableColumn prop="item" label="指标项" min-width="130" />
                 <ElTableColumn prop="unit" label="单位" width="100" />
@@ -434,7 +505,7 @@ watch(
                   <ElInput
                     v-if="isEditable"
                     v-model="row.value"
-                    placeholder="请输入"
+                    placeholder="请输入内容"
                     size="small"
                   />
                   <span v-else>{{ row.value }}</span>
@@ -461,12 +532,7 @@ watch(
       </section>
     </div>
 
-    <ElDialog
-      v-model="selfCheckVisible"
-      title="设备自检结果"
-      width="520px"
-      destroy-on-close
-    >
+    <ElDialog v-model="selfCheckVisible" title="设备自检结果" width="520px" destroy-on-close>
       <template v-if="selfCheckResult">
         <ElAlert
           :type="
@@ -493,7 +559,12 @@ watch(
           </ElDescriptionsItem>
           <ElDescriptionsItem label="检测时间">{{ selfCheckResult.checkedAt }}</ElDescriptionsItem>
         </ElDescriptions>
-        <ElTable v-if="selfCheckResult.items.length" :data="selfCheckResult.items" border size="small">
+        <ElTable
+          v-if="selfCheckResult.items.length"
+          :data="selfCheckResult.items"
+          border
+          size="small"
+        >
           <ElTableColumn prop="name" label="检测项" min-width="120" />
           <ElTableColumn label="结果" width="88" align="center">
             <template #default="{ row }">

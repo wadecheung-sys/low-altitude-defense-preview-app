@@ -1,6 +1,6 @@
 export type ParamValueType = 'string' | 'number' | 'boolean'
 
-export type ParamGroup = '系统' | '告警' | '地图' | '数据'
+export type ParamGroup = '系统' | '地图' | '数据'
 
 export interface SystemParam {
   id: string

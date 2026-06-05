@@ -1,4 +1,6 @@
 <script setup lang="tsx">
+import { reactive, ref, unref } from 'vue'
+import { ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
@@ -6,10 +8,8 @@ import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { getSystemParamListApi } from '@/api/lad/system'
-import type { ParamGroup, ParamValueType, SystemParam } from '@/api/lad/system/types'
+import type { ParamGroup, SystemParam } from '@/api/lad/system/types'
 import SystemParamEditDialog from './components/SystemParamEditDialog.vue'
-import { reactive, ref, unref } from 'vue'
-import { ElTag } from 'element-plus'
 
 defineOptions({ name: 'LadSystemParams' })
 
@@ -19,28 +19,14 @@ const editRow = ref<SystemParam>()
 
 const groupOptions = [
   { label: '系统', value: '系统' },
-  { label: '告警', value: '告警' },
   { label: '地图', value: '地图' },
   { label: '数据', value: '数据' }
-]
-
-const valueTypeOptions = [
-  { label: '字符串', value: 'string' },
-  { label: '数值', value: 'number' },
-  { label: '布尔', value: 'boolean' }
-]
-
-const valueTypeLabel: Record<ParamValueType, string> = {
-  string: '字符串',
-  number: '数值',
-  boolean: '布尔'
-}
+] satisfies Array<{ label: string; value: ParamGroup }>
 
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
     keyword: params.keyword,
-    group: params.group as ParamGroup | undefined,
-    valueType: params.valueType as ParamValueType | undefined
+    group: params.group as ParamGroup | undefined
   }
   currentPage.value = 1
   getList()
@@ -85,7 +71,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '关键词',
     search: {
       component: 'Input',
-      componentProps: { placeholder: '键名 / 名称 / 参数值' }
+      componentProps: { placeholder: '参数名称 / 参数值' }
     },
     table: { hidden: true }
   },
@@ -96,49 +82,27 @@ const crudSchemas = reactive<CrudSchema[]>([
       component: 'Select',
       componentProps: { options: groupOptions, clearable: true }
     },
-    table: { width: 90 }
-  },
-  {
-    field: 'valueType',
-    label: '值类型',
-    search: {
-      component: 'Select',
-      componentProps: { options: valueTypeOptions, clearable: true }
-    },
-    table: {
-      width: 90,
-      slots: {
-        default: (data: { row: SystemParam }) => (
-          <span>{valueTypeLabel[data.row.valueType]}</span>
-        )
-      }
-    }
-  },
-  {
-    field: 'paramKey',
-    label: '参数键',
-    search: { hidden: true },
-    table: { minWidth: 180, showOverflowTooltip: true }
+    table: { width: 110 }
   },
   {
     field: 'paramName',
     label: '参数名称',
     search: { hidden: true },
-    table: { minWidth: 140, showOverflowTooltip: true }
+    table: { minWidth: 180, showOverflowTooltip: true }
   },
   {
     field: 'paramValue',
     label: '参数值',
     search: { hidden: true },
     table: {
-      minWidth: 120,
+      minWidth: 160,
       slots: {
-        default: (data: { row: SystemParam }) => {
-          const v = data.row.paramValue
-          if (data.row.valueType === 'boolean') {
-            return <ElTag type={v ? 'success' : 'info'}>{v ? '是' : '否'}</ElTag>
+        default: ({ row }: { row: SystemParam }) => {
+          const value = row.paramValue
+          if (row.valueType === 'boolean') {
+            return <ElTag type={value ? 'success' : 'info'}>{value ? '是' : '否'}</ElTag>
           }
-          return <span>{String(v)}</span>
+          return <span>{String(value)}</span>
         }
       }
     }
@@ -147,7 +111,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'remark',
     label: '备注',
     search: { hidden: true },
-    table: { minWidth: 140, showOverflowTooltip: true }
+    table: { minWidth: 180, showOverflowTooltip: true }
   },
   {
     field: 'updatedAt',
@@ -163,8 +127,8 @@ const crudSchemas = reactive<CrudSchema[]>([
       width: 100,
       fixed: 'right',
       slots: {
-        default: (data: { row: SystemParam }) => (
-          <BaseButton type="primary" onClick={() => openEdit(data.row)}>
+        default: ({ row }: { row: SystemParam }) => (
+          <BaseButton type="primary" onClick={() => openEdit(row)}>
             编辑
           </BaseButton>
         )
@@ -188,10 +152,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       :pagination="{ total }"
       @register="tableRegister"
     />
-    <SystemParamEditDialog
-      v-model="editVisible"
-      :row="editRow"
-      @success="getList"
-    />
+    <SystemParamEditDialog v-model="editVisible" :row="editRow" @success="getList" />
   </ContentWrap>
 </template>

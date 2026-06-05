@@ -1,4 +1,7 @@
 <script setup lang="tsx">
+import { reactive, ref, unref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
@@ -12,9 +15,6 @@ import type {
   ManualConfirmStatus,
   ThreatLevel
 } from '@/api/lad/incident/types'
-import { reactive, ref, unref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 
 defineOptions({
@@ -27,6 +27,7 @@ const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({})
 const confirmVisible = ref(false)
 const confirmRow = ref<HistoryEventItem>()
+const delLoading = ref(false)
 
 const setSearchParams = (params: Recordable) => {
   const range = params.discoveredAtRange as string[] | undefined
@@ -37,7 +38,6 @@ const setSearchParams = (params: Recordable) => {
     threatLevel: params.threatLevel,
     handlingStatus: params.handlingStatus,
     manualConfirmStatus: params.manualConfirmStatus,
-    trajectoryFeature: params.trajectoryFeature,
     detectionDevice: params.detectionDevice,
     countermeasureDevice: params.countermeasureDevice,
     handlingResult: params.handlingResult,
@@ -71,29 +71,23 @@ const manualConfirmOptions = [
   { label: '启动反制', value: '启动反制' }
 ]
 
-const trajectoryOptions = [
-  { label: '直线逼近', value: '直线逼近' },
-  { label: '盘旋', value: '盘旋' },
-  { label: '悬停', value: '悬停' },
-  { label: '快速穿越', value: '快速穿越' },
-  { label: '不规则', value: '不规则' }
-]
-
 const countermeasureOptions = [
   { label: '干扰-01 (自动)', value: '干扰-01 (自动)' },
-  { label: '—', value: '—' },
+  { label: '--', value: '--' },
   { label: '诱骗-02', value: '诱骗-02' },
   { label: '干扰-01 (人工)', value: '干扰-01 (人工)' },
   { label: '激光-01 (待命)', value: '激光-01 (待命)' }
 ]
 
 const handlingResultOptions = [
-  { label: '监控跟踪', value: '监控跟踪' },
+  { label: '监视跟踪', value: '监视跟踪' },
   { label: '无线电干扰', value: '无线电干扰' },
   { label: '迫降处置', value: '迫降处置' },
   { label: '告警记录', value: '告警记录' },
   { label: '移交执勤', value: '移交执勤' }
 ]
+
+const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
 
 const filterByTargetId = (targetId: string) => {
   searchParams.value = { ...unref(searchParams), targetId }
@@ -125,8 +119,6 @@ const { getList, getElTableExpose, delList } = tableMethods
 
 getList()
 
-const delLoading = ref(false)
-
 const threatTagType = (level: ThreatLevel) => {
   const map: Record<ThreatLevel, 'danger' | 'warning' | 'success' | 'info'> = {
     高: 'danger',
@@ -148,12 +140,18 @@ const statusTagType = (status: HandlingStatus) => {
   return map[status]
 }
 
-const goDetail = (row: HistoryEventItem) => {
-  push(`/lad/incident/target/${row.id}`)
+const confirmTagType = (status: ManualConfirmStatus) => {
+  const map: Record<ManualConfirmStatus, 'danger' | 'success' | 'warning' | 'info'> = {
+    待人工确认: 'warning',
+    真实入侵: 'danger',
+    '飞鸟/误报': 'success',
+    启动反制: 'info'
+  }
+  return map[status]
 }
 
-const goReplay = (row: HistoryEventItem) => {
-  push({ path: `/lad/incident/target/${row.id}`, query: { tab: 'replay' } })
+const goDetail = (row: HistoryEventItem) => {
+  push(`/lad/incident/target/${row.id}`)
 }
 
 const goUavRegistry = (row: HistoryEventItem) => {
@@ -171,19 +169,9 @@ const onConfirmSuccess = () => {
   getList()
 }
 
-const confirmTagType = (status: ManualConfirmStatus) => {
-  const map: Record<ManualConfirmStatus, 'danger' | 'success' | 'warning' | 'info'> = {
-    待人工确认: 'warning',
-    真实入侵: 'danger',
-    '飞鸟/误报': 'success',
-    启动反制: 'info'
-  }
-  return map[status]
-}
-
 const exportReport = (format: 'word' | 'excel') => {
   const label = format === 'word' ? 'Word' : 'Excel'
-  ElMessage.success(`已生成历史事件${label}报表（演示，未写入文件）`)
+  ElMessage.success(`已生成历史事件 ${label} 报表（演示，未写入文件）`)
 }
 
 const setWhitelist = async (row: HistoryEventItem) => {
@@ -193,21 +181,21 @@ const setWhitelist = async (row: HistoryEventItem) => {
   }
   try {
     await ElMessageBox.confirm(
-      `将无人机 ${row.uavSn}（${row.targetModel}）加入白名单？加入后不再触发告警。`,
+      `将无人机 ${row.uavSn}（${row.targetModel}）加入白名单后，不再触发告警。是否继续？`,
       '设白名单',
       { type: 'info', confirmButtonText: '确定', cancelButtonText: '取消' }
     )
     push({ path: '/lad/list/black-white', query: { sn: row.uavSn, add: 'white' } })
-    ElMessage.success('已跳转黑白名单（演示）')
+    ElMessage.success('已跳转至黑白名单（演示）')
   } catch {
-    /* 取消 */
+    /* user canceled */
   }
 }
 
 const delData = async (row: HistoryEventItem | null) => {
   const elTableExpose = await getElTableExpose()
   const selected = elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined
-  const deleteIds = row ? [row.id] : selected?.map((r) => r.id) || []
+  const deleteIds = row ? [row.id] : selected?.map((item) => item.id) || []
   if (!deleteIds.length) {
     ElMessage.warning('请先勾选要删除的记录')
     return
@@ -227,7 +215,7 @@ const delData = async (row: HistoryEventItem | null) => {
     })
     ElMessage.success('删除成功')
   } catch {
-    /* 用户取消 */
+    /* user canceled */
   }
 }
 
@@ -278,30 +266,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'trajectoryFeature',
-    label: '轨迹特征',
-    minWidth: 100,
-    search: {
-      component: 'Select',
-      colProps: { span: 6 },
-      componentProps: {
-        placeholder: '请选择轨迹特征',
-        style: { width: '100%' },
-        clearable: true,
-        options: trajectoryOptions
-      }
-    },
-    table: {
-      slots: {
-        default: ({ row }: { row: HistoryEventItem }) => (
-          <ElLink type="primary" underline={false} onClick={() => goReplay(row)}>
-            {row.trajectoryFeature}
-          </ElLink>
-        )
-      }
-    }
-  },
-  {
     field: 'handledAt',
     label: '处置时间',
     minWidth: 168,
@@ -318,12 +282,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'endedAt',
     label: '结束时间',
     minWidth: 168,
-    search: { hidden: true }
-  },
-  {
-    field: 'abnormalDuration',
-    label: '异常时长',
-    minWidth: 96,
     search: { hidden: true }
   },
   {
@@ -344,17 +302,10 @@ const crudSchemas = reactive<CrudSchema[]>([
           row.pilotLocation === '未定位' ? (
             <span class="text-[var(--el-text-color-secondary)]">未定位</span>
           ) : (
-            <span title="无线电解析 / TDOA 等推算">{row.pilotLocation}</span>
+            <span>{row.pilotLocation}</span>
           )
       }
     }
-  },
-  {
-    field: 'targetLocation',
-    label: '目标位置',
-    minWidth: 130,
-    search: { hidden: true },
-    table: { showOverflowTooltip: true }
   },
   {
     field: 'targetModel',
@@ -491,13 +442,7 @@ const crudSchemas = reactive<CrudSchema[]>([
         placeholder: '请选择探测设备',
         style: { width: '100%' },
         clearable: true,
-        options: [
-          { label: '雷达-01 (2.4G)', value: '雷达-01 (2.4G)' },
-          { label: '无线电-02', value: '无线电-02' },
-          { label: '雷达-03 (5.8G)', value: '雷达-03 (5.8G)' },
-          { label: '光电-01', value: '光电-01' },
-          { label: '融合节点-A', value: '融合节点-A' }
-        ]
+        options: detectionDevices.map((item) => ({ label: item, value: item }))
       }
     },
     table: { showOverflowTooltip: true }
@@ -571,16 +516,16 @@ const crudSchemas = reactive<CrudSchema[]>([
     detail: { hidden: true },
     table: {
       slots: {
-        default: (data: { row: HistoryEventItem }) => (
+        default: ({ row }: { row: HistoryEventItem }) => (
           <>
-            <BaseButton type="primary" onClick={() => openManualConfirm(data.row)}>
+            <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
               人工确认
             </BaseButton>
-            <BaseButton type="success" onClick={() => goDetail(data.row)}>
+            <BaseButton type="success" onClick={() => goDetail(row)}>
               详情
             </BaseButton>
-            <BaseButton onClick={() => setWhitelist(data.row)}>设白名单</BaseButton>
-            <BaseButton type="danger" onClick={() => delData(data.row)}>
+            <BaseButton onClick={() => setWhitelist(row)}>设白名单</BaseButton>
+            <BaseButton type="danger" onClick={() => delData(row)}>
               删除
             </BaseButton>
           </>
@@ -622,10 +567,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       @register="tableRegister"
     />
 
-    <ManualConfirmDialog
-      v-model="confirmVisible"
-      :row="confirmRow"
-      @success="onConfirmSuccess"
-    />
+    <ManualConfirmDialog v-model="confirmVisible" :row="confirmRow" @success="onConfirmSuccess" />
   </ContentWrap>
 </template>

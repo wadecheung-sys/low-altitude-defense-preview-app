@@ -1,6 +1,6 @@
+import type { RouteMeta } from 'vue-router'
 import { Layout, getParentLayout } from '@/utils/routerHelper'
 import { getLadPageMeta } from './ladRouteMeta'
-import type { RouteMeta } from 'vue-router'
 
 const commandScreenPage = () => import('@/views/Lad/Command/CommandScreen.vue')
 const historyEventPage = () => import('@/views/Lad/Incident/HistoryEvent.vue')
@@ -16,18 +16,16 @@ const deviceRuntimeMonitorPage = () => import('@/views/Lad/Device/DeviceRuntimeM
 const areaListPage = () => import('@/views/Lad/Area/AreaList.vue')
 const areaEditPage = () => import('@/views/Lad/Area/AreaEdit.vue')
 const systemParamsPage = () => import('@/views/Lad/System/SystemParams.vue')
-const systemDiagnosticsPage = () => import('@/views/Lad/System/SystemDiagnostics.vue')
 const dictListPage = () => import('@/views/Lad/System/DictList.vue')
 const dictDetailPage = () => import('@/views/Lad/System/DictDetail.vue')
 const authUserPage = () => import('@/views/Lad/Auth/AuthUser.vue')
 const authPermissionPage = () => import('@/views/Lad/Auth/AuthPermission.vue')
 const authRolePage = () => import('@/views/Lad/Auth/AuthRole.vue')
 const authLogPage = () => import('@/views/Lad/Auth/AuthLog.vue')
-const systemIntegrationPage = () => import('@/views/Lad/Integration/SystemIntegration.vue')
 const threatRuleListPage = () => import('@/views/Lad/Threat/ThreatRuleList.vue')
 const threatSoundAlarmPage = () => import('@/views/Lad/Threat/ThreatSoundAlarm.vue')
 const planStrategyListPage = () => import('@/views/Lad/Plan/PlanStrategyList.vue')
-/** 合并 ladRouteMeta 与路由级 meta（title、hidden 等） */
+
 function ladMeta(pageKey: string, extra: Partial<RouteMeta> = {}): RouteMeta {
   const base = getLadPageMeta(pageKey)
   return {
@@ -369,14 +367,6 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         })
       },
       {
-        path: 'diagnostics',
-        name: 'LadSystemDiagnostics',
-        component: systemDiagnosticsPage,
-        meta: ladMeta('system-diagnostics', {
-          title: '系统自诊断'
-        })
-      },
-      {
         path: 'sound-alarm',
         name: 'LadSystemSoundAlarm',
         component: threatSoundAlarmPage,
@@ -459,27 +449,6 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         component: authLogPage,
         meta: ladMeta('auth-log', {
           title: '日志管理'
-        })
-      }
-    ]
-  },
-  {
-    path: '/lad/integration',
-    component: Layout,
-    redirect: '/lad/integration/index',
-    name: 'LadIntegrationWrap',
-    meta: {
-      title: '系统对接及算法服务',
-      icon: 'vi-ant-design:api-outlined',
-      reqModule: '10'
-    },
-    children: [
-      {
-        path: 'index',
-        name: 'LadIntegration',
-        component: systemIntegrationPage,
-        meta: ladMeta('system-integration', {
-          title: '系统对接及算法服务'
         })
       }
     ]
