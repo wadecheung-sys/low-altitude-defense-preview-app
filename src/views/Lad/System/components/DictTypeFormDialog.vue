@@ -4,14 +4,7 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveDictTypeApi } from '@/api/lad/system'
 import type { DictTypeItem } from '@/api/lad/system/types'
-import {
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElMessage,
-  ElRadio,
-  ElRadioGroup
-} from 'element-plus'
+import { ElForm, ElFormItem, ElInput, ElMessage } from 'element-plus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -34,7 +27,6 @@ const loading = ref(false)
 const form = ref({
   dictCode: '',
   dictName: '',
-  status: 'enabled' as 'enabled' | 'disabled',
   remark: ''
 })
 
@@ -46,11 +38,10 @@ watch(
       form.value = {
         dictCode: props.row.dictCode,
         dictName: props.row.dictName,
-        status: props.row.status,
         remark: props.row.remark || ''
       }
     } else {
-      form.value = { dictCode: '', dictName: '', status: 'enabled', remark: '' }
+      form.value = { dictCode: '', dictName: '', remark: '' }
     }
   }
 )
@@ -66,7 +57,6 @@ async function onSave() {
       id: props.row?.id,
       dictCode: form.value.dictCode.trim(),
       dictName: form.value.dictName.trim(),
-      status: form.value.status,
       remark: form.value.remark.trim() || undefined
     })
     ElMessage.success('保存成功')
@@ -98,12 +88,6 @@ async function onSave() {
       </ElFormItem>
       <ElFormItem label="字典名称" required>
         <ElInput v-model="form.dictName" placeholder="显示名称" clearable />
-      </ElFormItem>
-      <ElFormItem label="状态">
-        <ElRadioGroup v-model="form.status">
-          <ElRadio value="enabled">启用</ElRadio>
-          <ElRadio value="disabled">停用</ElRadio>
-        </ElRadioGroup>
       </ElFormItem>
       <ElFormItem label="备注">
         <ElInput v-model="form.remark" type="textarea" :rows="3" />

@@ -10,7 +10,7 @@ import type { DictEntryItem, DictTypeItem } from '@/api/lad/system/types'
 import DictItemFormDialog from './components/DictItemFormDialog.vue'
 import { computed, onMounted, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElDescriptions, ElDescriptionsItem, ElMessage, ElMessageBox, ElTag } from 'element-plus'
+import { ElDescriptions, ElDescriptionsItem, ElMessage, ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'LadSystemDictDetail' })
 
@@ -24,13 +24,8 @@ const formVisible = ref(false)
 const formRow = ref<DictEntryItem>()
 const ids = ref<string[]>([])
 
-const statusOptions = [
-  { label: '启用', value: 'enabled' },
-  { label: '停用', value: 'disabled' }
-]
-
 const setSearchParams = (params: Recordable) => {
-  searchParams.value = { label: params.label, status: params.status }
+  searchParams.value = { label: params.label }
   currentPage.value = 1
   getList()
 }
@@ -135,24 +130,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { width: 80, align: 'center' }
   },
   {
-    field: 'status',
-    label: '状态',
-    search: {
-      component: 'Select',
-      componentProps: { options: statusOptions, clearable: true }
-    },
-    table: {
-      width: 90,
-      slots: {
-        default: (data: { row: DictEntryItem }) => (
-          <ElTag type={data.row.status === 'enabled' ? 'success' : 'info'}>
-            {data.row.status === 'enabled' ? '启用' : '停用'}
-          </ElTag>
-        )
-      }
-    }
-  },
-  {
     field: 'remark',
     label: '备注',
     search: { hidden: true },
@@ -194,15 +171,10 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <div class="lad-dict-detail__head">
       <BaseButton @click="goBack">返回列表</BaseButton>
-      <ElDescriptions v-if="dictType" :column="3" border class="lad-dict-detail__desc">
+      <ElDescriptions v-if="dictType" :column="2" border class="lad-dict-detail__desc">
         <ElDescriptionsItem label="字典编码">{{ dictType.dictCode }}</ElDescriptionsItem>
         <ElDescriptionsItem label="字典名称">{{ dictType.dictName }}</ElDescriptionsItem>
-        <ElDescriptionsItem label="状态">
-          <ElTag :type="dictType.status === 'enabled' ? 'success' : 'info'">
-            {{ dictType.status === 'enabled' ? '启用' : '停用' }}
-          </ElTag>
-        </ElDescriptionsItem>
-        <ElDescriptionsItem v-if="dictType.remark" label="备注" :span="3">
+        <ElDescriptionsItem v-if="dictType.remark" label="备注" :span="2">
           {{ dictType.remark }}
         </ElDescriptionsItem>
       </ElDescriptions>

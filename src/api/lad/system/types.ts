@@ -35,7 +35,6 @@ export interface DictTypeItem {
   id: string
   dictCode: string
   dictName: string
-  status: 'enabled' | 'disabled'
   remark?: string
   itemCount: number
   updatedAt: string
@@ -47,7 +46,6 @@ export interface DictEntryItem {
   label: string
   value: string
   sort: number
-  status: 'enabled' | 'disabled'
   remark?: string
   updatedAt: string
 }
@@ -57,7 +55,6 @@ export interface DictTypeQuery {
   pageSize?: number
   dictCode?: string
   dictName?: string
-  status?: 'enabled' | 'disabled' | ''
 }
 
 export interface DictTypeListResult {
@@ -69,7 +66,6 @@ export interface DictTypeSavePayload {
   id?: string
   dictCode: string
   dictName: string
-  status: 'enabled' | 'disabled'
   remark?: string
 }
 
@@ -78,7 +74,6 @@ export interface DictEntryQuery {
   pageIndex?: number
   pageSize?: number
   label?: string
-  status?: 'enabled' | 'disabled' | ''
 }
 
 export interface DictEntryListResult {
@@ -93,6 +88,5 @@ export interface DictEntrySavePayload {
   label: string
   value: string
   sort: number
-  status: 'enabled' | 'disabled'
   remark?: string
 }

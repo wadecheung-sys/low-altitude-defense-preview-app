@@ -20,7 +20,6 @@ const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({})
 
 const setSearchParams = (params: Recordable) => {
-  const range = params.lastHeartbeatRange as string[] | undefined
   searchParams.value = {
     deviceId: params.deviceId,
     deviceName: params.deviceName,
@@ -28,9 +27,7 @@ const setSearchParams = (params: Recordable) => {
     deployLocation: params.deployLocation,
     ipAddress: params.ipAddress,
     serialNo: params.serialNo,
-    personInCharge: params.personInCharge,
-    lastHeartbeatStart: range?.[0],
-    lastHeartbeatEnd: range?.[1]
+    personInCharge: params.personInCharge
   }
   currentPage.value = 1
   getList()
@@ -200,22 +197,6 @@ const crudSchemas = reactive<CrudSchema[]>([
       componentProps: { placeholder: '请输入序列号', style: { width: '100%' } }
     },
     table: { showOverflowTooltip: true }
-  },
-  {
-    field: 'lastHeartbeatRange',
-    label: '最后心跳',
-    search: {
-      component: 'DatePicker',
-      colProps: DEVICE_INFO_SEARCH_COL,
-      componentProps: {
-        type: 'daterange',
-        valueFormat: 'YYYY-MM-DD',
-        startPlaceholder: '开始日期',
-        endPlaceholder: '结束日期',
-        style: { width: '100%' }
-      }
-    },
-    table: { hidden: true }
   },
   {
     field: 'personInCharge',

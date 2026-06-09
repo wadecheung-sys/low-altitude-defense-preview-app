@@ -96,7 +96,6 @@ const form = reactive({
   archiveId: '',
   serialNo: '',
   deviceType: '',
-  lastHeartbeat: '',
   deployLocation: '',
   deployAddress: '',
   personInCharge: '',
@@ -144,7 +143,6 @@ function applyDetail(data: DeviceInfoDetail) {
   form.archiveId = data.archiveId || ''
   form.serialNo = data.serialNo
   form.deviceType = data.deviceType
-  form.lastHeartbeat = data.lastHeartbeat
   form.deployLocation = data.deployLocation
   form.deployAddress = data.deployAddress
   form.personInCharge = data.personInCharge
@@ -162,7 +160,6 @@ function resetCreate() {
   form.archiveId = ''
   form.serialNo = ''
   form.deviceType = '无线电干扰'
-  form.lastHeartbeat = ''
   form.deployLocation = ''
   form.deployAddress = ''
   form.personInCharge = ''
@@ -428,9 +425,6 @@ watch(
               {{ linkedArchive.archiveNo }} / {{ linkedArchive.deviceModel }}
             </span>
           </ElFormItem>
-          <ElFormItem v-if="!isCreateMode" label="最后心跳">
-            <ElInput v-model="form.lastHeartbeat" disabled />
-          </ElFormItem>
           <ElFormItem label="部署位置" prop="deployLocation" required>
             <ElInput v-model="form.deployLocation" placeholder="如：楼顶 A 区" clearable />
           </ElFormItem>
@@ -527,7 +521,7 @@ watch(
           :device-name="form.deviceName"
           :device-type="form.deviceType"
           :device-code="form.serialNo"
-          :online="!!form.lastHeartbeat"
+          :online="!!detail?.lastHeartbeat"
         />
       </section>
     </div>
