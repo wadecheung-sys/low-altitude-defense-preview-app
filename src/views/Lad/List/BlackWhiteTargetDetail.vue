@@ -14,6 +14,7 @@ import { Table } from '@/components/Table'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import {
+  ElAlert,
   ElDatePicker,
   ElDescriptions,
   ElDescriptionsItem,
@@ -25,7 +26,7 @@ import {
   ElSelect,
   ElTag
 } from 'element-plus'
-import { computed, onMounted, reactive, ref, unref, watch } from 'vue'
+import { computed, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 defineOptions({
@@ -33,10 +34,11 @@ defineOptions({
 })
 
 const route = useRoute()
-const { push, go } = useRouter()
+const { push } = useRouter()
 
 const loading = ref(true)
 const detail = ref<BlackWhiteTargetDetail | null>(null)
+const loadError = ref('')
 
 const recordId = computed(() => route.params.id as string)
 
@@ -96,10 +98,20 @@ function disposalDetailText(row: BlackWhiteTargetDetail): string {
 }
 
 const fetchDetail = async () => {
+  if (!recordId.value) {
+    detail.value = null
+    loadError.value = '缺少目标标识，无法加载详情'
+    loading.value = false
+    return
+  }
   loading.value = true
+  loadError.value = ''
   try {
     const res = await getBlackWhiteDetailApi(recordId.value)
     detail.value = res.data
+  } catch (error) {
+    detail.value = null
+    loadError.value = error instanceof Error ? error.message : '详情加载失败，请返回列表重试'
   } finally {
     loading.value = false
   }
@@ -296,15 +308,19 @@ const crudSchemas = reactive<CrudSchema[]>([
 
 const { allSchemas } = useCrudSchemas(crudSchemas)
 
-onMounted(async () => {
-  await fetchDetail()
-})
+watch(
+  recordId,
+  () => {
+    fetchDetail()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
   <ContentDetailWrap v-loading="loading" title="">
     <template #header>
-      <BaseButton @click="go(-1)">返回</BaseButton>
+      <BaseButton @click="goBackList">返回列表</BaseButton>
     </template>
 
     <template v-if="detail">
@@ -323,9 +339,7 @@ onMounted(async () => {
                 {{ detail.listType }}
               </ElTag>
             </div>
-            <p class="target-detail-profile__hint">
-              设备标识与名单建档信息，不随单次飞行变化。
-            </p>
+            <p class="target-detail-profile__hint"> 设备标识与名单建档信息，不随单次飞行变化。 </p>
             <ElDescriptions
               :column="2"
               border
@@ -342,7 +356,12 @@ onMounted(async () => {
               <ElDescriptionsItem label="录入方式">{{ detail.entryMethod }}</ElDescriptionsItem>
 
               <ElDescriptionsItem label="有效期至">
-                <ElTag v-if="detail.validUntil === '永久'" type="success" size="small" effect="light">
+                <ElTag
+                  v-if="detail.validUntil === '永久'"
+                  type="success"
+                  size="small"
+                  effect="light"
+                >
                   永久
                 </ElTag>
                 <span v-else>{{ detail.validUntil }}</span>
@@ -399,10 +418,7 @@ onMounted(async () => {
               </template>
               <template v-else>
                 {{ detail.pilotLocation }}
-                <span
-                  v-if="detail.pilotConfidence !== '—'"
-                  class="target-detail-events__cell-sub"
-                >
+                <span v-if="detail.pilotConfidence !== '—'" class="target-detail-events__cell-sub">
                   置信度 {{ detail.pilotConfidence }}
                 </span>
                 <span
@@ -417,9 +433,7 @@ onMounted(async () => {
             <ElDescriptionsItem label="处置说明" :span="2">
               <span
                 :class="
-                  detail.handlingStatus === '待处置'
-                    ? 'text-[var(--el-text-color-secondary)]'
-                    : ''
+                  detail.handlingStatus === '待处置' ? 'text-[var(--el-text-color-secondary)]' : ''
                 "
               >
                 {{ disposalDetailText(detail) }}
@@ -510,6 +524,8 @@ onMounted(async () => {
         />
       </ContentWrap>
     </template>
+
+    <ElAlert v-else-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
   </ContentDetailWrap>
 </template>
 

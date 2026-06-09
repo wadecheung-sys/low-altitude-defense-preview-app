@@ -19,14 +19,15 @@ import { reactive, ref } from 'vue'
 defineOptions({ name: 'LadSystemSoundAlarm' })
 
 type AlarmLevel = '低' | '中' | '高'
+type AlarmAudioMode = '无' | '蜂鸣' | '连续蜂鸣' | '汽笛' | '语音警示'
+type AlarmLightMode = '无' | '闪烁' | '连续' | '频闪'
 
 interface AlarmAudioRow {
   id: string
   level: AlarmLevel
   tagColor: string
-  soundEnabled: boolean
-  lightEnabled: boolean
-  pattern: string
+  audioMode: AlarmAudioMode
+  lightMode: AlarmLightMode
 }
 
 const rows = ref<AlarmAudioRow[]>([
@@ -34,34 +35,33 @@ const rows = ref<AlarmAudioRow[]>([
     id: 'za-low',
     level: '低',
     tagColor: '#67c23a',
-    soundEnabled: true,
-    lightEnabled: false,
-    pattern: '标准声光'
+    audioMode: '无',
+    lightMode: '闪烁'
   },
   {
     id: 'za-middle',
     level: '中',
     tagColor: '#e6a23c',
-    soundEnabled: true,
-    lightEnabled: true,
-    pattern: '间歇蜂鸣'
+    audioMode: '蜂鸣',
+    lightMode: '闪烁'
   },
   {
     id: 'za-high',
     level: '高',
     tagColor: '#f56c6c',
-    soundEnabled: true,
-    lightEnabled: true,
-    pattern: '紧急告警'
+    audioMode: '汽笛',
+    lightMode: '频闪'
   }
 ])
 
 const globalForm = reactive({
   masterSwitch: true,
-  defaultPattern: '标准声光'
+  defaultAudioMode: '蜂鸣' as AlarmAudioMode,
+  defaultLightMode: '闪烁' as AlarmLightMode
 })
 
-const patternOptions = ['标准声光', '连续声光', '间歇蜂鸣', '紧急告警', '静默闪光']
+const audioModeOptions: AlarmAudioMode[] = ['无', '蜂鸣', '连续蜂鸣', '汽笛', '语音警示']
+const lightModeOptions: AlarmLightMode[] = ['无', '闪烁', '连续', '频闪']
 
 const editVisible = ref(false)
 const editForm = reactive({
@@ -96,7 +96,9 @@ function submitEdit() {
 }
 
 function testAlarm(row: AlarmAudioRow) {
-  ElMessage.info(`已向“${row.level}”级别下发试鸣指令（演示）`)
+  ElMessage.info(
+    `已向“${row.level}”级别下发联调指令（音频：${row.audioMode}，灯光：${row.lightMode}）`
+  )
 }
 </script>
 
@@ -107,8 +109,13 @@ function testAlarm(row: AlarmAudioRow) {
         <ElSwitch v-model="globalForm.masterSwitch" />
       </ElFormItem>
       <ElFormItem label="默认告警音频">
-        <ElSelect v-model="globalForm.defaultPattern" style="width: 160px">
-          <ElOption v-for="item in patternOptions" :key="item" :label="item" :value="item" />
+        <ElSelect v-model="globalForm.defaultAudioMode" style="width: 160px">
+          <ElOption v-for="item in audioModeOptions" :key="item" :label="item" :value="item" />
+        </ElSelect>
+      </ElFormItem>
+      <ElFormItem label="默认灯光模式">
+        <ElSelect v-model="globalForm.defaultLightMode" style="width: 160px">
+          <ElOption v-for="item in lightModeOptions" :key="item" :label="item" :value="item" />
         </ElSelect>
       </ElFormItem>
       <ElFormItem>
@@ -130,20 +137,17 @@ function testAlarm(row: AlarmAudioRow) {
           ></span>
         </template>
       </ElTableColumn>
-      <ElTableColumn label="声音" width="80">
+      <ElTableColumn label="报警音频" min-width="160">
         <template #default="{ row }">
-          <ElSwitch v-model="row.soundEnabled" size="small" />
+          <ElSelect v-model="row.audioMode" size="small" style="width: 140px">
+            <ElOption v-for="item in audioModeOptions" :key="item" :label="item" :value="item" />
+          </ElSelect>
         </template>
       </ElTableColumn>
-      <ElTableColumn label="灯光" width="80">
+      <ElTableColumn label="灯光" min-width="140">
         <template #default="{ row }">
-          <ElSwitch v-model="row.lightEnabled" size="small" />
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="告警音频" min-width="160">
-        <template #default="{ row }">
-          <ElSelect v-model="row.pattern" size="small" style="width: 140px">
-            <ElOption v-for="item in patternOptions" :key="item" :label="item" :value="item" />
+          <ElSelect v-model="row.lightMode" size="small" style="width: 120px">
+            <ElOption v-for="item in lightModeOptions" :key="item" :label="item" :value="item" />
           </ElSelect>
         </template>
       </ElTableColumn>
