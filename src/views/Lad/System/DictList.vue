@@ -10,7 +10,7 @@ import type { DictTypeItem } from '@/api/lad/system/types'
 import DictTypeFormDialog from './components/DictTypeFormDialog.vue'
 import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
+import { ElLink, ElMessage, ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'LadSystemDictList' })
 
@@ -19,16 +19,10 @@ const searchParams = ref<Recordable>({})
 const formVisible = ref(false)
 const formRow = ref<DictTypeItem>()
 
-const statusOptions = [
-  { label: '启用', value: 'enabled' },
-  { label: '停用', value: 'disabled' }
-]
-
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
     dictCode: params.dictCode,
-    dictName: params.dictName,
-    status: params.status
+    dictName: params.dictName
   }
   currentPage.value = 1
   getList()
@@ -100,24 +94,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '条目数',
     search: { hidden: true },
     table: { width: 90, align: 'center' }
-  },
-  {
-    field: 'status',
-    label: '状态',
-    search: {
-      component: 'Select',
-      componentProps: { options: statusOptions, clearable: true }
-    },
-    table: {
-      width: 90,
-      slots: {
-        default: (data: { row: DictTypeItem }) => (
-          <ElTag type={data.row.status === 'enabled' ? 'success' : 'info'}>
-            {data.row.status === 'enabled' ? '启用' : '停用'}
-          </ElTag>
-        )
-      }
-    }
   },
   {
     field: 'remark',

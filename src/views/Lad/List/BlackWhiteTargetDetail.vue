@@ -89,14 +89,6 @@ const statusLabel = (status: HandlingStatus) => {
   return status
 }
 
-/** 待处置时尚无处置记录，说明为「未处置」或留空 */
-function disposalDetailText(row: BlackWhiteTargetDetail): string {
-  if (row.handlingStatus === '待处置') {
-    return row.disposalDetail?.trim() || '未处置'
-  }
-  return row.disposalDetail?.trim() || '—'
-}
-
 const fetchDetail = async () => {
   if (!recordId.value) {
     detail.value = null
@@ -385,63 +377,8 @@ watch(
       <ContentWrap
         class="target-detail-events"
         title="历史事件信息"
-        message="上方为最近一次探测摘要，下方表格为全部飞行记录明细。"
+        message="下方表格为全部飞行记录明细。"
       >
-        <section class="target-detail-events__snapshot">
-          <div class="target-detail-events__snapshot-title">最近一次探测</div>
-          <ElDescriptions
-            :column="2"
-            border
-            size="small"
-            label-width="128px"
-            class="target-detail-descriptions target-detail-events__snapshot-table"
-          >
-            <ElDescriptionsItem label="探测时间">
-              {{ detail.lastObservedAt || detail.updatedAt }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="威胁等级">
-              <ElTag :type="threatTagType(detail.threatLevel)" size="small" effect="light">
-                {{ detail.threatLevel }}
-              </ElTag>
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="处置状态">
-              {{ statusLabel(detail.handlingStatus) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="所在区域">{{ detail.zoneName }}</ElDescriptionsItem>
-
-            <ElDescriptionsItem label="无人机最后位置" :span="2">
-              {{ detail.lastPosition }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="飞手最后已知位置" :span="2">
-              <template v-if="detail.pilotLocation === '未定位'">
-                <span class="text-[var(--el-text-color-secondary)]">未定位</span>
-              </template>
-              <template v-else>
-                {{ detail.pilotLocation }}
-                <span v-if="detail.pilotConfidence !== '—'" class="target-detail-events__cell-sub">
-                  置信度 {{ detail.pilotConfidence }}
-                </span>
-                <span
-                  v-if="detail.pilotLocatedAt && detail.pilotLocatedAt !== '—'"
-                  class="target-detail-events__cell-sub"
-                >
-                  推算 {{ detail.pilotLocatedAt }}
-                </span>
-              </template>
-            </ElDescriptionsItem>
-
-            <ElDescriptionsItem label="处置说明" :span="2">
-              <span
-                :class="
-                  detail.handlingStatus === '待处置' ? 'text-[var(--el-text-color-secondary)]' : ''
-                "
-              >
-                {{ disposalDetailText(detail) }}
-              </span>
-            </ElDescriptionsItem>
-          </ElDescriptions>
-        </section>
-
         <div class="target-detail-events__list-head">全部历史记录</div>
         <div class="target-detail-events__toolbar mb-10px">
           <ElForm inline class="target-detail-events__filters">
@@ -602,29 +539,6 @@ watch(
 }
 
 .target-detail-events {
-  &__snapshot {
-    margin-bottom: 12px;
-  }
-
-  &__snapshot-title {
-    margin-bottom: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-  }
-
-  &__snapshot-table {
-    width: 100%;
-    margin-bottom: 0;
-  }
-
-  &__cell-sub {
-    display: block;
-    margin-top: 4px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-
   &__list-head {
     margin: 0 0 12px;
     font-size: 13px;

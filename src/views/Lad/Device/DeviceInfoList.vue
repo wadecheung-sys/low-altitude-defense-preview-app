@@ -218,13 +218,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { hidden: true }
   },
   {
-    field: 'lastHeartbeat',
-    label: '最后心跳',
-    minWidth: 168,
-    search: { hidden: true },
-    table: { showOverflowTooltip: true }
-  },
-  {
     field: 'personInCharge',
     label: '负责人',
     minWidth: 100,
