@@ -46,6 +46,8 @@ export interface DeviceInfoListResult {
 
 /** 设备部署与 GIS 扩展信息 */
 export interface DeviceInfoDeployment {
+  /** 设备实拍图；为空时由界面展示雷达语义占位符 */
+  imageUrl: string
   /** 详细部署地址（补充 deployLocation） */
   deployAddress: string
   longitude: number
@@ -112,6 +114,7 @@ export interface DeviceInfoSavePayload {
   mapX?: number
   mapY?: number
   deviceIcon?: string
+  imageUrl?: string
   controlRangeM?: number
   remark?: string
   extendedFields?: DeviceExtendedField[]

@@ -6,20 +6,10 @@ import { simulateThreatApi } from '@/api/lad/threat'
 import { SWARM_TARGET_TYPE } from '@/api/lad/threat/threatSwarm'
 import type { ThreatSimulateResult } from '@/api/lad/threat/types'
 import { UI } from '../threatConstants'
-import {
-  dictEntriesToOptions,
-  LAD_DICT_AREA_REGION_TYPE
-} from '../../shared/ladDictHelpers'
+import { dictEntriesToOptions, LAD_DICT_AREA_REGION_TYPE } from '../../shared/ladDictHelpers'
 import { useLadDictOptions } from '../../shared/useLadDictOptions'
 import { targetTypeOptions, weatherOptions } from '../../shared/ladOptionConstants'
-import {
-  ElAlert,
-  ElForm,
-  ElFormItem,
-  ElInputNumber,
-  ElOption,
-  ElSelect
-} from 'element-plus'
+import { ElAlert, ElForm, ElFormItem, ElInputNumber, ElOption, ElSelect } from 'element-plus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -154,7 +144,8 @@ async function onRun() {
         {{ UI.triggerPlan }}{{ colon }}{{ result.planName }}（{{ result.planCode }}）
       </p>
       <p v-if="result.matched && result.planDeviceType" class="text-13px">
-        {{ UI.detailDeviceType }}{{ colon }}{{ result.planDeviceType }} / {{ result.planDeviceFunction }}
+        {{ UI.detailDeviceType }}{{ colon }}{{ result.planDeviceType }} /
+        {{ result.planDeviceFunction }}
       </p>
     </ElAlert>
     <template #footer>

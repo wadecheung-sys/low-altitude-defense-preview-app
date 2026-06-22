@@ -19,6 +19,7 @@ interface DeviceInfoExt extends DeviceInfoDeployment {
 
 const DEFAULT_EXT: DeviceInfoExt = {
   remark: '',
+  imageUrl: '',
   deployAddress: '',
   longitude: 116.397128,
   latitude: 39.916527,
@@ -79,6 +80,7 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
   const o = offsets[index % offsets.length]
   return {
     remark: '',
+    imageUrl: '',
     deployAddress: `${row.deployLocation} · 园区坐标已标绘`,
     longitude: o.lng,
     latitude: o.lat,
@@ -113,6 +115,7 @@ function mergeExt(body: DeviceInfoSavePayload, prev?: DeviceInfoExt): DeviceInfo
     []
   return {
     remark: body.remark ?? prev?.remark ?? '',
+    imageUrl: body.imageUrl ?? prev?.imageUrl ?? '',
     deployAddress: body.deployAddress?.trim() ?? prev?.deployAddress ?? '',
     longitude: body.longitude ?? prev?.longitude ?? DEFAULT_EXT.longitude,
     latitude: body.latitude ?? prev?.latitude ?? DEFAULT_EXT.latitude,

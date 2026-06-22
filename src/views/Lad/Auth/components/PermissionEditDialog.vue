@@ -5,14 +5,7 @@ import { BaseButton } from '@/components/Button'
 import { saveAuthPermissionApi } from '@/api/lad/auth'
 import type { AuthPermissionNode } from '@/api/lad/auth/types'
 import { permTypeLabel, statusOptions } from '../authConstants'
-import {
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElMessage,
-  ElRadio,
-  ElRadioGroup
-} from 'element-plus'
+import { ElForm, ElFormItem, ElInput, ElMessage, ElRadio, ElRadioGroup } from 'element-plus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -81,7 +74,9 @@ async function onSave() {
       </ElFormItem>
       <ElFormItem label="状态">
         <ElRadioGroup v-model="status">
-          <ElRadio v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</ElRadio>
+          <ElRadio v-for="o in statusOptions" :key="o.value" :value="o.value">{{
+            o.label
+          }}</ElRadio>
         </ElRadioGroup>
       </ElFormItem>
     </ElForm>

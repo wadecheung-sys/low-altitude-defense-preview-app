@@ -129,9 +129,11 @@ onMounted(async () => {
             <ElDescriptionsItem label="SN 码">{{ detail.uavSn }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="发现时间">{{ detail.discoveredAt }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="结束时间">{{ detail.endedAt }}</ElDescriptionsItem>
             <ElDescriptionsItem label="处置时间">
               {{ detail.handledAt === '--' ? '--' : detail.handledAt }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="当前状态">
+              {{ statusLabel(detail.handlingStatus) }}
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="威胁等级">
@@ -139,40 +141,34 @@ onMounted(async () => {
                 {{ detail.threatLevel }}
               </ElTag>
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="当前状态">
-              {{ statusLabel(detail.handlingStatus) }}
+            <ElDescriptionsItem label="人工确认">
+              {{ detail.manualConfirmStatus }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="人工确认">{{
-              detail.manualConfirmStatus
-            }}</ElDescriptionsItem>
-
             <ElDescriptionsItem label="最新高度">
               {{ lastAltitude }}
             </ElDescriptionsItem>
+
             <ElDescriptionsItem label="飞手位置">
               <template v-if="detail.pilotLocation === '未定位'">未定位</template>
               <template v-else>
                 {{ detail.pilotLocation }}
                 <span v-if="detail.pilotConfidence !== '--'" class="detail-info__confidence">
-                  置信度 {{ detail.pilotConfidence }}
+                  置信度：{{ detail.pilotConfidence }}
                 </span>
               </template>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="区域">{{ detail.zoneName }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="持续时长">{{ detail.duration }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="频率信息">{{ detail.frequencyInfo }}</ElDescriptionsItem>
             <ElDescriptionsItem label="目标类型">{{ detail.targetType }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="持续时长">{{ detail.duration }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="处置结果">{{ detail.handlingResult }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="探测设备">{{ detail.detectionDevice }}</ElDescriptionsItem>
             <ElDescriptionsItem label="反制设备">{{
               detail.countermeasureDevice
             }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="处置结果">{{ detail.handlingResult }}</ElDescriptionsItem>
-
-            <ElDescriptionsItem label="处置详情" :span="3">
-              {{ detail.disposalDetail }}
-            </ElDescriptionsItem>
+            <ElDescriptionsItem label="处置详情">{{ detail.disposalDetail }}</ElDescriptionsItem>
 
             <ElDescriptionsItem v-if="detail.relatedEventCount > 1" label="关联事件">
               同目标共 {{ detail.relatedEventCount }} 条飞行记录
@@ -191,7 +187,13 @@ onMounted(async () => {
       <section v-if="detail.disposalTimeline?.length" class="detail-timeline-section">
         <div class="detail-timeline-section__title">设备处置时间链</div>
         <p class="detail-timeline-section__hint">
-          从设备发现、威胁识别、评估、处置执行到结果归档的全过程记录。
+          {{
+            detail.handlingStatus === '待处置'
+              ? '当前处于威胁评估阶段，后续节点将在实际发生后展示。'
+              : detail.handlingStatus === '处置中'
+                ? '当前处置指令正在执行，结果节点将在设备回传后展示。'
+                : '从设备发现、威胁识别、评估、人工确认、处置执行到结果归档的全过程记录。'
+          }}
         </p>
         <DisposalTimelinePanel :nodes="detail.disposalTimeline" />
       </section>

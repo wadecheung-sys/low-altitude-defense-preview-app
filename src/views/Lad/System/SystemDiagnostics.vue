@@ -16,13 +16,43 @@ interface DiagItem {
 const checking = ref(false)
 const items = ref<DiagItem[]>([
   { module: '数据库连接', status: 'ok', message: '连接池正常', checkedAt: '2026-05-20 14:00:00' },
-  { module: '消息队列', status: 'ok', message: '消费延迟 < 50ms', checkedAt: '2026-05-20 14:00:00' },
-  { module: '雷达接入网关', status: 'ok', message: '3/3 节点在线', checkedAt: '2026-05-20 14:00:01' },
-  { module: '无线电侦测', status: 'warn', message: '1 路心跳超时', checkedAt: '2026-05-20 14:00:01' },
-  { module: '反制指令通道', status: 'ok', message: 'TCP 通道可用', checkedAt: '2026-05-20 14:00:02' },
-  { module: '光电流媒体', status: 'ok', message: 'RTSP 转码正常', checkedAt: '2026-05-20 14:00:02' },
+  {
+    module: '消息队列',
+    status: 'ok',
+    message: '消费延迟 < 50ms',
+    checkedAt: '2026-05-20 14:00:00'
+  },
+  {
+    module: '雷达接入网关',
+    status: 'ok',
+    message: '3/3 节点在线',
+    checkedAt: '2026-05-20 14:00:01'
+  },
+  {
+    module: '无线电侦测',
+    status: 'warn',
+    message: '1 路心跳超时',
+    checkedAt: '2026-05-20 14:00:01'
+  },
+  {
+    module: '反制指令通道',
+    status: 'ok',
+    message: 'TCP 通道可用',
+    checkedAt: '2026-05-20 14:00:02'
+  },
+  {
+    module: '光电流媒体',
+    status: 'ok',
+    message: 'RTSP 转码正常',
+    checkedAt: '2026-05-20 14:00:02'
+  },
   { module: '授时同步', status: 'ok', message: 'NTP 偏差 8ms', checkedAt: '2026-05-20 14:00:03' },
-  { module: '磁盘空间', status: 'warn', message: '数据分区使用率 78%', checkedAt: '2026-05-20 14:00:03' }
+  {
+    module: '磁盘空间',
+    status: 'warn',
+    message: '数据分区使用率 78%',
+    checkedAt: '2026-05-20 14:00:03'
+  }
 ])
 
 const healthPercent = ref(92)
@@ -57,9 +87,7 @@ async function runCheck() {
   <ContentWrap title="系统自诊断">
     <div class="system-diagnostics__head">
       <div>
-        <p class="system-diagnostics__hint">
-          一键检测各子系统与服务健康状态。
-        </p>
+        <p class="system-diagnostics__hint"> 一键检测各子系统与服务健康状态。 </p>
         <ElProgress :percentage="healthPercent" :stroke-width="14" />
       </div>
       <BaseButton type="primary" :loading="checking" @click="runCheck">立即诊断</BaseButton>

@@ -115,9 +115,7 @@ export function buildAreaPaintItems(
         shape: { ...shape, color: shape.color || region.color },
         fillColor: tintFill(region.color, alpha),
         holes,
-        highlight: options.highlightRegionId
-          ? region.regionId === options.highlightRegionId
-          : false
+        highlight: options.highlightRegionId ? region.regionId === options.highlightRegionId : false
       })
     })
   })

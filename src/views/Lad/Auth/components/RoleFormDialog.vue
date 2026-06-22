@@ -109,7 +109,9 @@ async function onSave() {
       </ElFormItem>
       <ElFormItem label="状态">
         <ElRadioGroup v-model="form.status" :disabled="builtin">
-          <ElRadio v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</ElRadio>
+          <ElRadio v-for="o in statusOptions" :key="o.value" :value="o.value">{{
+            o.label
+          }}</ElRadio>
         </ElRadioGroup>
       </ElFormItem>
       <ElFormItem label="备注">

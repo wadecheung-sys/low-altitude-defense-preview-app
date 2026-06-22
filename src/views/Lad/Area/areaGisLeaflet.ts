@@ -15,9 +15,7 @@ export function sortPaintItemsForMapStack(items: AreaPaintItem[]): AreaPaintItem
 }
 
 function holeRings(holes: AreaShape[]): [number, number][][] {
-  return holes
-    .map((h) => shapeToLatLngRing(h))
-    .filter((r) => r.length >= 3)
+  return holes.map((h) => shapeToLatLngRing(h)).filter((r) => r.length >= 3)
 }
 
 function fillFromItem(item: AreaPaintItem) {
@@ -124,14 +122,11 @@ export function createAreaGisMap(container: HTMLElement): {
       attribution: 'GeoQ'
     }
   )
-  const carto = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {
-      maxZoom: 20,
-      subdomains: 'abcd',
-      attribution: '&copy; CARTO'
-    }
-  )
+  const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    subdomains: 'abcd',
+    attribution: '&copy; CARTO'
+  })
 
   geoq.addTo(map)
   geoq.on('tileerror', () => {

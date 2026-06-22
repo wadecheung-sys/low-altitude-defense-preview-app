@@ -2,7 +2,7 @@ export type ThreatLevel = '高' | '中' | '低' | '未知'
 
 export type HandlingStatus = '待处置' | '处置中' | '已处置' | '已关闭' | '仅记录'
 
-export type ManualConfirmResult = '真实入侵' | '飞鸟/误报' | '启动反制'
+export type ManualConfirmResult = '真实入侵' | '躁扰告警'
 
 export type ManualConfirmStatus = '待人工确认' | ManualConfirmResult
 
@@ -28,6 +28,7 @@ export interface HistoryEventItem {
   handlingResult: string
   handlingStatus: HandlingStatus
   manualConfirmStatus: ManualConfirmStatus
+  listType: '黑名单' | '白名单' | '未知'
   remark: string
 }
 
@@ -59,7 +60,14 @@ export interface HistoryEventListResult {
 export interface ManualConfirmPayload {
   id: string
   result: ManualConfirmResult
+  threatLevel?: ThreatLevel
+  nuisanceType?: string
   remark?: string
+}
+
+export interface HistoryEventListTypePayload {
+  ids: string[]
+  listType: '黑名单' | '白名单'
 }
 
 export interface TrajectoryPoint {

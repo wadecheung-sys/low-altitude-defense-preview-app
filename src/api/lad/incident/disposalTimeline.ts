@@ -72,6 +72,9 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
           : 5
 
   const lastDone = pending - 1
+  const confirmDetail = row.remark?.trim() ? `；人工确认备注：${row.remark}` : ''
+  const confirmTag =
+    row.manualConfirmStatus === '待人工确认' ? '待确认' : `人工确认：${row.manualConfirmStatus}`
 
   const nodes: Omit<DisposalTimelineNode, 'status'>[] = [
     {
@@ -97,9 +100,12 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
       key: 'assess',
       title: '威胁评估',
       time: assessAt,
-      summary: '威胁规则命中，联动预案策略',
-      detail: `人工确认：${row.manualConfirmStatus}；建议处置：${row.handlingResult}`,
-      tags: ['规则引擎', row.manualConfirmStatus === '待人工确认' ? '待确认' : '已确认']
+      summary:
+        row.manualConfirmStatus === '待人工确认'
+          ? '威胁规则命中，待值守人员人工确认'
+          : `人工确认完成，结论为“${row.manualConfirmStatus}”`,
+      detail: `建议处置：${row.handlingResult}${confirmDetail}`,
+      tags: ['规则引擎', confirmTag]
     },
     {
       key: 'dispose',
@@ -110,9 +116,11 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
           ? '持续监视，未下发反制'
           : `已下发处置：${row.countermeasureDevice}`,
       detail:
-        row.handlingStatus === '处置中'
-          ? '处置指令已下发，正在执行中'
-          : `处置方式：${row.handlingResult}`,
+        row.manualConfirmStatus === '真实入侵' && row.countermeasureDevice !== '--'
+          ? `人工确认真实入侵后联动反制设备；执行结果：${row.handlingResult}${confirmDetail}`
+          : row.handlingStatus === '处置中'
+            ? '处置指令已下发，正在执行中'
+            : `设备执行结果：${row.handlingResult}${confirmDetail}`,
       tags: [row.handlingStatus, row.countermeasureDevice !== '--' ? '反制' : '监视']
     },
     {
@@ -120,15 +128,21 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
       title: '处置结果',
       time: ended,
       summary: `${row.handlingResult}；状态：${row.handlingStatus}`,
-      detail: row.remark || '目标已脱离管控空域或事件归档',
-      tags: [row.handlingResult]
+      detail:
+        row.manualConfirmStatus === '待人工确认'
+          ? row.remark || '等待人工确认或后续归档。'
+          : row.remark || `人工确认结果：${row.manualConfirmStatus}`,
+      tags: [row.handlingResult, confirmTag]
     }
   ]
 
-  return nodes.map((node, index) => ({
+  const timeline = nodes.map((node, index) => ({
     ...node,
     status: nodeStatus(index, lastDone, pending)
   }))
+
+  // 未完成的事件只展示已经发生或正在进行的阶段，避免详情页误呈现完整处置链。
+  return pending < nodes.length ? timeline.filter((node) => node.status !== 'pending') : timeline
 }
 
 function hashSeed(id: string): number {

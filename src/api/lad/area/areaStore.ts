@@ -46,6 +46,7 @@ const seed: AreaRegion[] = [
         height: 16
       }
     ],
+    createdAt: '2026-05-20 09:00:00',
     updatedAt: '2026-05-20 09:00:00'
   },
   {
@@ -66,6 +67,7 @@ const seed: AreaRegion[] = [
         height: 48
       }
     ],
+    createdAt: '2026-05-20 09:05:00',
     updatedAt: '2026-05-20 09:05:00'
   },
   {
@@ -86,6 +88,7 @@ const seed: AreaRegion[] = [
         height: 84
       }
     ],
+    createdAt: '2026-05-20 09:10:00',
     updatedAt: '2026-05-20 09:10:00'
   },
   {
@@ -105,6 +108,7 @@ const seed: AreaRegion[] = [
         r: 15
       }
     ],
+    createdAt: '2026-05-20 09:15:00',
     updatedAt: '2026-05-20 09:15:00'
   }
 ]
@@ -143,9 +147,7 @@ export function queryAreaRegionList(params: AreaRegionQuery = {}): AreaRegionLis
     rows = rows.filter((r) => r.regionType === params.regionType)
   }
   if (params.alarmEnabled !== undefined && params.alarmEnabled !== '') {
-    const on =
-      params.alarmEnabled === true ||
-      params.alarmEnabled === 'true'
+    const on = params.alarmEnabled === true || params.alarmEnabled === 'true'
     rows = rows.filter((r) => r.alarmEnabled === on)
   }
   rows.sort((a, b) => b.clipPriority - a.clipPriority)
@@ -170,8 +172,7 @@ export function getAreaRegion(id: string): AreaRegion | null {
 export function saveAreaRegion(body: AreaRegionSavePayload): AreaRegion {
   const regionType = resolveRegionType(body)
   const clipPriority = clampPriority(body.clipPriority ?? defaultClipPriorityForType(regionType))
-  const alarmEnabled =
-    body.alarmEnabled ?? defaultAlarmForType(regionType)
+  const alarmEnabled = body.alarmEnabled ?? defaultAlarmForType(regionType)
 
   const now = formatNow()
   const shapes = body.shapes.map((s) => ({
@@ -191,6 +192,7 @@ export function saveAreaRegion(body: AreaRegionSavePayload): AreaRegion {
       alarmEnabled,
       color: body.color,
       shapes,
+      createdAt: allRegions[idx].createdAt || allRegions[idx].updatedAt,
       updatedAt: now
     }
     allRegions[idx] = row
@@ -210,6 +212,7 @@ export function saveAreaRegion(body: AreaRegionSavePayload): AreaRegion {
     alarmEnabled,
     color: body.color,
     shapes,
+    createdAt: now,
     updatedAt: now
   }
   allRegions.push(row)

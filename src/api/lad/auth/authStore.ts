@@ -364,12 +364,10 @@ const logsSeed: AuthLogItem[] = [
   }
 ]
 
-let allLogs: AuthLogItem[] = [...logsSeed]
+const allLogs: AuthLogItem[] = [...logsSeed]
 
 function roleNamesByIds(ids: string[]) {
-  return ids
-    .map((id) => allRoles.find((r) => r.id === id)?.roleName)
-    .filter(Boolean) as string[]
+  return ids.map((id) => allRoles.find((r) => r.id === id)?.roleName).filter(Boolean) as string[]
 }
 
 function filterUsers(q: AuthUserQuery): AuthUser[] {
@@ -418,7 +416,14 @@ export function saveAuthUser(body: AuthUserSavePayload): AuthUser {
       status: body.status
     }
     allUsers[idx] = row
-    appendLog('operation', row.username, row.account, '用户管理', body.id === row.id ? '修改用户' : '修改用户', `更新用户 ${row.account}`)
+    appendLog(
+      'operation',
+      row.username,
+      row.account,
+      '用户管理',
+      body.id === row.id ? '修改用户' : '修改用户',
+      `更新用户 ${row.account}`
+    )
     return { ...row }
   }
   if (allUsers.some((u) => u.account === body.account)) throw new Error('登录账号已存在')

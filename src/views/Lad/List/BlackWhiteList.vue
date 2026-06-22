@@ -1,4 +1,7 @@
 <script setup lang="tsx">
+import { onMounted, reactive, ref, unref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
@@ -8,9 +11,6 @@ import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { deleteBlackWhiteApi, getBlackWhiteListApi } from '@/api/lad/list'
 import type { BlackWhiteListItem, ListType } from '@/api/lad/list/types'
 import BlackWhiteFormDialog from './components/BlackWhiteFormDialog.vue'
-import { onMounted, reactive, ref, unref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
 
 defineOptions({
   name: 'LadBlackWhiteList'
@@ -40,19 +40,6 @@ const targetTypeOptions = [
   { label: '未知', value: '未知' }
 ]
 
-const zoneOptions = [
-  { label: '核心保护区-A区', value: '核心保护区-A区' },
-  { label: '缓冲区-B区', value: '缓冲区-B区' },
-  { label: '管制空域-C区', value: '管制空域-C区' },
-  { label: '公共区域', value: '公共区域' }
-]
-
-const entryMethodOptions = [
-  { label: '自动录入', value: '自动录入' },
-  { label: '人工录入', value: '人工录入' },
-  { label: '自动+人工校验', value: '自动+人工校验' }
-]
-
 const setSearchParams = (params: Recordable) => {
   const range = params.discoveredAtRange as string[] | undefined
   searchParams.value = {
@@ -61,8 +48,6 @@ const setSearchParams = (params: Recordable) => {
     sn: params.sn,
     model: params.model,
     targetType: params.targetType,
-    zoneName: params.zoneName,
-    entryMethod: params.entryMethod,
     discoveredAtStart: range?.[0],
     discoveredAtEnd: range?.[1]
   }
@@ -137,8 +122,8 @@ const delData = async (row: BlackWhiteListItem | null) => {
   try {
     await ElMessageBox.confirm(
       row
-        ? `确定删除 SN「${row.sn}」的名单记录？`
-        : `确定批量删除已选 ${deleteIds.length} 条记录？`,
+        ? `确定删除 SN「${row.sn}」的名单记录吗？`
+        : `确定批量删除已选 ${deleteIds.length} 条记录吗？`,
       '删除确认',
       { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
     )
@@ -149,7 +134,7 @@ const delData = async (row: BlackWhiteListItem | null) => {
     })
     ElMessage.success('删除成功')
   } catch {
-    /* 用户取消 */
+    // 用户取消
   }
 }
 
@@ -219,7 +204,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'validUntil',
     label: '有效期至',
-    minWidth: 108,
+    minWidth: 160,
     search: { hidden: true },
     table: {
       slots: {
@@ -257,7 +242,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'model',
     label: '机型/型号',
-    minWidth: 128,
+    minWidth: 140,
     search: {
       component: 'Input',
       colProps: { span: 6 },
@@ -335,57 +320,31 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'zoneName',
-    label: '所在区域',
-    minWidth: 130,
-    search: {
-      component: 'Select',
-      colProps: { span: 6 },
-      componentProps: {
-        placeholder: '请选择区域',
-        style: { width: '100%' },
-        clearable: true,
-        options: zoneOptions
-      }
-    },
-    table: { showOverflowTooltip: true }
+    search: { hidden: true },
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'longitude',
-    label: '经度',
-    minWidth: 100,
     search: { hidden: true },
-    table: {
-      slots: {
-        default: ({ row }: { row: BlackWhiteListItem }) => <span>{row.longitude.toFixed(4)}</span>
-      }
-    }
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'latitude',
-    label: '纬度',
-    minWidth: 100,
     search: { hidden: true },
-    table: {
-      slots: {
-        default: ({ row }: { row: BlackWhiteListItem }) => <span>{row.latitude.toFixed(4)}</span>
-      }
-    }
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'entryMethod',
-    label: '录入方式',
-    minWidth: 128,
-    search: {
-      component: 'Select',
-      colProps: { span: 6 },
-      componentProps: {
-        placeholder: '请选择录入方式',
-        style: { width: '100%' },
-        clearable: true,
-        options: entryMethodOptions
-      }
-    },
-    table: { showOverflowTooltip: true }
+    search: { hidden: true },
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'remark',

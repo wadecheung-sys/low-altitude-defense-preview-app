@@ -23,15 +23,13 @@ export function areaRegionTypeDisplay(code: string, entries?: DictEntryItem[]): 
   }
 }
 
-export const THREAT_LEVEL_TAG_TYPE: Record<
-  string,
-  'danger' | 'warning' | 'success' | 'info' | ''
-> = {
-  高: 'danger',
-  中: 'warning',
-  低: 'success',
-  无: 'info'
-}
+export const THREAT_LEVEL_TAG_TYPE: Record<string, 'danger' | 'warning' | 'success' | 'info' | ''> =
+  {
+    高: 'danger',
+    中: 'warning',
+    低: 'success',
+    无: 'info'
+  }
 
 import { coerceThreatLevelLabel as coerceThreatLevelLabelFromApi } from '@/api/lad/threat/threatLevelUtils'
 

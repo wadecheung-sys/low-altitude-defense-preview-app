@@ -46,62 +46,216 @@ const dictTypesSeed: DictTypeItem[] = [
     updatedAt: '2026-05-19 14:00:00'
   },
   {
-    id: 'dt-005',
-    dictCode: 'area_level',
-    dictName: '区域级别',
-    remark: '防护区域 1–3 级（预案等模块沿用）',
-    itemCount: 3,
-    updatedAt: '2026-05-20 09:00:00'
-  },
-  {
     id: 'dt-007',
     dictCode: 'area_region_type',
     dictName: '区域类型',
     remark: '与区域管理一致，供威胁评估等模块引用',
     itemCount: 9,
     updatedAt: '2026-05-21 10:00:00'
-  },
-  {
-    id: 'dt-006',
-    dictCode: 'entry_method',
-    dictName: '录入方式',
-    itemCount: 3,
-    updatedAt: '2026-05-20 09:30:00'
   }
 ]
 
 const dictEntriesSeed: DictEntryItem[] = [
-  { id: 'de-001', dictTypeId: 'dt-001', label: '黑名单', value: 'black', sort: 1, updatedAt: '2026-05-18 10:00:00' },
-  { id: 'de-002', dictTypeId: 'dt-001', label: '白名单', value: 'white', sort: 2, updatedAt: '2026-05-18 10:00:00' },
-  { id: 'de-003', dictTypeId: 'dt-001', label: '未知', value: 'unknown', sort: 3, updatedAt: '2026-05-18 10:00:00' },
-  { id: 'de-004', dictTypeId: 'dt-002', label: '多旋翼', value: 'multirotor', sort: 1, updatedAt: '2026-05-18 10:05:00' },
-  { id: 'de-005', dictTypeId: 'dt-002', label: '固定翼', value: 'fixed', sort: 2, updatedAt: '2026-05-18 10:05:00' },
-  { id: 'de-006', dictTypeId: 'dt-002', label: '行业级', value: 'industry', sort: 3, updatedAt: '2026-05-18 10:05:00' },
-  { id: 'de-007', dictTypeId: 'dt-002', label: '未知', value: 'unknown', sort: 4, updatedAt: '2026-05-18 10:05:00' },
-  { id: 'de-008', dictTypeId: 'dt-003', label: '高', value: 'high', sort: 1, updatedAt: '2026-05-19 09:00:00' },
-  { id: 'de-009', dictTypeId: 'dt-003', label: '中', value: 'medium', sort: 2, updatedAt: '2026-05-19 09:00:00' },
-  { id: 'de-010', dictTypeId: 'dt-003', label: '低', value: 'low', sort: 3, updatedAt: '2026-05-19 09:00:00' },
-  { id: 'de-011', dictTypeId: 'dt-003', label: '无', value: 'none', sort: 4, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-012', dictTypeId: 'dt-004', label: '雷达', value: 'radar', sort: 1, updatedAt: '2026-05-19 14:00:00' },
-  { id: 'de-013', dictTypeId: 'dt-004', label: '光电', value: 'eo', sort: 2, updatedAt: '2026-05-19 14:00:00' },
-  { id: 'de-014', dictTypeId: 'dt-004', label: '无线电', value: 'rf', sort: 3, updatedAt: '2026-05-19 14:00:00' },
-  { id: 'de-015', dictTypeId: 'dt-004', label: '反制', value: 'jammer', sort: 4, updatedAt: '2026-05-19 14:00:00' },
-  { id: 'de-016', dictTypeId: 'dt-004', label: '融合', value: 'fusion', sort: 5, updatedAt: '2026-05-19 14:00:00' },
-  { id: 'de-017', dictTypeId: 'dt-005', label: '一级', value: '1', sort: 1, updatedAt: '2026-05-20 09:00:00' },
-  { id: 'de-018', dictTypeId: 'dt-005', label: '二级', value: '2', sort: 2, updatedAt: '2026-05-20 09:00:00' },
-  { id: 'de-019', dictTypeId: 'dt-005', label: '三级', value: '3', sort: 3, updatedAt: '2026-05-20 09:00:00' },
-  { id: 'de-020', dictTypeId: 'dt-006', label: '自动录入', value: 'auto', sort: 1, updatedAt: '2026-05-20 09:30:00' },
-  { id: 'de-021', dictTypeId: 'dt-006', label: '人工录入', value: 'manual', sort: 2, updatedAt: '2026-05-20 09:30:00' },
-  { id: 'de-022', dictTypeId: 'dt-006', label: '自动+人工校验', value: 'mixed', sort: 3, updatedAt: '2026-05-20 09:30:00' },
-  { id: 'de-023', dictTypeId: 'dt-007', label: '预警区', value: 'warning', sort: 1, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-024', dictTypeId: 'dt-007', label: '警戒区', value: 'alert', sort: 2, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-025', dictTypeId: 'dt-007', label: '识别处置区', value: 'dispose', sort: 3, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-026', dictTypeId: 'dt-007', label: '禁飞区', value: 'nofly', sort: 4, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-027', dictTypeId: 'dt-007', label: '报警屏蔽区', value: 'mask', sort: 5, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-028', dictTypeId: 'dt-007', label: '核岛', value: 'nuclear', sort: 6, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-029', dictTypeId: 'dt-007', label: '乏燃料水池', value: 'pool', sort: 7, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-030', dictTypeId: 'dt-007', label: '试飞区', value: 'testflight', sort: 8, updatedAt: '2026-05-21 10:00:00' },
-  { id: 'de-031', dictTypeId: 'dt-007', label: '其他', value: 'other', sort: 9, updatedAt: '2026-05-21 10:00:00' }
+  {
+    id: 'de-001',
+    dictTypeId: 'dt-001',
+    label: '黑名单',
+    value: 'black',
+    sort: 1,
+    updatedAt: '2026-05-18 10:00:00'
+  },
+  {
+    id: 'de-002',
+    dictTypeId: 'dt-001',
+    label: '白名单',
+    value: 'white',
+    sort: 2,
+    updatedAt: '2026-05-18 10:00:00'
+  },
+  {
+    id: 'de-003',
+    dictTypeId: 'dt-001',
+    label: '未知',
+    value: 'unknown',
+    sort: 3,
+    updatedAt: '2026-05-18 10:00:00'
+  },
+  {
+    id: 'de-004',
+    dictTypeId: 'dt-002',
+    label: '多旋翼',
+    value: 'multirotor',
+    sort: 1,
+    updatedAt: '2026-05-18 10:05:00'
+  },
+  {
+    id: 'de-005',
+    dictTypeId: 'dt-002',
+    label: '固定翼',
+    value: 'fixed',
+    sort: 2,
+    updatedAt: '2026-05-18 10:05:00'
+  },
+  {
+    id: 'de-006',
+    dictTypeId: 'dt-002',
+    label: '行业级',
+    value: 'industry',
+    sort: 3,
+    updatedAt: '2026-05-18 10:05:00'
+  },
+  {
+    id: 'de-007',
+    dictTypeId: 'dt-002',
+    label: '未知',
+    value: 'unknown',
+    sort: 4,
+    updatedAt: '2026-05-18 10:05:00'
+  },
+  {
+    id: 'de-008',
+    dictTypeId: 'dt-003',
+    label: '高',
+    value: 'high',
+    sort: 1,
+    updatedAt: '2026-05-19 09:00:00'
+  },
+  {
+    id: 'de-009',
+    dictTypeId: 'dt-003',
+    label: '中',
+    value: 'medium',
+    sort: 2,
+    updatedAt: '2026-05-19 09:00:00'
+  },
+  {
+    id: 'de-010',
+    dictTypeId: 'dt-003',
+    label: '低',
+    value: 'low',
+    sort: 3,
+    updatedAt: '2026-05-19 09:00:00'
+  },
+  {
+    id: 'de-011',
+    dictTypeId: 'dt-003',
+    label: '无',
+    value: 'none',
+    sort: 4,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-012',
+    dictTypeId: 'dt-004',
+    label: '雷达',
+    value: 'radar',
+    sort: 1,
+    updatedAt: '2026-05-19 14:00:00'
+  },
+  {
+    id: 'de-013',
+    dictTypeId: 'dt-004',
+    label: '光电',
+    value: 'eo',
+    sort: 2,
+    updatedAt: '2026-05-19 14:00:00'
+  },
+  {
+    id: 'de-014',
+    dictTypeId: 'dt-004',
+    label: '无线电',
+    value: 'rf',
+    sort: 3,
+    updatedAt: '2026-05-19 14:00:00'
+  },
+  {
+    id: 'de-015',
+    dictTypeId: 'dt-004',
+    label: '反制',
+    value: 'jammer',
+    sort: 4,
+    updatedAt: '2026-05-19 14:00:00'
+  },
+  {
+    id: 'de-016',
+    dictTypeId: 'dt-004',
+    label: '融合',
+    value: 'fusion',
+    sort: 5,
+    updatedAt: '2026-05-19 14:00:00'
+  },
+  {
+    id: 'de-023',
+    dictTypeId: 'dt-007',
+    label: '预警区',
+    value: 'warning',
+    sort: 1,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-024',
+    dictTypeId: 'dt-007',
+    label: '警戒区',
+    value: 'alert',
+    sort: 2,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-025',
+    dictTypeId: 'dt-007',
+    label: '识别处置区',
+    value: 'dispose',
+    sort: 3,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-026',
+    dictTypeId: 'dt-007',
+    label: '禁飞区',
+    value: 'nofly',
+    sort: 4,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-027',
+    dictTypeId: 'dt-007',
+    label: '报警屏蔽区',
+    value: 'mask',
+    sort: 5,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-028',
+    dictTypeId: 'dt-007',
+    label: '核岛',
+    value: 'nuclear',
+    sort: 6,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-029',
+    dictTypeId: 'dt-007',
+    label: '乏燃料水池',
+    value: 'pool',
+    sort: 7,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-030',
+    dictTypeId: 'dt-007',
+    label: '试飞区',
+    value: 'testflight',
+    sort: 8,
+    updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-031',
+    dictTypeId: 'dt-007',
+    label: '其他',
+    value: 'other',
+    sort: 9,
+    updatedAt: '2026-05-21 10:00:00'
+  }
 ]
 
 let allTypes: DictTypeItem[] = dictTypesSeed.map((r) => ({ ...r }))

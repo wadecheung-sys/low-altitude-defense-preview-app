@@ -170,9 +170,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       minWidth: 140,
       slots: {
-        default: (data: { row: AuthUser }) => (
-          <span>{data.row.roleNames?.join('、') || '-'}</span>
-        )
+        default: (data: { row: AuthUser }) => <span>{data.row.roleNames?.join('、') || '-'}</span>
       }
     }
   },

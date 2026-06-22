@@ -79,12 +79,7 @@ async function onSave() {
   >
     <ElForm label-width="90px">
       <ElFormItem label="字典编码" required>
-        <ElInput
-          v-model="form.dictCode"
-          :disabled="isEdit"
-          placeholder="如 list_type"
-          clearable
-        />
+        <ElInput v-model="form.dictCode" :disabled="isEdit" placeholder="如 list_type" clearable />
       </ElFormItem>
       <ElFormItem label="字典名称" required>
         <ElInput v-model="form.dictName" placeholder="显示名称" clearable />

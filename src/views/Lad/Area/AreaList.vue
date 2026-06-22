@@ -23,20 +23,10 @@ const { push } = useRouter()
 const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({})
 
-const alarmOptions = [
-  { label: '全部', value: '' },
-  { label: '是', value: 'true' },
-  { label: '否', value: 'false' }
-]
-
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
     name: params.name,
-    regionType: params.regionType || undefined,
-    alarmEnabled:
-      params.alarmEnabled === '' || params.alarmEnabled === undefined
-        ? undefined
-        : params.alarmEnabled
+    regionType: params.regionType || undefined
   }
   currentPage.value = 1
   getList()
@@ -177,66 +167,21 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: { hidden: true },
     table: {
       slots: {
-        default: ({ row }: { row: AreaRegion }) => <span>P{row.clipPriority}</span>
+        default: ({ row }: { row: AreaRegion }) => <span>{row.clipPriority}</span>
       }
     }
   },
   {
-    field: 'color',
-    label: '区域颜色',
-    minWidth: 100,
-    search: { hidden: true },
-    table: {
-      slots: {
-        default: ({ row }: { row: AreaRegion }) => (
-          <span class="area-list-color">
-            <i class="area-list-color__swatch" style={{ background: row.color }} />
-          </span>
-        )
-      }
-    }
-  },
-  {
-    field: 'alarmEnabled',
-    label: '参与告警',
-    minWidth: 96,
-    search: {
-      component: 'Select',
-      colProps: AREA_SEARCH_COL,
-      componentProps: {
-        options: alarmOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: { width: '100%' }
-      }
-    },
-    table: {
-      slots: {
-        default: ({ row }: { row: AreaRegion }) => (
-          <ElTag type={row.alarmEnabled ? 'success' : 'info'} size="small" effect="light">
-            {row.alarmEnabled ? '是' : '否'}
-          </ElTag>
-        )
-      }
-    }
-  },
-  {
-    field: 'shapeCount',
-    label: '范围图形',
-    minWidth: 96,
-    search: { hidden: true },
-    table: {
-      slots: {
-        default: ({ row }: { row: AreaRegion }) => `${row.shapes.length} 个`
-      }
-    }
-  },
-  {
-    field: 'updatedAt',
-    label: '更新时间',
+    field: 'createdAt',
+    label: '添加时间',
     minWidth: 168,
     search: { hidden: true },
-    table: { showOverflowTooltip: true }
+    table: {
+      showOverflowTooltip: true,
+      slots: {
+        default: ({ row }: { row: AreaRegion }) => row.createdAt || row.updatedAt
+      }
+    }
   },
   {
     field: 'action',
@@ -296,18 +241,3 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     />
   </ContentWrap>
 </template>
-
-<style scoped lang="less">
-.area-list-color {
-  display: inline-flex;
-  align-items: center;
-}
-
-.area-list-color__swatch {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 4px;
-}
-</style>

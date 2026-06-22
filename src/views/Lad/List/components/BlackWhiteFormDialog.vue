@@ -4,14 +4,7 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveBlackWhiteApi } from '@/api/lad/list'
 import type { BlackWhiteListItem, EntryMethod, ListType } from '@/api/lad/list/types'
-import {
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElInputNumber,
-  ElOption,
-  ElSelect
-} from 'element-plus'
+import { ElDatePicker, ElForm, ElFormItem, ElInput, ElOption, ElSelect } from 'element-plus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -31,20 +24,32 @@ const visible = computed({
 const isEdit = computed(() => !!props.row?.id)
 const loading = ref(false)
 
-const form = ref({
+const modelOptions = [
+  'DJI Mavic 3',
+  'DJI Mini 3 Pro',
+  'DJI Air 3',
+  'Autel EVO II',
+  '大疆经纬 M30',
+  'Parrot Anafi',
+  '其他'
+]
+
+const createDefaultForm = () => ({
   listType: '未知' as ListType,
   targetId: '',
   targetType: '多旋翼',
-  validUntil: '永久',
-  model: '',
+  validUntil: '',
+  model: modelOptions[0],
   frequency: '2.4GHz + 5.8GHz',
   sn: '',
-  zoneName: '核心保护区-A区',
+  zoneName: '核心防护区A区',
   longitude: 113.4,
   latitude: 23.1,
   entryMethod: '人工录入' as EntryMethod,
   remark: ''
 })
+
+const form = ref(createDefaultForm())
 
 watch(
   () => props.modelValue,
@@ -52,11 +57,12 @@ watch(
     if (!open) return
     if (props.row) {
       form.value = {
+        ...createDefaultForm(),
         listType: props.row.listType,
         targetId: props.row.targetId,
         targetType: props.row.targetType,
-        validUntil: props.row.validUntil,
-        model: props.row.model,
+        validUntil: props.row.validUntil === '永久' ? '' : props.row.validUntil,
+        model: props.row.model || '其他',
         frequency: props.row.frequency,
         sn: props.row.sn,
         zoneName: props.row.zoneName,
@@ -65,21 +71,11 @@ watch(
         entryMethod: props.row.entryMethod,
         remark: props.row.remark
       }
-    } else {
-      form.value = {
-        listType: '未知',
-        targetId: '',
-        targetType: '多旋翼',
-        validUntil: '永久',
-        model: '',
-        frequency: '2.4GHz + 5.8GHz',
-        sn: '',
-        zoneName: '核心保护区-A区',
-        longitude: 113.4,
-        latitude: 23.1,
-        entryMethod: '人工录入',
-        remark: ''
+      if (!modelOptions.includes(form.value.model)) {
+        form.value.model = '其他'
       }
+    } else {
+      form.value = createDefaultForm()
     }
   }
 )
@@ -89,7 +85,8 @@ const onSubmit = async () => {
   try {
     await saveBlackWhiteApi({
       id: props.row?.id,
-      ...form.value
+      ...form.value,
+      validUntil: form.value.validUntil || '永久'
     })
     emit('success')
     visible.value = false
@@ -121,7 +118,9 @@ const onSubmit = async () => {
         <ElInput v-model="form.sn" placeholder="无人机设备 SN" />
       </ElFormItem>
       <ElFormItem label="机型/型号">
-        <ElInput v-model="form.model" placeholder="如 DJI Mavic 3" />
+        <ElSelect v-model="form.model" style="width: 100%" placeholder="请选择机型/型号">
+          <ElOption v-for="item in modelOptions" :key="item" :label="item" :value="item" />
+        </ElSelect>
       </ElFormItem>
       <ElFormItem label="目标类型">
         <ElSelect v-model="form.targetType" style="width: 100%">
@@ -134,24 +133,15 @@ const onSubmit = async () => {
       <ElFormItem label="频段/频率">
         <ElInput v-model="form.frequency" />
       </ElFormItem>
-      <ElFormItem label="所在区域">
-        <ElInput v-model="form.zoneName" />
-      </ElFormItem>
       <ElFormItem label="有效期至">
-        <ElInput v-model="form.validUntil" placeholder="永久 或 YYYY-MM-DD" />
-      </ElFormItem>
-      <ElFormItem label="经度">
-        <ElInputNumber v-model="form.longitude" :precision="4" :step="0.0001" style="width: 100%" />
-      </ElFormItem>
-      <ElFormItem label="纬度">
-        <ElInputNumber v-model="form.latitude" :precision="4" :step="0.0001" style="width: 100%" />
-      </ElFormItem>
-      <ElFormItem label="录入方式">
-        <ElSelect v-model="form.entryMethod" style="width: 100%">
-          <ElOption label="自动录入" value="自动录入" />
-          <ElOption label="人工录入" value="人工录入" />
-          <ElOption label="自动+人工校验" value="自动+人工校验" />
-        </ElSelect>
+        <ElDatePicker
+          v-model="form.validUntil"
+          type="datetime"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          placeholder="请选择失效时间，不选则默认为永久"
+          clearable
+          style="width: 100%"
+        />
       </ElFormItem>
       <ElFormItem label="备注">
         <ElInput v-model="form.remark" type="textarea" :rows="2" />

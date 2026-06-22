@@ -3,11 +3,7 @@ import { nextShapeId } from '@/api/lad/area'
 import type { AreaShape, AreaShapeType } from '@/api/lad/area/types'
 import type { AreaPaintItem } from '../areaShapeGeometry'
 import { latLngToPercent } from '../areaGisCoords'
-import {
-  createAreaGisMap,
-  renderPaintItemsOnMap,
-  renderPreviewShape
-} from '../areaGisLeaflet'
+import { createAreaGisMap, renderPaintItemsOnMap, renderPreviewShape } from '../areaGisLeaflet'
 import { GIS_BASE_LAT, GIS_BASE_LNG } from '../areaGisConstants'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import L from 'leaflet'
@@ -295,7 +291,7 @@ defineExpose({ finishPolygon, cancelPolygon })
     :class="{ 'is-drawing': !!tool && !readonly && mapReady }"
     aria-label="GIS地图"
   >
-    <div ref="mapRoot" class="area-gis-map__container" />
+    <div ref="mapRoot" class="area-gis-map__container"></div>
     <p v-if="mapReady && tool === 'polygon' && !readonly" class="area-gis-map__hint">
       在地图上依次点击顶点，完成后点击「完成绘制」
     </p>

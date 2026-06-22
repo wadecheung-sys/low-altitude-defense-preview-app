@@ -222,7 +222,7 @@ defineExpose({ play, pause, togglePlay })
             class="trajectory-replay__marker"
             :style="{ left: `${m.progress}%` }"
           >
-            <i class="trajectory-replay__marker-tick" />
+            <i class="trajectory-replay__marker-tick"></i>
             <span class="trajectory-replay__marker-label">{{ m.label }}</span>
           </span>
         </div>

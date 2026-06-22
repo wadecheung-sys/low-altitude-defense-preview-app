@@ -58,7 +58,8 @@ const seed: IntegrationEndpoint[] = [
   {
     id: 'int-003',
     linkCode: 'RADAR_GW',
-    description: '\u6beb\u7c73\u6ce2\u96f7\u8fbe\u63a5\u5165\u4e0e\u9065\u6d4b\u6570\u636e\u4e0a\u62a5',
+    description:
+      '\u6beb\u7c73\u6ce2\u96f7\u8fbe\u63a5\u5165\u4e0e\u9065\u6d4b\u6570\u636e\u4e0a\u62a5',
     runStatus: 'running',
     heartbeatText: '\u6b63\u5e38 (38ms)',
     dataUpdatedAt: '2026-05-20 10:58:30',
@@ -156,7 +157,8 @@ const seed: IntegrationEndpoint[] = [
   {
     id: 'int-009',
     linkCode: 'PPS_INTEGRATION',
-    description: '\u5b9e\u7269\u4fdd\u62a4\u96c6\u6210\u7ba1\u7406\u5e73\u53f0\u544a\u8b66\u8ba2\u9605',
+    description:
+      '\u5b9e\u7269\u4fdd\u62a4\u96c6\u6210\u7ba1\u7406\u5e73\u53f0\u544a\u8b66\u8ba2\u9605',
     runStatus: 'running',
     heartbeatText: '\u6b63\u5e38 (95ms)',
     dataUpdatedAt: '2026-05-20 10:58:00',
@@ -220,7 +222,7 @@ const seed: IntegrationEndpoint[] = [
   }
 ]
 
-let endpoints: IntegrationEndpoint[] = seed.map((e) => ({ ...e }))
+const endpoints: IntegrationEndpoint[] = seed.map((e) => ({ ...e }))
 let probeHistory: IntegrationProbeRecord[] = []
 let lastPollAt = formatNow()
 
@@ -228,7 +230,11 @@ function randInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-function statusFromProbe(success: boolean, latencyMs: number, enabled: boolean): IntegrationRunStatus {
+function statusFromProbe(
+  success: boolean,
+  latencyMs: number,
+  enabled: boolean
+): IntegrationRunStatus {
   if (!enabled) return 'unknown'
   if (!success) return 'stopped'
   if (latencyMs > 200) return 'error'
@@ -437,7 +443,13 @@ export function reconnectIntegration(id: string): IntegrationReconnectResult {
   const total = row.requestCount24h
   row.successRate = Math.round(((total - row.failCount24h) / total) * 1000) / 10
   endpoints[idx] = row
-  pushProbeRecord(id, true, latencyMs, '\u91cd\u8fde\u6210\u529f\uff0c\u6570\u636e\u4ea4\u4e92\u5df2\u6062\u590d', '{"code":0,"data":{"status":"ok"}}')
+  pushProbeRecord(
+    id,
+    true,
+    latencyMs,
+    '\u91cd\u8fde\u6210\u529f\uff0c\u6570\u636e\u4ea4\u4e92\u5df2\u6062\u590d',
+    '{"code":0,"data":{"status":"ok"}}'
+  )
 
   return {
     success: true,

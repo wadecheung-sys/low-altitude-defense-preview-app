@@ -10,9 +10,7 @@ export const deviceArchiveTypeOptions = [
   { label: '光电跟踪', value: '光电跟踪' }
 ]
 
-export const deviceArchiveVendorOptions = [
-  { label: '同方威视', value: '同方威视' }
-]
+export const deviceArchiveVendorOptions = [{ label: '同方威视', value: '同方威视' }]
 
 export const deviceArchiveStatusOptions = [
   { label: '生效', value: 'enabled' },

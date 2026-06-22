@@ -41,10 +41,7 @@ function onPower(on: boolean) {
   <div class="device-remote-panel" :class="{ 'is-compact': compact }">
     <div class="device-remote-panel__head">
       <span class="device-remote-panel__name">{{ deviceName }}</span>
-      <span
-        class="device-remote-panel__status"
-        :class="online ? 'is-online' : 'is-offline'"
-      >
+      <span class="device-remote-panel__status" :class="online ? 'is-online' : 'is-offline'">
         {{ online ? '\u5728\u7ebf' : '\u79bb\u7ebf' }}
       </span>
     </div>

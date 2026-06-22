@@ -4,11 +4,7 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { getAuthRoleOptionsApi, saveAuthUserApi } from '@/api/lad/auth'
 import type { AuthUser } from '@/api/lad/auth/types'
-import {
-  accountLevelOptions,
-  statusOptions,
-  userTypeOptions
-} from '../authConstants'
+import { accountLevelOptions, statusOptions, userTypeOptions } from '../authConstants'
 import {
   ElForm,
   ElFormItem,
@@ -128,7 +124,12 @@ async function onSave() {
 </script>
 
 <template>
-  <Dialog v-model="visible" :title="isEdit ? '编辑用户' : '新增用户'" width="640px" max-height="75vh">
+  <Dialog
+    v-model="visible"
+    :title="isEdit ? '编辑用户' : '新增用户'"
+    width="640px"
+    max-height="75vh"
+  >
     <ElForm label-width="100px">
       <div class="lad-auth-form-grid">
         <ElFormItem label="姓名" required>
@@ -139,7 +140,12 @@ async function onSave() {
         </ElFormItem>
         <ElFormItem label="用户类型" required>
           <ElSelect v-model="form.userType" class="w-full" :disabled="!!row?.builtin">
-            <ElOption v-for="o in userTypeOptions" :key="o.value" :label="o.label" :value="o.value" />
+            <ElOption
+              v-for="o in userTypeOptions"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="账号分级" required>
@@ -168,7 +174,9 @@ async function onSave() {
         </ElFormItem>
         <ElFormItem label="状态">
           <ElRadioGroup v-model="form.status" :disabled="!!row?.builtin">
-            <ElRadio v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</ElRadio>
+            <ElRadio v-for="o in statusOptions" :key="o.value" :value="o.value">{{
+              o.label
+            }}</ElRadio>
           </ElRadioGroup>
         </ElFormItem>
       </div>

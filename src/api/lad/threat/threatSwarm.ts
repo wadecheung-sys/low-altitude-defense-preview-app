@@ -16,10 +16,7 @@ export function isSwarmSimulateInput(input: ThreatSimulateInput): boolean {
 }
 
 /** 规则用于排序的有效优先级：蜂群规则更靠前 */
-export function effectiveRulePriority(
-  rule: ThreatRule,
-  input?: ThreatSimulateInput
-): number {
+export function effectiveRulePriority(rule: ThreatRule, input?: ThreatSimulateInput): number {
   let p = rule.priority
   if (isSwarmRule(rule)) p -= SWARM_PRIORITY_BOOST
   if (input && isSwarmSimulateInput(input) && isSwarmRule(rule)) p -= 3
@@ -41,7 +38,9 @@ const LEVEL_KEY_TO_LABEL: Record<'high' | 'mid' | 'low', ThreatLevelLabel> = {
 }
 
 /** 按规则属性推导威胁等级（未手工指定时的默认值） */
-export function deriveThreatLevel(rule: Pick<ThreatRule, 'enabled' | 'priority' | 'targetType'>): ThreatLevelLabel {
+export function deriveThreatLevel(
+  rule: Pick<ThreatRule, 'enabled' | 'priority' | 'targetType'>
+): ThreatLevelLabel {
   if (!rule.enabled) return '无'
   return LEVEL_KEY_TO_LABEL[resolveThreatLevelKey(rule as ThreatRule)]
 }

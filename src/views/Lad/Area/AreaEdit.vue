@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import {
-  deleteAreaRegionApi,
-  getAreaRegionDetailApi,
-  getAreaRegionListApi,
-  saveAreaRegionApi
-} from '@/api/lad/area'
+import { deleteAreaRegionApi, getAreaRegionDetailApi, saveAreaRegionApi } from '@/api/lad/area'
 import { cloneShapes } from '@/api/lad/area/areaStore'
 import type { AreaRegion, AreaRegionType, AreaShape, AreaShapeType } from '@/api/lad/area/types'
 import { buildAreaPaintItems, type RegionShapeRef } from './areaShapeGeometry'
@@ -20,7 +15,6 @@ import {
   defaultColorForType
 } from './areaConstants'
 import {
-  ElColorPicker,
   ElForm,
   ElFormItem,
   ElInput,
@@ -28,8 +22,7 @@ import {
   ElMessage,
   ElMessageBox,
   ElOption,
-  ElSelect,
-  ElSwitch
+  ElSelect
 } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -42,7 +35,6 @@ const { push, go } = useRouter()
 
 const loading = ref(false)
 const saveLoading = ref(false)
-const allRegions = ref<AreaRegion[]>([])
 const recordId = ref('')
 const drawTool = ref<AreaShapeType | null>(null)
 const gisMapRef = ref<InstanceType<typeof AreaGisMap>>()
@@ -60,27 +52,16 @@ const form = ref({
 })
 
 const paintRegionRefs = computed<RegionShapeRef[]>(() => {
-  const refs: RegionShapeRef[] = allRegions.value
-    .filter((r) => r.id !== recordId.value)
-    .map((r) => ({
-      regionId: r.id,
-      regionType: r.regionType,
-      clipPriority: r.clipPriority,
-      color: r.color,
-      shapes: r.shapes
-    }))
-
   const draftId = recordId.value || '__draft__'
-  if (form.value.shapes.length || isCreateMode.value) {
-    refs.push({
+  return [
+    {
       regionId: draftId,
       regionType: form.value.regionType,
       clipPriority: form.value.clipPriority,
       color: form.value.color,
-      shapes: form.value.shapes
-    })
-  }
-  return refs
+      shapes: form.value.shapes.slice(0, 1)
+    }
+  ]
 })
 
 const canvasPaintItems = computed(() =>
@@ -88,11 +69,6 @@ const canvasPaintItems = computed(() =>
     highlightRegionId: recordId.value || '__draft__'
   })
 )
-
-async function loadAllRegions() {
-  const res = await getAreaRegionListApi({ pageIndex: 1, pageSize: 500 })
-  allRegions.value = res.data.list
-}
 
 function resetFormForNew(type: AreaRegionType = 'warning') {
   recordId.value = ''
@@ -114,7 +90,7 @@ function applyDetail(data: AreaRegion) {
     clipPriority: data.clipPriority,
     alarmEnabled: data.alarmEnabled,
     color: data.color,
-    shapes: cloneShapes(data.shapes)
+    shapes: cloneShapes(data.shapes.slice(0, 1))
   }
 }
 
@@ -122,7 +98,6 @@ async function loadPage() {
   drawTool.value = null
   loading.value = true
   try {
-    await loadAllRegions()
     if (isCreateMode.value) {
       resetFormForNew('warning')
       return
@@ -139,11 +114,9 @@ async function loadPage() {
 }
 
 function onRegionTypeChange(type: AreaRegionType) {
-  if (isCreateMode.value) {
-    form.value.clipPriority = defaultClipPriorityForType(type)
-    form.value.alarmEnabled = defaultAlarmForType(type)
-    form.value.color = defaultColorForType(type)
-  }
+  form.value.clipPriority = defaultClipPriorityForType(type)
+  form.value.alarmEnabled = defaultAlarmForType(type)
+  form.value.color = defaultColorForType(type)
 }
 
 function setTool(tool: AreaShapeType) {
@@ -156,7 +129,7 @@ function finishPolygonDraw() {
 }
 
 function onShapesUpdate(shapes: AreaShape[]) {
-  form.value.shapes = shapes
+  form.value.shapes = shapes.slice(-1)
 }
 
 function clearShapes() {
@@ -185,14 +158,13 @@ async function saveRegion() {
       clipPriority: form.value.clipPriority,
       alarmEnabled: form.value.alarmEnabled,
       color: form.value.color,
-      shapes: cloneShapes(form.value.shapes)
+      shapes: cloneShapes(form.value.shapes.slice(0, 1))
     })
     ElMessage.success(isCreateMode.value ? '新增成功' : '保存成功')
     if (isCreateMode.value) {
       await push(`/lad/area/edit/${res.data.id}`)
     } else {
       applyDetail(res.data)
-      await loadAllRegions()
     }
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '保存失败')
@@ -239,7 +211,7 @@ watch(
     <div class="area-edit-layout">
       <aside class="area-edit-sidebar">
         <div class="area-edit-panel__title">区域配置</div>
-        <p class="area-edit-tip">配置名称、类型、优先级与颜色，并在右侧地图绘制范围。</p>
+        <p class="area-edit-tip">配置名称、类型与优先级，并在右侧地图绘制单个区域范围。</p>
         <ElForm label-position="top" class="area-edit-form">
           <ElFormItem label="区域名称" required>
             <ElInput v-model="form.name" placeholder="请输入区域名称" clearable />
@@ -266,15 +238,7 @@ watch(
               :max="CLIP_PRIORITY_MAX"
               class="w-100%"
             />
-            <p class="area-field-tip">
-              数值越大越优先保留；重叠时低优先级区域会被镂空扣除。
-            </p>
-          </ElFormItem>
-          <ElFormItem label="区域颜色">
-            <ElColorPicker v-model="form.color" show-alpha color-format="rgb" />
-          </ElFormItem>
-          <ElFormItem label="参与告警">
-            <ElSwitch v-model="form.alarmEnabled" active-text="是" inactive-text="否" />
+            <p class="area-field-tip"> 数值越大越优先保留；重叠时低优先级区域会被镂空扣除。 </p>
           </ElFormItem>
           <ElFormItem label="范围绘制">
             <div class="area-draw-toolbar" role="toolbar" aria-label="范围绘制工具">
@@ -320,7 +284,6 @@ watch(
       <section class="area-edit-map-pane">
         <div class="area-edit-map-head">
           <span class="area-edit-panel__title">范围绘制</span>
-          <span class="area-edit-map-desc">灰色区域为其他已保存范围，当前编辑范围高亮显示</span>
         </div>
         <AreaGisMap
           ref="gisMapRef"
@@ -382,12 +345,6 @@ watch(
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 12px;
-}
-
-.area-edit-map-desc {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--el-text-color-secondary);
 }
 
 .area-edit-map-pane :deep(.area-gis-map) {

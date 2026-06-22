@@ -194,7 +194,9 @@ const buildTwoRowSearchSchema = (
   })
 
   if (!tailFilters.length) {
-    out.push(createActionField(Math.max(0, 24 - ACTION_SPAN), propsComputed, useExpand, canCollapse))
+    out.push(
+      createActionField(Math.max(0, 24 - ACTION_SPAN), propsComputed, useExpand, canCollapse)
+    )
   }
 
   return out
@@ -209,8 +211,7 @@ const newSchema = computed(() => {
     propsComputed.expandRows
   )
   const canCollapse = collapseIndex < filters.length
-  const useExpand =
-    propsComputed.showExpand || (propsComputed.expandRows > 0 && canCollapse)
+  const useExpand = propsComputed.showExpand || (propsComputed.expandRows > 0 && canCollapse)
   const collapsed = useExpand && canCollapse && !unref(visible)
   const useTwoRowLayout = propsComputed.isCol && propsComputed.expandRows === 2
 
@@ -242,9 +243,7 @@ const newSchema = computed(() => {
     })
   }
 
-  const visibleSpan = schema
-    .filter((v) => !v.hidden)
-    .reduce((sum, v) => sum + getFieldSpan(v), 0)
+  const visibleSpan = schema.filter((v) => !v.hidden).reduce((sum, v) => sum + getFieldSpan(v), 0)
   const tailSpan = visibleSpan % 24
 
   return schema.concat([

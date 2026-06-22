@@ -5,7 +5,11 @@ import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { getIntegrationListApi, probeIntegrationApi, reconnectIntegrationApi } from '@/api/lad/integration'
+import {
+  getIntegrationListApi,
+  probeIntegrationApi,
+  reconnectIntegrationApi
+} from '@/api/lad/integration'
 import type { IntegrationEndpoint, IntegrationRunStatus } from '@/api/lad/integration/types'
 import IntegrationDetailDialog from './components/IntegrationDetailDialog.vue'
 import { UI, runStatusLabel, runStatusOptions, runStatusTagType } from './integrationConstants'
@@ -190,7 +194,9 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
     <div class="mb-10px">
-      <BaseButton type="primary" :loading="probingAll" @click="probeAll">{{ UI.btnProbeAll }}</BaseButton>
+      <BaseButton type="primary" :loading="probingAll" @click="probeAll">{{
+        UI.btnProbeAll
+      }}</BaseButton>
     </div>
     <Table
       v-model:pageSize="pageSize"
@@ -201,10 +207,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       :pagination="{ total }"
       @register="tableRegister"
     />
-    <IntegrationDetailDialog
-      v-model="detailVisible"
-      :endpoint-id="detailId"
-      @probed="getList"
-    />
+    <IntegrationDetailDialog v-model="detailVisible" :endpoint-id="detailId" @probed="getList" />
   </ContentWrap>
 </template>

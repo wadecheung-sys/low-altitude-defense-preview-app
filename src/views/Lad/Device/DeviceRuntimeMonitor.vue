@@ -5,7 +5,11 @@ import DeviceMonitorCard from './components/DeviceMonitorCard.vue'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { DEVICE_MONITOR_SEARCH_COL, deviceMonitorTypeOptions, onlineStatusOptions } from './deviceMonitorConstants'
+import {
+  DEVICE_MONITOR_SEARCH_COL,
+  deviceMonitorTypeOptions,
+  onlineStatusOptions
+} from './deviceMonitorConstants'
 import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElEmpty, ElPagination } from 'element-plus'
@@ -163,18 +167,14 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
   &__grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
 
-    @media (max-width: 1400px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    @media (max-width: 992px) {
+    @media (max-width: 1100px) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    @media (max-width: 576px) {
+    @media (max-width: 720px) {
       grid-template-columns: 1fr;
     }
   }

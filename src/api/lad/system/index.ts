@@ -18,15 +18,11 @@ export function getSystemParamListApi(
   return request.get({ url: '/mock/lad/system/params/list', params })
 }
 
-export function saveSystemParamApi(
-  data: SystemParamSavePayload
-): Promise<IResponse<SystemParam>> {
+export function saveSystemParamApi(data: SystemParamSavePayload): Promise<IResponse<SystemParam>> {
   return request.post({ url: '/mock/lad/system/params/save', data })
 }
 
-export function getDictTypeListApi(
-  params: DictTypeQuery
-): Promise<IResponse<DictTypeListResult>> {
+export function getDictTypeListApi(params: DictTypeQuery): Promise<IResponse<DictTypeListResult>> {
   return request.get({ url: '/mock/lad/system/dict/type/list', params })
 }
 
@@ -44,9 +40,7 @@ export function getDictEntryListApi(
   return request.get({ url: '/mock/lad/system/dict/entry/list', params })
 }
 
-export function getDictEntriesByCodeApi(
-  dictCode: string
-): Promise<IResponse<DictEntryItem[]>> {
+export function getDictEntriesByCodeApi(dictCode: string): Promise<IResponse<DictEntryItem[]>> {
   return request.get({
     url: '/mock/lad/system/dict/entry/by-code',
     params: { dictCode }

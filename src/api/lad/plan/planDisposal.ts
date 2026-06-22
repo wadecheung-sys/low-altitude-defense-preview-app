@@ -51,10 +51,7 @@ export function normalizePlanDisposal(
   }
 }
 
-export function formatDisposalModeLabel(
-  mode: PlanDisposalMode,
-  manualResponseSeconds = 0
-): string {
+export function formatDisposalModeLabel(mode: PlanDisposalMode, manualResponseSeconds = 0): string {
   if (mode === 'manual') return '人员值守'
   if (manualResponseSeconds > 0) {
     return `自动处置 · ${manualResponseSeconds}s响应窗`

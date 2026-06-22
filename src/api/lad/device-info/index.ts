@@ -31,9 +31,7 @@ export const getDeviceInfoListApi = async (
   return request.get({ url: '/mock/lad/device-info/list', params })
 }
 
-export const getDeviceInfoDetailApi = async (
-  id: string
-): Promise<IResponse<DeviceInfoDetail>> => {
+export const getDeviceInfoDetailApi = async (id: string): Promise<IResponse<DeviceInfoDetail>> => {
   if (useLocalStore) {
     const data = queryDeviceInfoDetail(id)
     if (!data) {

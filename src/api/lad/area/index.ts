@@ -1,12 +1,12 @@
 import request from '@/axios'
 import { SUCCESS_CODE } from '@/constants'
-import {
-  deleteAreaRegion,
-  getAreaRegion,
-  queryAreaRegionList,
-  saveAreaRegion
-} from './areaStore'
-import type { AreaRegion, AreaRegionListResult, AreaRegionQuery, AreaRegionSavePayload } from './types'
+import { deleteAreaRegion, getAreaRegion, queryAreaRegionList, saveAreaRegion } from './areaStore'
+import type {
+  AreaRegion,
+  AreaRegionListResult,
+  AreaRegionQuery,
+  AreaRegionSavePayload
+} from './types'
 
 const useLocalStore = import.meta.env.VITE_USE_MOCK === 'true'
 

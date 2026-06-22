@@ -45,6 +45,7 @@ export interface AreaRegion {
   alarmEnabled: boolean
   color: string
   shapes: AreaShape[]
+  createdAt: string
   updatedAt: string
 }
 

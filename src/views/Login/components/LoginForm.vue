@@ -38,7 +38,9 @@ const schema = reactive<FormSchema[]>([
     formItemProps: {
       slots: {
         default: () => (
-          <h2 class="text-2xl font-bold text-center w-[100%] text-[#303133]">{t('login.platformTitle')}</h2>
+          <h2 class="text-2xl font-bold text-center w-[100%] text-[#303133]">
+            {t('login.platformTitle')}
+          </h2>
         )
       }
     }

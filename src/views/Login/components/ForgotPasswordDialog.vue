@@ -53,7 +53,11 @@ const validateConfirmPassword = (_rule: unknown, val: string, callback: (err?: E
 const rules = reactive<FormRules>({
   phone: [required(t('login.phoneRequired')), phone()],
   code: [required(t('login.codePlaceholder'))],
-  password: [required(t('login.passwordPlaceholder')), notSpace(), { min: 6, message: t('login.resetPasswordMin') }],
+  password: [
+    required(t('login.passwordPlaceholder')),
+    notSpace(),
+    { min: 6, message: t('login.resetPasswordMin') }
+  ],
   confirmPassword: [{ validator: validateConfirmPassword, trigger: 'blur' }]
 })
 

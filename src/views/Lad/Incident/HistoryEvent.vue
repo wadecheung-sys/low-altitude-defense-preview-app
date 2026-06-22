@@ -8,7 +8,11 @@ import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { deleteHistoryEventApi, getHistoryEventListApi } from '@/api/lad/incident'
+import {
+  deleteHistoryEventApi,
+  getHistoryEventListApi,
+  updateHistoryEventListTypeApi
+} from '@/api/lad/incident'
 import type {
   HandlingStatus,
   HistoryEventItem,
@@ -28,6 +32,7 @@ const searchParams = ref<Recordable>({})
 const confirmVisible = ref(false)
 const confirmRow = ref<HistoryEventItem>()
 const delLoading = ref(false)
+const listLoading = ref(false)
 
 const setSearchParams = (params: Recordable) => {
   const range = params.discoveredAtRange as string[] | undefined
@@ -67,8 +72,7 @@ const handlingStatusOptions = [
 const manualConfirmOptions = [
   { label: '待人工确认', value: '待人工确认' },
   { label: '真实入侵', value: '真实入侵' },
-  { label: '飞鸟/误报', value: '飞鸟/误报' },
-  { label: '启动反制', value: '启动反制' }
+  { label: '躁扰告警', value: '躁扰告警' }
 ]
 
 const countermeasureOptions = [
@@ -80,11 +84,12 @@ const countermeasureOptions = [
 ]
 
 const handlingResultOptions = [
-  { label: '监视跟踪', value: '监视跟踪' },
-  { label: '无线电干扰', value: '无线电干扰' },
-  { label: '迫降处置', value: '迫降处置' },
-  { label: '告警记录', value: '告警记录' },
-  { label: '移交执勤', value: '移交执勤' }
+  { label: '自动监控中', value: '自动监控中' },
+  { label: '驱离成功', value: '驱离成功' },
+  { label: '迫降成功', value: '迫降成功' },
+  { label: '激光打击成功', value: '激光打击成功' },
+  { label: '无线电压制成功', value: '无线电压制成功' },
+  { label: '未执行反制', value: '未执行反制' }
 ]
 
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
@@ -144,8 +149,7 @@ const confirmTagType = (status: ManualConfirmStatus) => {
   const map: Record<ManualConfirmStatus, 'danger' | 'success' | 'warning' | 'info'> = {
     待人工确认: 'warning',
     真实入侵: 'danger',
-    '飞鸟/误报': 'success',
-    启动反制: 'info'
+    躁扰告警: 'info'
   }
   return map[status]
 }
@@ -174,21 +178,23 @@ const exportReport = (format: 'word' | 'excel') => {
   ElMessage.success(`已生成历史事件 ${label} 报表（演示，未写入文件）`)
 }
 
-const setWhitelist = async (row: HistoryEventItem) => {
-  if (row.uavSn === '未解析') {
-    ElMessage.warning('该记录无有效 SN，无法设白名单')
+const addList = async (listType: '黑名单' | '白名单') => {
+  const elTableExpose = await getElTableExpose()
+  const selected = elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined
+  const selectedIds = selected?.map((item) => item.id) || []
+  if (!selectedIds.length) {
+    ElMessage.warning(`请先勾选要加入${listType}的记录`)
     return
   }
+
+  listLoading.value = true
   try {
-    await ElMessageBox.confirm(
-      `将无人机 ${row.uavSn}（${row.targetModel}）加入白名单后，不再触发告警。是否继续？`,
-      '设白名单',
-      { type: 'info', confirmButtonText: '确定', cancelButtonText: '取消' }
-    )
-    push({ path: '/lad/list/black-white', query: { sn: row.uavSn, add: 'white' } })
-    ElMessage.success('已跳转至黑白名单（演示）')
-  } catch {
-    /* user canceled */
+    await updateHistoryEventListTypeApi({ ids: selectedIds, listType })
+    ElMessage.success(`已将选中的 ${selectedIds.length} 条记录设为${listType}`)
+    await getList()
+    elTableExpose?.clearSelection()
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -203,8 +209,8 @@ const delData = async (row: HistoryEventItem | null) => {
   try {
     await ElMessageBox.confirm(
       row
-        ? `确定删除目标 ${row.targetId} 的该条历史记录？删除后不可恢复。`
-        : `确定批量删除已选 ${deleteIds.length} 条历史记录？删除后不可恢复。`,
+        ? `确定删除目标 ${row.targetId} 的该条历史记录吗？删除后不可恢复。`
+        : `确定批量删除已选 ${deleteIds.length} 条历史记录吗？删除后不可恢复。`,
       '删除确认',
       { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
     )
@@ -215,7 +221,7 @@ const delData = async (row: HistoryEventItem | null) => {
     })
     ElMessage.success('删除成功')
   } catch {
-    /* user canceled */
+    // user canceled
   }
 }
 
@@ -266,6 +272,25 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
+    field: 'listType',
+    label: '名单状态',
+    minWidth: 96,
+    search: { hidden: true },
+    table: {
+      slots: {
+        default: ({ row }: { row: HistoryEventItem }) => (
+          <ElTag
+            type={
+              row.listType === '黑名单' ? 'danger' : row.listType === '白名单' ? 'success' : 'info'
+            }
+          >
+            {row.listType}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
     field: 'handledAt',
     label: '处置时间',
     minWidth: 168,
@@ -279,12 +304,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: { hidden: true }
   },
   {
-    field: 'endedAt',
-    label: '结束时间',
-    minWidth: 168,
-    search: { hidden: true }
-  },
-  {
     field: 'duration',
     label: '持续时长',
     minWidth: 96,
@@ -293,17 +312,11 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'pilotLocation',
     label: '飞手位置',
-    minWidth: 168,
+    minWidth: 112,
     search: { hidden: true },
     table: {
-      showOverflowTooltip: true,
       slots: {
-        default: ({ row }: { row: HistoryEventItem }) =>
-          row.pilotLocation === '未定位' ? (
-            <span class="text-[var(--el-text-color-secondary)]">未定位</span>
-          ) : (
-            <span>{row.pilotLocation}</span>
-          )
+        default: () => <span class="text-[var(--el-text-color-secondary)]">未定位</span>
       }
     }
   },
@@ -504,11 +517,19 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '备注',
     minWidth: 120,
     search: { hidden: true },
-    table: { showOverflowTooltip: true }
+    table: {
+      showOverflowTooltip: true,
+      slots: {
+        default: ({ row }: { row: HistoryEventItem }) =>
+          row.remark === '等待值守人员确认' || row.remark === '等待值守人员人工确认'
+            ? ''
+            : row.remark
+      }
+    }
   },
   {
     field: 'action',
-    width: '380px',
+    width: '320px',
     label: '操作',
     fixed: 'right',
     search: { hidden: true },
@@ -518,13 +539,14 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
           <>
-            <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
-              人工确认
-            </BaseButton>
+            {row.handlingStatus !== '已处置' ? (
+              <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
+                人工确认
+              </BaseButton>
+            ) : null}
             <BaseButton type="success" onClick={() => goDetail(row)}>
               详情
             </BaseButton>
-            <BaseButton onClick={() => setWhitelist(row)}>设白名单</BaseButton>
             <BaseButton type="danger" onClick={() => delData(row)}>
               删除
             </BaseButton>
@@ -551,6 +573,12 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     />
 
     <div class="mb-10px">
+      <BaseButton type="danger" :loading="listLoading" @click="addList('黑名单')"
+        >添加黑名单</BaseButton
+      >
+      <BaseButton type="success" :loading="listLoading" @click="addList('白名单')"
+        >添加白名单</BaseButton
+      >
       <BaseButton type="primary" @click="exportReport('excel')">导出 Excel</BaseButton>
       <BaseButton @click="exportReport('word')">导出 Word</BaseButton>
       <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>

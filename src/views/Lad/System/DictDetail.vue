@@ -114,7 +114,10 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'label',
     label: '显示标签',
-    search: { component: 'Input', componentProps: { placeholder: '标签或字典值', clearable: true } },
+    search: {
+      component: 'Input',
+      componentProps: { placeholder: '标签或字典值', clearable: true }
+    },
     table: { minWidth: 120 }
   },
   {

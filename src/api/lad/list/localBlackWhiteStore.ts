@@ -174,6 +174,45 @@ export function updateLocalBlackWhiteListType(
   return buildTargetDetail(allList[idx])
 }
 
+export function syncLocalBlackWhiteListType(
+  targets: Array<{ targetId: string; targetModel: string; uavSn: string }>,
+  listType: Exclude<ListType, '未知'>
+) {
+  const ts = formatTimestamp(new Date())
+  targets.forEach((target) => {
+    const rows = allList.filter(
+      (row) =>
+        row.targetId === target.targetId || (target.uavSn !== '未解析' && row.sn === target.uavSn)
+    )
+    if (rows.length) {
+      rows.forEach((row) => {
+        row.listType = listType
+        row.updatedAt = ts
+      })
+      return
+    }
+
+    allList.unshift({
+      id: `bw-${Date.now()}-${target.targetId}`,
+      targetId: target.targetId,
+      listType,
+      targetType: '多旋翼',
+      validUntil: '永久',
+      discoveredAt: ts,
+      updatedAt: ts,
+      duration: '00:00:00',
+      model: target.targetModel,
+      frequency: '未知',
+      sn: target.uavSn,
+      zoneName: '',
+      longitude: 0,
+      latitude: 0,
+      entryMethod: '人工录入',
+      remark: '由历史事件批量设置'
+    })
+  })
+}
+
 export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteListItem {
   const ts = formatTimestamp(new Date())
 

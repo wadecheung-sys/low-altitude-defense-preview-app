@@ -1,4 +1,9 @@
-import type { AuthAccountLevel, AuthLogType, AuthUserType, PermissionNodeType } from '@/api/lad/auth/types'
+import type {
+  AuthAccountLevel,
+  AuthLogType,
+  AuthUserType,
+  PermissionNodeType
+} from '@/api/lad/auth/types'
 
 export const userTypeOptions = [
   { label: '系统管理员', value: 'system' },
@@ -52,7 +57,4 @@ export const permTypeLabel: Record<PermissionNodeType, string> = {
   button: '按钮'
 }
 
-export const roleUserTypeOptions = [
-  { label: '不限', value: 'any' },
-  ...userTypeOptions
-]
+export const roleUserTypeOptions = [{ label: '不限', value: 'any' }, ...userTypeOptions]

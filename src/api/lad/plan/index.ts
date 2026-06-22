@@ -6,7 +6,9 @@ import type {
   PlanStrategySavePayload
 } from './types'
 
-export function getPlanListApi(params: PlanStrategyQuery): Promise<IResponse<PlanStrategyListResult>> {
+export function getPlanListApi(
+  params: PlanStrategyQuery
+): Promise<IResponse<PlanStrategyListResult>> {
   return request.get({ url: '/mock/lad/plan/list', params })
 }
 

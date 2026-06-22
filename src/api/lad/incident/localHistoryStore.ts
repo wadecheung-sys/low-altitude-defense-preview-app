@@ -1,6 +1,6 @@
 import { buildDisposalTimeline } from './disposalTimeline'
+import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore'
 import type {
-  HandlingStatus,
   HistoryEventDetail,
   HistoryEventItem,
   HistoryEventListResult,
@@ -14,21 +14,14 @@ import type {
 const models = ['DJI Mavic 3', 'DJI Mini 3 Pro', 'Autel EVO II', 'Parrot Anafi', '未知型号']
 const trajectories = ['直线逼近', '盘旋', '悬停', '快速穿越', '不规则']
 const threatLevels: ThreatLevel[] = ['高', '中', '低', '未知']
-const handlingStatuses: HandlingStatus[] = ['待处置', '处置中', '已处置', '已关闭', '仅记录']
-const handlingResults = ['监视跟踪', '无线电干扰', '迫降处置', '告警记录', '移交执勤']
+const handlingResults = ['驱离成功', '迫降成功', '激光打击成功', '无线电压制成功']
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
-const zones = ['核心防护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
+const zones = ['核心防护区A区', '缓冲区B区', '管制空域C区', '公共区域']
 const dataSources = ['雷达+无线电融合', '雷达单源', '无线电侦测', '光电跟踪', '多源融合节点']
 const countermeasures = ['干扰-01 (自动)', '--', '诱骗-02', '干扰-01 (人工)', '激光-01 (待命)']
-const pilotLocations = [
-  'E:113.42 N:23.08（TDOA）',
-  'E:113.38 N:23.11（无线电解析）',
-  '未定位',
-  'E:113.45 N:23.06（TDOA+融合）',
-  'E:113.40 N:23.12（无线电解析）'
-]
 
 const TARGET_COUNT = 24
+const LIST_TYPE_STORAGE_KEY = 'lad-history-event-list-types'
 
 const targetProfiles = Array.from({ length: TARGET_COUNT }, (_, index) => {
   const hasUavSn = index % 4 !== 0
@@ -56,20 +49,19 @@ function buildSeedList() {
       const endMin = Number(min) + Math.floor(durationSec / 60)
       const endSec = (Number(sec) + durationSec) % 60
       const ended = `2024-03-${day} ${hour}:${String(endMin).padStart(2, '0')}:${String(endSec).padStart(2, '0')}`
-      const handled =
-        i % 5 === 4
-          ? '--'
-          : `2024-03-${day} ${hour}:${String(endMin).padStart(2, '0')}:${String((endSec + 5) % 60).padStart(2, '0')}`
+      const handled = `2024-03-${day} ${hour}:${String(endMin).padStart(2, '0')}:${String((endSec + 5) % 60).padStart(2, '0')}`
       const lng = (113.39 + (i % 20) * 0.01).toFixed(2)
       const lat = (23.09 + (i % 15) * 0.01).toFixed(2)
       const abnormalSec = i % 3 === 0 ? 8 + (i % 40) : 0
+      const keepOpen = i < 4
+      const forceDisposed = i === 8 || i === 9
 
       list.push({
         id: `he-${10001 + i}`,
         targetId: profile.targetId,
         relatedEventCount: profile.eventCount,
         threatLevel: threatLevels[i % threatLevels.length],
-        handledAt: handled,
+        handledAt: keepOpen ? '--' : handled,
         discoveredAt: discovered,
         endedAt: ended,
         abnormalDuration:
@@ -77,7 +69,7 @@ function buildSeedList() {
             ? `00:${String(Math.floor(abnormalSec / 60)).padStart(2, '0')}:${String(abnormalSec % 60).padStart(2, '0')}`
             : '--',
         duration: `00:${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`,
-        pilotLocation: pilotLocations[i % pilotLocations.length],
+        pilotLocation: '未定位',
         targetLocation: `E:${lng} N:${lat}`,
         zoneName: zones[i % zones.length],
         dataSource: dataSources[i % dataSources.length],
@@ -85,11 +77,18 @@ function buildSeedList() {
         targetModel: profile.targetModel,
         uavSn: profile.uavSn,
         detectionDevice: detectionDevices[i % detectionDevices.length],
-        countermeasureDevice: countermeasures[i % countermeasures.length],
-        handlingResult: handlingResults[i % handlingResults.length],
-        handlingStatus: i % 4 === 0 ? '待处置' : handlingStatuses[i % handlingStatuses.length],
-        manualConfirmStatus: i % 4 === 0 ? '待人工确认' : '真实入侵',
-        remark: i % 7 === 0 ? '多源轨迹已合并' : ''
+        countermeasureDevice: keepOpen ? '--' : countermeasures[i % countermeasures.length],
+        handlingResult: keepOpen ? '待执行' : handlingResults[i % handlingResults.length],
+        handlingStatus: forceDisposed
+          ? '已处置'
+          : keepOpen
+            ? i < 2
+              ? '待处置'
+              : '处置中'
+            : '已处置',
+        manualConfirmStatus: keepOpen ? '待人工确认' : i % 5 === 0 ? '躁扰告警' : '真实入侵',
+        listType: '未知',
+        remark: keepOpen ? '等待值守人员人工确认' : i % 7 === 0 ? '多源轨迹已合并' : ''
       })
     }
   })
@@ -97,7 +96,31 @@ function buildSeedList() {
   return list
 }
 
-let allList: HistoryEventItem[] = buildSeedList()
+function readStoredListTypes(): Record<string, HistoryEventItem['listType']> {
+  if (typeof localStorage === 'undefined') return {}
+  try {
+    return JSON.parse(localStorage.getItem(LIST_TYPE_STORAGE_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function persistListTypes() {
+  if (typeof localStorage === 'undefined') return
+  const values = Object.fromEntries(allList.map((row) => [row.id, row.listType]))
+  localStorage.setItem(LIST_TYPE_STORAGE_KEY, JSON.stringify(values))
+}
+
+const storedListTypes = readStoredListTypes()
+let allList: HistoryEventItem[] = buildSeedList().map((row) => ({
+  ...row,
+  listType: storedListTypes[row.id] || row.listType || '未知'
+}))
+
+function formatTimestamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
 
 function updateRelatedEventCount() {
   allList.forEach((row) => {
@@ -105,24 +128,48 @@ function updateRelatedEventCount() {
   })
 }
 
-function applyConfirm(row: HistoryEventItem, result: ManualConfirmResult, remark?: string) {
+function applyConfirm(
+  row: HistoryEventItem,
+  result: ManualConfirmResult,
+  threatLevel: ThreatLevel = '未知',
+  nuisanceType?: string,
+  remark?: string
+) {
+  const now = formatTimestamp(new Date())
   row.manualConfirmStatus = result
-  if (remark) row.remark = remark
+  row.handledAt = now
+  row.endedAt = row.endedAt === '--' ? now : row.endedAt
 
   if (result === '真实入侵') {
-    row.threatLevel = row.threatLevel === '未知' ? '高' : row.threatLevel
-    row.handlingStatus = '处置中'
-    row.handlingResult = '已确认入侵，持续监控'
-  } else if (result === '飞鸟/误报') {
+    row.threatLevel = threatLevel
+    if (threatLevel === '低') {
+      row.handlingStatus = '处置中'
+      row.handlingResult = '自动监控中'
+      row.countermeasureDevice = '光电-01 (自动)'
+    } else if (threatLevel === '中') {
+      row.handlingStatus = '已处置'
+      row.handlingResult = '驱离成功'
+      row.countermeasureDevice = '干扰-01 (自动)'
+    } else if (threatLevel === '高') {
+      row.handlingStatus = '已处置'
+      row.handlingResult = '激光打击成功'
+      row.countermeasureDevice = '激光-01 (自动)'
+    } else {
+      row.handlingStatus = '待处置'
+      row.handlingResult = '待执行'
+      row.countermeasureDevice = '--'
+    }
+    row.remark = remark || `人工确认真实入侵，威胁等级${threatLevel}`
+    return
+  }
+
+  if (result === '躁扰告警') {
     row.threatLevel = '低'
     row.handlingStatus = '已关闭'
-    row.handlingResult = '飞鸟/误报归档'
-  } else {
-    row.handlingStatus = '处置中'
-    row.handlingResult = '已下发反制指令'
-    if (row.countermeasureDevice === '--') {
-      row.countermeasureDevice = '干扰-01 (人工启动)'
-    }
+    row.handlingResult = '未执行反制'
+    row.countermeasureDevice = '--'
+    row.remark = remark || `人工确认为躁扰告警（${nuisanceType || '其他'}），已关闭告警`
+    return
   }
 }
 
@@ -162,8 +209,8 @@ function buildHistoryEventDetail(row: HistoryEventItem): HistoryEventDetail {
 
   return {
     ...row,
-    pilotConfidence: row.pilotLocation.includes('未定位') ? '--' : `${72 + (seed % 23)}%`,
-    zoneName: ['核心防护区-A区', '缓冲区-B区', '管制空域-C区'][seed % 3],
+    pilotConfidence: '--',
+    zoneName: ['核心防护区A区', '缓冲区B区', '管制空域C区'][seed % 3],
     frequencyInfo: seed % 2 === 0 ? '2.4GHz + 5.8GHz' : '5.8GHz',
     targetType: row.targetModel === '未知型号' ? '未知' : '多旋翼',
     disposalDetail: `${row.handlingResult}；反制设备：${row.countermeasureDevice}`,
@@ -267,6 +314,18 @@ export function deleteLocalHistoryEvent(ids: string[]) {
 
 export function confirmLocalHistoryEvent(payload: ManualConfirmPayload) {
   const row = allList.find((item) => item.id === payload.id)
-  if (row) applyConfirm(row, payload.result, payload.remark)
+  if (row) {
+    applyConfirm(row, payload.result, payload.threatLevel, payload.nuisanceType, payload.remark)
+  }
   return true
+}
+
+export function updateLocalHistoryEventListType(ids: string[], listType: '黑名单' | '白名单') {
+  const selected = allList.filter((row) => ids.includes(row.id))
+  selected.forEach((row) => {
+    row.listType = listType
+  })
+  persistListTypes()
+  syncLocalBlackWhiteListType(selected, listType)
+  return selected.length
 }

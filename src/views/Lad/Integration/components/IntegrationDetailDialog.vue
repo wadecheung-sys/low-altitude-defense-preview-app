@@ -2,7 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
-import { getIntegrationDetailApi, probeIntegrationApi, reconnectIntegrationApi } from '@/api/lad/integration'
+import {
+  getIntegrationDetailApi,
+  probeIntegrationApi,
+  reconnectIntegrationApi
+} from '@/api/lad/integration'
 import type { IntegrationDetailResult, IntegrationRunStatus } from '@/api/lad/integration/types'
 import { UI, runStatusLabel, runStatusTagType } from '../integrationConstants'
 import {
@@ -146,7 +150,9 @@ const showReconnect = computed(() => ep.value && canReconnect(ep.value.runStatus
       <BaseButton v-if="showReconnect" type="primary" :loading="reconnecting" @click="onReconnect">
         {{ UI.dialogReconnect }}
       </BaseButton>
-      <BaseButton type="primary" :loading="probing" @click="onProbe">{{ UI.dialogProbe }}</BaseButton>
+      <BaseButton type="primary" :loading="probing" @click="onProbe">{{
+        UI.dialogProbe
+      }}</BaseButton>
       <BaseButton @click="visible = false">{{ UI.dialogClose }}</BaseButton>
     </template>
   </Dialog>

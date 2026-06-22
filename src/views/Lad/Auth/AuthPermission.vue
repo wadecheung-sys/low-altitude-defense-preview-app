@@ -25,8 +25,7 @@ function filterTree(nodes: AuthPermissionNode[], kw: string): AuthPermissionNode
     const out: AuthPermissionNode[] = []
     for (const n of list) {
       const children = n.children ? walk(n.children) : []
-      const hit =
-        n.name.toLowerCase().includes(lower) || n.permCode.toLowerCase().includes(lower)
+      const hit = n.name.toLowerCase().includes(lower) || n.permCode.toLowerCase().includes(lower)
       if (hit || children.length) {
         out.push({ ...n, children: children.length ? children : undefined })
       }

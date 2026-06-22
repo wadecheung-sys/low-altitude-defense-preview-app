@@ -9,7 +9,7 @@ import {
   ElEmpty,
   ElCard
 } from 'element-plus'
-import { defineComponent, PropType, ref, computed, unref, watch, onMounted } from 'vue'
+import { defineComponent, PropType, ref, reactive, computed, unref, watch, onMounted } from 'vue'
 import { propTypes } from '@/utils/propTypes'
 import { setIndex } from './helper'
 import type { TableProps, TableColumn, Pagination, TableSetProps } from './types'
@@ -218,12 +218,13 @@ export default defineComponent({
     // 注册
     onMounted(() => {
       const tableRef = unref(elTableRef)
-      emit('register', tableRef?.$parent, elTableRef)
+      emit('register', tableRef?.$parent, tableRef)
     })
 
-    const pageSizeRef = ref(props.pageSize)
-
-    const currentPageRef = ref(props.currentPage)
+    const paginationState = reactive({
+      pageSize: props.pageSize,
+      currentPage: props.currentPage
+    })
 
     // useTable传入的props
     const outsideProps = ref<TableProps>({})
@@ -310,26 +311,32 @@ export default defineComponent({
     watch(
       () => unref(getProps).pageSize,
       (val: number) => {
-        pageSizeRef.value = val
+        paginationState.pageSize = val
+      },
+      {
+        immediate: true
       }
     )
 
     watch(
       () => unref(getProps).currentPage,
       (val: number) => {
-        currentPageRef.value = val
+        paginationState.currentPage = val
+      },
+      {
+        immediate: true
       }
     )
 
     watch(
-      () => pageSizeRef.value,
+      () => paginationState.pageSize,
       (val: number) => {
         emit('update:pageSize', val)
       }
     )
 
     watch(
-      () => currentPageRef.value,
+      () => paginationState.currentPage,
       (val: number) => {
         emit('update:currentPage', val)
       }
@@ -342,6 +349,15 @@ export default defineComponent({
       delete bindValue.align
       return bindValue
     })
+
+    const paginationListeners = {
+      'onUpdate:page-size': (val: number) => {
+        paginationState.pageSize = val
+      },
+      'onUpdate:current-page': (val: number) => {
+        paginationState.currentPage = val
+      }
+    }
 
     const renderTreeTableColumn = (columnsChildren: TableColumn[]) => {
       const { align, headerAlign, showOverflowTooltip, imagePreview, videoPreview } =
@@ -573,9 +589,10 @@ export default defineComponent({
           )}
           {unref(getProps).pagination ? (
             <ElPagination
-              v-model:pageSize={pageSizeRef.value}
-              v-model:currentPage={currentPageRef.value}
+              pageSize={paginationState.pageSize}
+              currentPage={paginationState.currentPage}
               class="mt-10px"
+              {...paginationListeners}
               {...unref(pagination)}
             ></ElPagination>
           ) : undefined}

@@ -13,10 +13,8 @@ import type {
   DeviceLinkedArchive,
   DeviceSelfCheckResult
 } from '@/api/lad/device-info/types'
-import DeviceRemoteControlPanel from '@/views/Lad/shared/DeviceRemoteControlPanel.vue'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
-import { DEVICE_ARCHIVE_PLACEHOLDER } from './constants'
 import { deviceInfoTypeOptions } from './deviceInfoConstants'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
@@ -53,8 +51,10 @@ const detail = ref<DeviceInfoDetail | null>(null)
 const currentLinkedArchive = ref<DeviceLinkedArchive | null>(null)
 const archiveOptions = ref<DeviceArchiveItem[]>([])
 const formRef = ref<FormInstance>()
-const metricsTab = ref<'archive' | 'extend'>('archive')
+const metricsTab = ref<'archive' | 'extend'>('extend')
 const extendedRows = ref<DeviceExtendedField[]>([])
+const deviceImageUrl = ref('')
+const imageInputRef = ref<HTMLInputElement>()
 const selfCheckLoading = ref(false)
 const selfCheckVisible = ref(false)
 const selfCheckResult = ref<DeviceSelfCheckResult | null>(null)
@@ -65,7 +65,6 @@ const isEditable = computed(() => !isViewMode.value)
 const recordId = computed(() => (route.params.id as string) || '')
 
 const linkedArchive = computed(() => currentLinkedArchive.value)
-const deviceImageUrl = computed(() => linkedArchive.value?.imageUrl || DEVICE_ARCHIVE_PLACEHOLDER)
 const archiveSelectOptions = computed(() => {
   const selectedArchiveId = form.archiveId
   return archiveOptions.value.filter((item) => item.enabled || item.id === selectedArchiveId)
@@ -104,13 +103,10 @@ const form = reactive({
 })
 
 const rules: FormRules = {
+  deviceId: [{ required: true, message: '请输入设备编号', trigger: 'blur' }],
   deviceName: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
-  deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
-  deployLocation: [{ required: true, message: '请输入部署位置', trigger: 'blur' }],
-  deployAddress: [{ required: true, message: '请填写详细部署地址', trigger: 'blur' }],
-  ipAddress: [{ required: true, message: '请输入 IP 地址', trigger: 'blur' }],
-  serialNo: [{ required: true, message: '请输入序列号', trigger: 'blur' }],
-  personInCharge: [{ required: true, message: '请输入负责人', trigger: 'blur' }]
+  archiveId: [{ required: true, message: '请选择基础档案', trigger: 'change' }],
+  deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }]
 }
 
 let extendSeq = 0
@@ -148,7 +144,20 @@ function applyDetail(data: DeviceInfoDetail) {
   form.personInCharge = data.personInCharge
   form.contactPhone = data.contactPhone
   form.remark = data.remark
-  extendedRows.value = data.extendedFields.map((field) => ({ ...field }))
+  deviceImageUrl.value = data.imageUrl || ''
+  const fields = data.extendedFields.map((field) => ({ ...field }))
+  const appendLegacyField = (label: string, value: string) => {
+    if (value && !fields.some((field) => field.label === label)) {
+      fields.push({ id: nextExtendId(), label, value })
+    }
+  }
+  appendLegacyField('部署位置', data.deployLocation)
+  appendLegacyField('详细地址', data.deployAddress)
+  appendLegacyField('负责人', data.personInCharge)
+  appendLegacyField('联系方式', data.contactPhone)
+  appendLegacyField('设备IP', data.ipAddress)
+  appendLegacyField('设备序列号', data.serialNo)
+  extendedRows.value = fields
 }
 
 function resetCreate() {
@@ -165,10 +174,8 @@ function resetCreate() {
   form.personInCharge = ''
   form.contactPhone = ''
   form.remark = ''
-  extendedRows.value = [
-    { id: nextExtendId(), label: '安装方位', value: '' },
-    { id: nextExtendId(), label: '现场编号', value: '' }
-  ]
+  deviceImageUrl.value = ''
+  extendedRows.value = []
 }
 
 async function loadArchiveOptions() {
@@ -187,7 +194,7 @@ async function syncLinkedArchive(archiveId?: string) {
     currentLinkedArchive.value = mapArchiveDetailToLinkedArchive(res.data)
   } catch {
     currentLinkedArchive.value = null
-    ElMessage.warning('关联档案加载失败')
+    ElMessage.warning('基础档案加载失败')
   } finally {
     archiveLoading.value = false
   }
@@ -227,6 +234,38 @@ function addExtendedRow() {
 
 function removeExtendedRow(row: DeviceExtendedField) {
   extendedRows.value = extendedRows.value.filter((item) => item.id !== row.id)
+}
+
+function extendedValue(label: string) {
+  return extendedRows.value.find((row) => row.label.trim() === label)?.value.trim() || ''
+}
+
+function openImagePicker() {
+  imageInputRef.value?.click()
+}
+
+function onImageSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    ElMessage.warning('仅支持 JPG、PNG 或 WebP 图片')
+    return
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    ElMessage.warning('设备图片不能超过 3 MB')
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    deviceImageUrl.value = typeof reader.result === 'string' ? reader.result : ''
+  }
+  reader.readAsDataURL(file)
+}
+
+function removeDeviceImage() {
+  deviceImageUrl.value = ''
 }
 
 function goArchiveDetail() {
@@ -269,10 +308,7 @@ async function save() {
   saveLoading.value = true
   try {
     const archiveInfo =
-      linkedArchive.value?.archiveName ||
-      detail.value?.archiveInfo ||
-      form.deployLocation.trim() ||
-      form.deviceName.trim()
+      linkedArchive.value?.archiveName || detail.value?.archiveInfo || form.deviceName.trim()
     const res = await saveDeviceInfoApi({
       id: isCreateMode.value ? undefined : recordId.value,
       deviceId: form.deviceId || undefined,
@@ -280,13 +316,14 @@ async function save() {
       archiveInfo,
       archiveId: form.archiveId || undefined,
       deviceType: form.deviceType,
-      deployLocation: form.deployLocation.trim(),
-      deployAddress: form.deployAddress.trim(),
-      ipAddress: form.ipAddress.trim(),
-      serialNo: form.serialNo.trim(),
-      personInCharge: form.personInCharge.trim(),
-      contactPhone: form.contactPhone.trim(),
+      deployLocation: extendedValue('部署位置'),
+      deployAddress: extendedValue('详细地址'),
+      ipAddress: extendedValue('设备IP'),
+      serialNo: extendedValue('设备序列号'),
+      personInCharge: extendedValue('负责人'),
+      contactPhone: extendedValue('联系方式'),
       remark: form.remark,
+      imageUrl: deviceImageUrl.value,
       extendedFields: extendedRows.value.map((row) => ({
         id: row.id,
         label: row.label.trim(),
@@ -317,7 +354,7 @@ watch(
 watch(
   () => `${String(route.name)}|${recordId.value}`,
   () => {
-    metricsTab.value = 'archive'
+    metricsTab.value = 'extend'
     fetchDetail()
   }
 )
@@ -347,21 +384,56 @@ watch(
 
     <div v-if="isCreateMode || detail" class="device-detail-grid">
       <section class="device-detail-panel">
-        <div class="device-detail-panel__title">设备图像</div>
-        <div class="device-detail-image">
-          <ElImage :src="deviceImageUrl" fit="contain" class="device-detail-image__img" />
+        <div class="device-detail-image-head">
+          <div class="device-detail-panel__title">设备图像</div>
+          <div v-if="isEditable" class="device-detail-image-actions">
+            <BaseButton type="primary" link @click="openImagePicker">
+              {{ deviceImageUrl ? '更换图片' : '上传图片' }}
+            </BaseButton>
+            <BaseButton v-if="deviceImageUrl" type="danger" link @click="removeDeviceImage">
+              移除
+            </BaseButton>
+          </div>
         </div>
-        <p v-if="linkedArchive" class="device-detail-image__hint">
-          取自关联档案“{{ linkedArchive.archiveName }}”
+        <input
+          ref="imageInputRef"
+          class="device-detail-image-input"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          @change="onImageSelected"
+        />
+        <div class="device-detail-image">
+          <ElImage
+            v-if="deviceImageUrl"
+            :src="deviceImageUrl"
+            fit="contain"
+            class="device-detail-image__img"
+            :preview-src-list="[deviceImageUrl]"
+          />
+          <div v-else class="device-radar-placeholder" aria-label="暂无设备图像">
+            <div class="device-radar-placeholder__scope">
+              <i class="device-radar-placeholder__ring ring-1"></i>
+              <i class="device-radar-placeholder__ring ring-2"></i>
+              <i class="device-radar-placeholder__ring ring-3"></i>
+              <i class="device-radar-placeholder__axis axis-x"></i>
+              <i class="device-radar-placeholder__axis axis-y"></i>
+              <i class="device-radar-placeholder__sweep"></i>
+              <i class="device-radar-placeholder__target target-1"></i>
+              <i class="device-radar-placeholder__target target-2"></i>
+              <i class="device-radar-placeholder__center"></i>
+            </div>
+            <strong>暂无设备图像</strong>
+            <span>RADAR DEVICE</span>
+          </div>
+        </div>
+        <p v-if="isEditable" class="device-detail-image__hint">
+          支持 JPG、PNG、WebP，文件不超过 3 MB
         </p>
-        <p v-else class="device-detail-image__hint">关联档案后可展示档案图像</p>
       </section>
 
       <section class="device-detail-panel">
         <div class="device-detail-panel__title">基本信息</div>
-        <p class="device-detail-panel__hint">
-          设备台账核心字段（含 IP、序列号等），与扩展信息区分。
-        </p>
+        <p class="device-detail-panel__hint">设备台账核心字段，与扩展信息区分。</p>
         <ElForm
           ref="formRef"
           label-position="top"
@@ -370,41 +442,20 @@ watch(
           class="device-detail-form"
           :disabled="!isEditable"
         >
-          <ElFormItem label="设备 ID">
-            <ElInput
-              v-model="form.deviceId"
-              :placeholder="isCreateMode ? '保存后自动生成' : ''"
-              disabled
-            />
+          <ElFormItem label="设备编号" prop="deviceId" required>
+            <ElInput v-model="form.deviceId" placeholder="请输入设备编号" clearable />
           </ElFormItem>
-          <ElFormItem label="设备名称" prop="deviceName" required>
+          <ElFormItem label="设备" prop="deviceName" required>
             <ElInput v-model="form.deviceName" placeholder="请输入设备名称" clearable />
           </ElFormItem>
-          <ElFormItem label="IP 地址" prop="ipAddress" required>
-            <ElInput v-model="form.ipAddress" placeholder="请输入 IP 地址" clearable />
-          </ElFormItem>
-          <ElFormItem label="序列号" prop="serialNo" required>
-            <ElInput v-model="form.serialNo" placeholder="请输入序列号" clearable />
-          </ElFormItem>
-          <ElFormItem label="设备类型" prop="deviceType" required>
-            <ElSelect v-model="form.deviceType" placeholder="请选择" class="w-100%" clearable>
-              <ElOption
-                v-for="option in deviceInfoTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="关联档案">
+          <ElFormItem label="基础档案" prop="archiveId" required>
             <ElSelect
               v-if="isEditable"
               v-model="form.archiveId"
               class="w-100%"
-              clearable
               filterable
               :loading="archiveLoading"
-              placeholder="请选择设备档案"
+              placeholder="请选择基础档案"
             >
               <ElOption
                 v-for="item in archiveSelectOptions"
@@ -425,22 +476,21 @@ watch(
               {{ linkedArchive.archiveNo }} / {{ linkedArchive.deviceModel }}
             </span>
           </ElFormItem>
-          <ElFormItem label="部署位置" prop="deployLocation" required>
-            <ElInput v-model="form.deployLocation" placeholder="如：楼顶 A 区" clearable />
+          <ElFormItem label="设备类型" prop="deviceType" required>
+            <ElSelect v-model="form.deviceType" placeholder="请选择" class="w-100%" clearable>
+              <ElOption
+                v-for="option in deviceInfoTypeOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </ElSelect>
           </ElFormItem>
-          <ElFormItem label="详细地址" prop="deployAddress" required>
-            <ElInput
-              v-model="form.deployAddress"
-              type="textarea"
-              :rows="2"
-              placeholder="楼栋、楼层、方位等"
-            />
+          <ElFormItem label="厂商" required>
+            <ElInput :model-value="linkedArchive?.vendor || '--'" disabled />
           </ElFormItem>
-          <ElFormItem label="负责人" prop="personInCharge" required>
-            <ElInput v-model="form.personInCharge" placeholder="请输入负责人" clearable />
-          </ElFormItem>
-          <ElFormItem label="联系方式">
-            <ElInput v-model="form.contactPhone" placeholder="请输入联系电话" clearable />
+          <ElFormItem label="设备型号" required>
+            <ElInput :model-value="linkedArchive?.deviceModel || '--'" disabled />
           </ElFormItem>
           <ElFormItem label="备注">
             <ElInput v-model="form.remark" type="textarea" :rows="2" placeholder="选填" />
@@ -450,27 +500,9 @@ watch(
 
       <section class="device-detail-panel device-detail-panel--wide">
         <ElTabs v-model="metricsTab" class="device-detail-metrics-tabs">
-          <ElTabPane label="档案指标" name="archive">
-            <p v-if="!linkedArchive" class="device-detail-metrics-empty">
-              未关联设备档案，暂无档案指标。请在台账中绑定档案后查看。
-            </p>
-            <template v-else>
-              <p class="device-detail-metrics-tip">
-                以下指标来自关联档案“{{
-                  linkedArchive.archiveName
-                }}”，随档案维护更新，本页不直接编辑。
-              </p>
-              <ElTable :data="linkedArchive.indicators" border stripe row-key="id" max-height="360">
-                <ElTableColumn type="index" label="序号" width="64" />
-                <ElTableColumn prop="item" label="指标项" min-width="130" />
-                <ElTableColumn prop="unit" label="单位" width="100" />
-                <ElTableColumn prop="value" label="值" min-width="120" />
-              </ElTable>
-            </template>
-          </ElTabPane>
           <ElTabPane label="扩展信息" name="extend">
             <p class="device-detail-metrics-tip">
-              本设备特有补充信息（不含 IP、序列号等基本信息字段），可单独维护。
+              本设备特有补充信息，可维护设备IP、设备序列号、部署位置、负责人等非核心字段。
             </p>
             <div v-if="isEditable" class="device-detail-ind-toolbar mb-10px">
               <BaseButton type="primary" @click="addExtendedRow">新增信息项</BaseButton>
@@ -485,7 +517,7 @@ watch(
                   <ElInput
                     v-if="isEditable"
                     v-model="row.label"
-                    placeholder="如：安装方位"
+                    placeholder="如：设备IP、部署位置"
                     size="small"
                   />
                   <span v-else>{{ row.label }}</span>
@@ -512,17 +544,25 @@ watch(
               </ElTableColumn>
             </ElTable>
           </ElTabPane>
+          <ElTabPane label="档案信息" name="archive">
+            <p v-if="!linkedArchive" class="device-detail-metrics-empty">
+              未关联基础档案，暂无档案信息。请绑定基础档案后查看。
+            </p>
+            <template v-else>
+              <p class="device-detail-metrics-tip">
+                以下信息来自基础档案“{{
+                  linkedArchive.archiveName
+                }}”，随档案维护更新，本页不直接编辑。
+              </p>
+              <ElTable :data="linkedArchive.indicators" border stripe row-key="id" max-height="360">
+                <ElTableColumn type="index" label="序号" width="64" />
+                <ElTableColumn prop="item" label="指标项" min-width="130" />
+                <ElTableColumn prop="unit" label="单位" width="100" />
+                <ElTableColumn prop="value" label="值" min-width="120" />
+              </ElTable>
+            </template>
+          </ElTabPane>
         </ElTabs>
-      </section>
-
-      <section v-if="isViewMode" class="device-detail-panel device-detail-panel--remote">
-        <div class="device-detail-panel__title">远程操控</div>
-        <DeviceRemoteControlPanel
-          :device-name="form.deviceName"
-          :device-type="form.deviceType"
-          :device-code="form.serialNo"
-          :online="!!detail?.lastHeartbeat"
-        />
       </section>
     </div>
 
@@ -604,6 +644,29 @@ watch(
   font-weight: 600;
 }
 
+.device-detail-image-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  margin-bottom: 8px;
+}
+
+.device-detail-image-head .device-detail-panel__title {
+  margin-bottom: 0;
+}
+
+.device-detail-image-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.device-detail-image-input {
+  display: none;
+}
+
 .device-detail-panel__hint {
   margin: 0 0 10px;
   font-size: 12px;
@@ -615,24 +678,147 @@ watch(
   min-width: 0;
 }
 
-.device-detail-panel--remote {
-  grid-column: 1 / -1;
-}
-
 .device-detail-image {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
-  height: min(32vh, 300px);
-  padding: 8px;
-  background: var(--el-fill-color-light);
-  border-radius: var(--el-border-radius-base);
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  min-height: 210px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #f7fafc, #edf3f7);
+  border: 1px solid #dce6ed;
+  border-radius: 10px;
 }
 
 .device-detail-image__img {
   width: 100%;
-  max-height: 100%;
+  height: 100%;
+}
+
+.device-radar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #708696;
+}
+
+.device-radar-placeholder__scope {
+  position: relative;
+  width: 138px;
+  height: 138px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid #9db4c2;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(66, 124, 151, 0.09), rgba(66, 124, 151, 0.015));
+  box-shadow:
+    inset 0 0 28px rgba(42, 96, 122, 0.08),
+    0 8px 24px rgba(56, 89, 105, 0.08);
+}
+
+.device-radar-placeholder__ring,
+.device-radar-placeholder__axis,
+.device-radar-placeholder__sweep,
+.device-radar-placeholder__target,
+.device-radar-placeholder__center {
+  position: absolute;
+  display: block;
+}
+
+.device-radar-placeholder__ring {
+  top: 50%;
+  left: 50%;
+  border: 1px solid rgba(78, 126, 148, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.device-radar-placeholder__ring.ring-1 {
+  width: 38px;
+  height: 38px;
+}
+
+.device-radar-placeholder__ring.ring-2 {
+  width: 78px;
+  height: 78px;
+}
+
+.device-radar-placeholder__ring.ring-3 {
+  width: 116px;
+  height: 116px;
+}
+
+.device-radar-placeholder__axis {
+  background: rgba(78, 126, 148, 0.2);
+}
+
+.device-radar-placeholder__axis.axis-x {
+  top: 50%;
+  left: 10px;
+  width: calc(100% - 20px);
+  height: 1px;
+}
+
+.device-radar-placeholder__axis.axis-y {
+  top: 10px;
+  left: 50%;
+  width: 1px;
+  height: calc(100% - 20px);
+}
+
+.device-radar-placeholder__sweep {
+  inset: 8px;
+  border-radius: 50%;
+  background: conic-gradient(from 10deg, rgba(45, 129, 164, 0.3), transparent 28%);
+  animation: radar-sweep 4s linear infinite;
+}
+
+.device-radar-placeholder__target {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #5c94aa;
+  box-shadow: 0 0 0 4px rgba(92, 148, 170, 0.15);
+}
+
+.device-radar-placeholder__target.target-1 {
+  top: 37px;
+  right: 34px;
+}
+
+.device-radar-placeholder__target.target-2 {
+  bottom: 31px;
+  left: 43px;
+}
+
+.device-radar-placeholder__center {
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #527f93;
+  border-radius: 50%;
+  background: #f4f8fa;
+  transform: translate(-50%, -50%);
+}
+
+.device-radar-placeholder strong {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #526b79;
+}
+
+.device-radar-placeholder > span {
+  margin-top: 3px;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: #9aabb5;
 }
 
 .device-detail-image__hint {
@@ -641,6 +827,12 @@ watch(
   line-height: 1.4;
   color: var(--el-text-color-secondary);
   text-align: center;
+}
+
+@keyframes radar-sweep {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .device-detail-form {

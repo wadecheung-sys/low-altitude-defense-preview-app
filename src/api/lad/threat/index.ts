@@ -40,6 +40,8 @@ export function simulateThreatApi(
   return request.post({ url: '/mock/lad/threat/simulate', data })
 }
 
-export function assessThreatRuleApi(params: { id: string }): Promise<IResponse<ThreatAssessResult>> {
+export function assessThreatRuleApi(params: {
+  id: string
+}): Promise<IResponse<ThreatAssessResult>> {
   return request.get({ url: '/mock/lad/threat/assess', params })
 }

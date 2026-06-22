@@ -62,9 +62,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       width: 100,
       slots: {
-        default: (data: { row: AuthLogItem }) => (
-          <span>{logTypeLabel[data.row.logType]}</span>
-        )
+        default: (data: { row: AuthLogItem }) => <span>{logTypeLabel[data.row.logType]}</span>
       }
     }
   },

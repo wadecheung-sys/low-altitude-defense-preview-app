@@ -60,16 +60,8 @@ function onMapClick(ev: MouseEvent) {
     @click="onMapClick"
   >
     <span class="device-gis-map__watermark">GIS地图</span>
-    <div
-      v-if="mapX > 0 || mapY > 0"
-      class="device-gis-map__range"
-      :style="rangeStyle"
-    />
-    <div
-      v-if="mapX > 0 || mapY > 0"
-      class="device-gis-map__marker"
-      :style="markerStyle"
-    >
+    <div v-if="mapX > 0 || mapY > 0" class="device-gis-map__range" :style="rangeStyle"></div>
+    <div v-if="mapX > 0 || mapY > 0" class="device-gis-map__marker" :style="markerStyle">
       <span class="device-gis-map__marker-icon">⚡</span>
       <span class="device-gis-map__marker-label">{{ deviceLabel }}</span>
     </div>

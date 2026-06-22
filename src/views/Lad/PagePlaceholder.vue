@@ -49,7 +49,10 @@ const deferredModules = [...LAD_DEFERRED_MODULES]
             （{{ route.meta.pageType }}）
           </span>
         </el-descriptions-item>
-        <el-descriptions-item v-if="route.meta?.prototypeRef || meta?.prototypeRef" label="原型参考">
+        <el-descriptions-item
+          v-if="route.meta?.prototypeRef || meta?.prototypeRef"
+          label="原型参考"
+        >
           {{ route.meta?.prototypeRef || meta?.prototypeRef }}
         </el-descriptions-item>
         <el-descriptions-item
