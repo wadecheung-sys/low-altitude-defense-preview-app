@@ -141,7 +141,7 @@ onMounted(async () => {
                 {{ detail.threatLevel }}
               </ElTag>
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="人工确认">
+            <ElDescriptionsItem label="威胁识别">
               {{ detail.manualConfirmStatus }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="最新高度">

@@ -31,10 +31,25 @@ export interface DeviceArchiveListResult {
   total: number
 }
 
+export type DeviceArchiveIndicatorDataType = 'text' | 'number' | 'datetime' | 'select'
+
+export interface DeviceArchiveIndicatorConfig {
+  maxLength?: number
+  integerDigits?: number
+  decimalPlaces?: number
+  includeDate?: boolean
+  includeTime?: boolean
+  timeFormat?: 'YYYY-MM-DD HH:mm:ss' | 'YYYY-MM-DD' | 'YYYY-MM' | 'YYYY' | 'HH:mm:ss'
+  options?: string[]
+}
+
 export interface DeviceArchiveIndicator {
   id: string
   item: string
   unit: string
+  dataType?: DeviceArchiveIndicatorDataType
+  config?: DeviceArchiveIndicatorConfig
+  /** 指标未单独维护时采用的默认值。 */
   value: string
 }
 

@@ -12,7 +12,7 @@ const appStore = useAppStore()
 const show = ref(true)
 
 /** 侧栏展示用短标题；浏览器标题仍用 VITE_APP_TITLE */
-const logoTitle = import.meta.env.VITE_APP_TITLE_SHORT || '低空防御平台'
+const logoTitle = import.meta.env.VITE_APP_TITLE_SHORT || '低空防御指挥控制平台'
 
 const layout = computed(() => appStore.getLayout)
 

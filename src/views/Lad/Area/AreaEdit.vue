@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { deleteAreaRegionApi, getAreaRegionDetailApi, saveAreaRegionApi } from '@/api/lad/area'
+import {
+  deleteAreaRegionApi,
+  getAreaRegionDetailApi,
+  getAreaRegionListApi,
+  saveAreaRegionApi
+} from '@/api/lad/area'
 import { cloneShapes } from '@/api/lad/area/areaStore'
 import type { AreaRegion, AreaRegionType, AreaShape, AreaShapeType } from '@/api/lad/area/types'
 import { buildAreaPaintItems, type RegionShapeRef } from './areaShapeGeometry'
@@ -38,12 +43,15 @@ const saveLoading = ref(false)
 const recordId = ref('')
 const drawTool = ref<AreaShapeType | null>(null)
 const gisMapRef = ref<InstanceType<typeof AreaGisMap>>()
+const siteOptions = ref<AreaRegion[]>([])
 
 const isCreateMode = computed(() => route.name === 'LadAreaAdd')
-const pageTitle = computed(() => (isCreateMode.value ? '新增区域' : '编辑区域'))
+const pageTitle = computed(() => (isCreateMode.value ? '新增场地' : '编辑场地'))
 
 const form = ref({
+  siteCode: '',
   name: '',
+  parentId: null as string | null,
   regionType: 'warning' as AreaRegionType,
   clipPriority: 40,
   alarmEnabled: true,
@@ -73,7 +81,9 @@ const canvasPaintItems = computed(() =>
 function resetFormForNew(type: AreaRegionType = 'warning') {
   recordId.value = ''
   form.value = {
+    siteCode: '',
     name: '',
+    parentId: null,
     regionType: type,
     clipPriority: defaultClipPriorityForType(type),
     alarmEnabled: defaultAlarmForType(type),
@@ -85,7 +95,9 @@ function resetFormForNew(type: AreaRegionType = 'warning') {
 function applyDetail(data: AreaRegion) {
   recordId.value = data.id
   form.value = {
+    siteCode: data.siteCode,
     name: data.name,
+    parentId: data.parentId,
     regionType: data.regionType,
     clipPriority: data.clipPriority,
     alarmEnabled: data.alarmEnabled,
@@ -98,6 +110,8 @@ async function loadPage() {
   drawTool.value = null
   loading.value = true
   try {
+    const siteRes = await getAreaRegionListApi({ pageIndex: 1, pageSize: 500 })
+    siteOptions.value = siteRes.data.list
     if (isCreateMode.value) {
       resetFormForNew('warning')
       return
@@ -141,8 +155,12 @@ function goList() {
 }
 
 async function saveRegion() {
+  if (!form.value.siteCode.trim()) {
+    ElMessage.warning('请输入场地编号')
+    return
+  }
   if (!form.value.name.trim()) {
-    ElMessage.warning('请输入区域名称')
+    ElMessage.warning('请输入场地名称')
     return
   }
   if (!form.value.shapes.length) {
@@ -153,7 +171,9 @@ async function saveRegion() {
   try {
     const res = await saveAreaRegionApi({
       id: recordId.value || undefined,
+      siteCode: form.value.siteCode.trim(),
       name: form.value.name.trim(),
+      parentId: form.value.parentId,
       regionType: form.value.regionType,
       clipPriority: form.value.clipPriority,
       alarmEnabled: form.value.alarmEnabled,
@@ -210,11 +230,30 @@ watch(
 
     <div class="area-edit-layout">
       <aside class="area-edit-sidebar">
-        <div class="area-edit-panel__title">区域配置</div>
-        <p class="area-edit-tip">配置名称、类型与优先级，并在右侧地图绘制单个区域范围。</p>
+        <div class="area-edit-panel__title">场地配置</div>
+        <p class="area-edit-tip">维护场地层级与区域属性，并在右侧地图绘制当前场地范围。</p>
         <ElForm label-position="top" class="area-edit-form">
-          <ElFormItem label="区域名称" required>
-            <ElInput v-model="form.name" placeholder="请输入区域名称" clearable />
+          <ElFormItem label="场地编号" required>
+            <ElInput v-model="form.siteCode" placeholder="请输入场地编号" clearable />
+          </ElFormItem>
+          <ElFormItem label="场地名称" required>
+            <ElInput v-model="form.name" placeholder="请输入场地名称" clearable />
+          </ElFormItem>
+          <ElFormItem label="上级场地">
+            <ElSelect
+              v-model="form.parentId"
+              class="w-100%"
+              clearable
+              filterable
+              placeholder="请选择上级场地"
+            >
+              <ElOption
+                v-for="site in siteOptions.filter((item) => item.id !== recordId)"
+                :key="site.id"
+                :label="`${site.name}（${site.siteCode}）`"
+                :value="site.id"
+              />
+            </ElSelect>
           </ElFormItem>
           <ElFormItem label="区域类型" required>
             <ElSelect

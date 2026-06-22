@@ -194,7 +194,7 @@ onBeforeUnmount(() => {
           ref="iframeRef"
           class="lad-data-screen__frame"
           :src="PROTOTYPE_SRC"
-          title="低空防御综合管控平台数据大屏"
+          title="低空防御指挥控制平台数据大屏"
           @load="handleFrameLoad"
         ></iframe>
       </div>

@@ -20,7 +20,7 @@ const seed: SystemParam[] = [
     paramName: '平台名称',
     group: '系统',
     valueType: 'string',
-    paramValue: '低空防控综合管控平台',
+    paramValue: '低空防御指挥控制平台',
     remark: '登录页与页面标题展示',
     updatedAt: '2026-05-18 09:00:00'
   },

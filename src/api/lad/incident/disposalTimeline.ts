@@ -72,9 +72,13 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
           : 5
 
   const lastDone = pending - 1
-  const confirmDetail = row.remark?.trim() ? `；人工确认备注：${row.remark}` : ''
-  const confirmTag =
-    row.manualConfirmStatus === '待人工确认' ? '待确认' : `人工确认：${row.manualConfirmStatus}`
+  const isManualRecognition = row.manualConfirmStatus.startsWith('人工-')
+  const recognitionResult = row.manualConfirmStatus.replace(/^人工-/, '')
+  const confirmDetail =
+    isManualRecognition && row.remark?.trim() ? `；人工确认备注：${row.remark}` : ''
+  const confirmTag = isManualRecognition
+    ? `人工确认：${recognitionResult}`
+    : `自动识别：${recognitionResult}`
 
   const nodes: Omit<DisposalTimelineNode, 'status'>[] = [
     {
@@ -100,10 +104,9 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
       key: 'assess',
       title: '威胁评估',
       time: assessAt,
-      summary:
-        row.manualConfirmStatus === '待人工确认'
-          ? '威胁规则命中，待值守人员人工确认'
-          : `人工确认完成，结论为“${row.manualConfirmStatus}”`,
+      summary: isManualRecognition
+        ? `人工确认完成，结论为“${recognitionResult}”`
+        : `系统识别为“${recognitionResult}”，待值守人员复核`,
       detail: `建议处置：${row.handlingResult}${confirmDetail}`,
       tags: ['规则引擎', confirmTag]
     },
@@ -116,7 +119,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
           ? '持续监视，未下发反制'
           : `已下发处置：${row.countermeasureDevice}`,
       detail:
-        row.manualConfirmStatus === '真实入侵' && row.countermeasureDevice !== '--'
+        recognitionResult === '真实入侵' && row.countermeasureDevice !== '--'
           ? `人工确认真实入侵后联动反制设备；执行结果：${row.handlingResult}${confirmDetail}`
           : row.handlingStatus === '处置中'
             ? '处置指令已下发，正在执行中'
@@ -128,10 +131,9 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
       title: '处置结果',
       time: ended,
       summary: `${row.handlingResult}；状态：${row.handlingStatus}`,
-      detail:
-        row.manualConfirmStatus === '待人工确认'
-          ? row.remark || '等待人工确认或后续归档。'
-          : row.remark || `人工确认结果：${row.manualConfirmStatus}`,
+      detail: isManualRecognition
+        ? row.remark || `人工确认结果：${recognitionResult}`
+        : row.remark || `自动识别结果：${recognitionResult}`,
       tags: [row.handlingResult, confirmTag]
     }
   ]

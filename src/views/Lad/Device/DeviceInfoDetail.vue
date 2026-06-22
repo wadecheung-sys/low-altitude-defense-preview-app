@@ -22,10 +22,12 @@ import {
   ElDescriptions,
   ElDescriptionsItem,
   ElDialog,
+  ElDatePicker,
   ElForm,
   ElFormItem,
   ElImage,
   ElInput,
+  ElInputNumber,
   ElLink,
   ElMessage,
   ElOption,
@@ -34,7 +36,8 @@ import {
   ElTable,
   ElTableColumn,
   ElTabs,
-  ElTag
+  ElTag,
+  ElTimePicker
 } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -115,6 +118,22 @@ function nextExtendId() {
   return `ext-${Date.now()}-${extendSeq}`
 }
 
+const fixedExtendedLabels = [
+  '安装方位',
+  '现场编号',
+  '维护周期',
+  '部署位置',
+  '详细地址',
+  '负责人',
+  '联系方式',
+  '设备IP',
+  '设备序列号'
+]
+
+function createFixedExtendedRows() {
+  return fixedExtendedLabels.map((label) => ({ id: nextExtendId(), label, value: '' }))
+}
+
 function mapArchiveDetailToLinkedArchive(
   data: Awaited<ReturnType<typeof getDeviceArchiveDetailApi>>['data']
 ) {
@@ -128,6 +147,51 @@ function mapArchiveDetailToLinkedArchive(
     imageUrl: data.imageUrl,
     indicators: data.indicators.map((item) => ({ ...item }))
   } satisfies DeviceLinkedArchive
+}
+
+function indicatorDatePickerType(row: DeviceLinkedArchive['indicators'][number]) {
+  const format = row.config?.timeFormat
+  if (format === 'YYYY') return 'year'
+  if (format === 'YYYY-MM') return 'month'
+  if (format === 'YYYY-MM-DD') return 'date'
+  return 'datetime'
+}
+
+function indicatorNumberLimit(row: DeviceLinkedArchive['indicators'][number]) {
+  const digits = Math.min(12, Math.max(1, row.config?.integerDigits || 8))
+  return Number('9'.repeat(digits))
+}
+
+function updateIndicatorNumber(
+  row: DeviceLinkedArchive['indicators'][number],
+  value: number | undefined
+) {
+  row.value = value === undefined ? '' : String(value)
+}
+
+function validateArchiveIndicatorValues() {
+  for (const row of linkedArchive.value?.indicators || []) {
+    if (!row.value) continue
+    if (row.dataType === 'text' && row.value.length > (row.config?.maxLength || 100)) {
+      return `“${row.item}”不能超过 ${row.config?.maxLength || 100} 个字符`
+    }
+    if (row.dataType === 'number') {
+      const match = row.value.match(/^-?(\d+)(?:\.(\d+))?$/)
+      if (!match) return `“${row.item}”必须填写有效数值`
+      const integerLength = match[1]?.replace(/^0+/, '').length || 1
+      const decimalLength = match[2]?.length || 0
+      if (integerLength > (row.config?.integerDigits || 8)) {
+        return `“${row.item}”整数部分最多 ${row.config?.integerDigits || 8} 位`
+      }
+      if (decimalLength > (row.config?.decimalPlaces ?? 0)) {
+        return `“${row.item}”小数部分最多 ${row.config?.decimalPlaces ?? 0} 位`
+      }
+    }
+    if (row.dataType === 'select' && !row.config?.options?.includes(row.value)) {
+      return `“${row.item}”不在档案允许的选项范围内`
+    }
+  }
+  return null
 }
 
 function applyDetail(data: DeviceInfoDetail) {
@@ -147,16 +211,19 @@ function applyDetail(data: DeviceInfoDetail) {
   deviceImageUrl.value = data.imageUrl || ''
   const fields = data.extendedFields.map((field) => ({ ...field }))
   const appendLegacyField = (label: string, value: string) => {
-    if (value && !fields.some((field) => field.label === label)) {
+    if (!fields.some((field) => field.label === label)) {
       fields.push({ id: nextExtendId(), label, value })
     }
   }
-  appendLegacyField('部署位置', data.deployLocation)
-  appendLegacyField('详细地址', data.deployAddress)
-  appendLegacyField('负责人', data.personInCharge)
-  appendLegacyField('联系方式', data.contactPhone)
-  appendLegacyField('设备IP', data.ipAddress)
-  appendLegacyField('设备序列号', data.serialNo)
+  const legacyValues: Record<string, string> = {
+    部署位置: data.deployLocation,
+    详细地址: data.deployAddress,
+    负责人: data.personInCharge,
+    联系方式: data.contactPhone,
+    设备IP: data.ipAddress,
+    设备序列号: data.serialNo
+  }
+  fixedExtendedLabels.forEach((label) => appendLegacyField(label, legacyValues[label] || ''))
   extendedRows.value = fields
 }
 
@@ -175,7 +242,7 @@ function resetCreate() {
   form.contactPhone = ''
   form.remark = ''
   deviceImageUrl.value = ''
-  extendedRows.value = []
+  extendedRows.value = createFixedExtendedRows()
 }
 
 async function loadArchiveOptions() {
@@ -188,6 +255,7 @@ async function syncLinkedArchive(archiveId?: string) {
     currentLinkedArchive.value = null
     return
   }
+  if (currentLinkedArchive.value?.id === archiveId) return
   archiveLoading.value = true
   try {
     const res = await getDeviceArchiveDetailApi(archiveId)
@@ -217,23 +285,6 @@ async function fetchDetail() {
   } finally {
     loading.value = false
   }
-}
-
-function validateExtended(): string | null {
-  for (const row of extendedRows.value) {
-    if (!row.label.trim() || !row.value.trim()) {
-      return '扩展信息的条目名称与内容不能为空'
-    }
-  }
-  return null
-}
-
-function addExtendedRow() {
-  extendedRows.value.push({ id: nextExtendId(), label: '', value: '' })
-}
-
-function removeExtendedRow(row: DeviceExtendedField) {
-  extendedRows.value = extendedRows.value.filter((item) => item.id !== row.id)
 }
 
 function extendedValue(label: string) {
@@ -295,9 +346,10 @@ async function runSelfCheck() {
 
 async function save() {
   if (!isEditable.value) return
-  const extErr = validateExtended()
-  if (extErr) {
-    ElMessage.warning(extErr)
+  const indicatorError = validateArchiveIndicatorValues()
+  if (indicatorError) {
+    ElMessage.warning(indicatorError)
+    metricsTab.value = 'archive'
     return
   }
   try {
@@ -328,7 +380,10 @@ async function save() {
         id: row.id,
         label: row.label.trim(),
         value: row.value.trim()
-      }))
+      })),
+      archiveIndicatorValues: Object.fromEntries(
+        (linkedArchive.value?.indicators || []).map((row) => [row.id, row.value.trim()])
+      )
     })
     ElMessage.success(isCreateMode.value ? '新增成功' : '保存成功')
     if (isCreateMode.value) {
@@ -501,48 +556,18 @@ watch(
       <section class="device-detail-panel device-detail-panel--wide">
         <ElTabs v-model="metricsTab" class="device-detail-metrics-tabs">
           <ElTabPane label="扩展信息" name="extend">
-            <p class="device-detail-metrics-tip">
-              本设备特有补充信息，可维护设备IP、设备序列号、部署位置、负责人等非核心字段。
-            </p>
-            <div v-if="isEditable" class="device-detail-ind-toolbar mb-10px">
-              <BaseButton type="primary" @click="addExtendedRow">新增信息项</BaseButton>
-            </div>
-            <ElTable :data="extendedRows" border stripe row-key="id" max-height="360">
-              <ElTableColumn type="index" label="序号" width="64" />
-              <ElTableColumn label="信息项" min-width="140">
-                <template #header>
-                  <span><span class="device-detail-req">*</span>信息项</span>
-                </template>
-                <template #default="{ row }">
+            <ElForm label-position="top" class="device-detail-extended-form">
+              <div class="device-detail-extended-grid">
+                <ElFormItem v-for="row in extendedRows" :key="row.id" :label="row.label">
                   <ElInput
-                    v-if="isEditable"
-                    v-model="row.label"
-                    placeholder="如：设备IP、部署位置"
-                    size="small"
-                  />
-                  <span v-else>{{ row.label }}</span>
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="内容" min-width="180">
-                <template #header>
-                  <span><span class="device-detail-req">*</span>内容</span>
-                </template>
-                <template #default="{ row }">
-                  <ElInput
-                    v-if="isEditable"
                     v-model="row.value"
-                    placeholder="请输入内容"
-                    size="small"
+                    :disabled="!isEditable"
+                    placeholder="请输入"
+                    clearable
                   />
-                  <span v-else>{{ row.value }}</span>
-                </template>
-              </ElTableColumn>
-              <ElTableColumn v-if="isEditable" label="操作" width="88" fixed="right">
-                <template #default="{ row }">
-                  <BaseButton type="danger" link @click="removeExtendedRow(row)">删除</BaseButton>
-                </template>
-              </ElTableColumn>
-            </ElTable>
+                </ElFormItem>
+              </div>
+            </ElForm>
           </ElTabPane>
           <ElTabPane label="档案信息" name="archive">
             <p v-if="!linkedArchive" class="device-detail-metrics-empty">
@@ -552,13 +577,71 @@ watch(
               <p class="device-detail-metrics-tip">
                 以下信息来自基础档案“{{
                   linkedArchive.archiveName
-                }}”，随档案维护更新，本页不直接编辑。
+                }}”。指标值按档案规则校验，可针对当前设备单独维护。
               </p>
               <ElTable :data="linkedArchive.indicators" border stripe row-key="id" max-height="360">
                 <ElTableColumn type="index" label="序号" width="64" />
                 <ElTableColumn prop="item" label="指标项" min-width="130" />
                 <ElTableColumn prop="unit" label="单位" width="100" />
-                <ElTableColumn prop="value" label="值" min-width="120" />
+                <ElTableColumn label="指标值" min-width="180">
+                  <template #default="{ row }">
+                    <template v-if="isEditable">
+                      <ElInputNumber
+                        v-if="row.dataType === 'number'"
+                        :model-value="row.value === '' ? undefined : Number(row.value)"
+                        :precision="row.config?.decimalPlaces ?? 0"
+                        :min="-indicatorNumberLimit(row)"
+                        :max="indicatorNumberLimit(row)"
+                        controls-position="right"
+                        class="w-100%"
+                        placeholder="可不填"
+                        @update:model-value="updateIndicatorNumber(row, $event)"
+                      />
+                      <ElSelect
+                        v-else-if="row.dataType === 'select'"
+                        v-model="row.value"
+                        class="w-100%"
+                        clearable
+                        placeholder="可不填"
+                      >
+                        <ElOption
+                          v-for="option in row.config?.options || []"
+                          :key="option"
+                          :label="option"
+                          :value="option"
+                        />
+                      </ElSelect>
+                      <ElTimePicker
+                        v-else-if="
+                          row.dataType === 'datetime' && row.config?.timeFormat === 'HH:mm:ss'
+                        "
+                        v-model="row.value"
+                        value-format="HH:mm:ss"
+                        format="HH:mm:ss"
+                        class="w-100%"
+                        placeholder="可不填"
+                      />
+                      <ElDatePicker
+                        v-else-if="row.dataType === 'datetime'"
+                        v-model="row.value"
+                        :type="indicatorDatePickerType(row)"
+                        :value-format="row.config?.timeFormat || 'YYYY-MM-DD HH:mm:ss'"
+                        :format="row.config?.timeFormat || 'YYYY-MM-DD HH:mm:ss'"
+                        class="w-100%"
+                        placeholder="可不填"
+                      />
+                      <ElInput
+                        v-else
+                        v-model="row.value"
+                        :maxlength="row.config?.maxLength || 100"
+                        show-word-limit
+                        clearable
+                        placeholder="可不填"
+                      />
+                    </template>
+                    <span v-else>{{ row.value || '—' }}</span>
+                  </template>
+                </ElTableColumn>
               </ElTable>
             </template>
           </ElTabPane>
@@ -866,6 +949,30 @@ watch(
   color: var(--el-text-color-secondary);
 }
 
+.device-detail-extended-form {
+  padding: 16px 18px 2px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  background: var(--el-fill-color-lighter);
+}
+
+.device-detail-extended-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 42px;
+  row-gap: 2px;
+}
+
+.device-detail-extended-form :deep(.el-form-item) {
+  margin-bottom: 15px;
+}
+
+.device-detail-extended-form :deep(.el-form-item__label) {
+  padding-bottom: 5px;
+  color: var(--el-text-color-regular);
+  line-height: 1.4;
+}
+
 .device-detail-metrics-empty {
   margin: 24px 0;
   font-size: 13px;
@@ -896,5 +1003,12 @@ watch(
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .device-detail-extended-grid {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+  }
 }
 </style>

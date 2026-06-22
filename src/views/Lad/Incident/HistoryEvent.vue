@@ -70,7 +70,8 @@ const handlingStatusOptions = [
 ]
 
 const manualConfirmOptions = [
-  { label: '待人工确认', value: '待人工确认' },
+  { label: '人工-真实入侵', value: '人工-真实入侵' },
+  { label: '人工-躁扰告警', value: '人工-躁扰告警' },
   { label: '真实入侵', value: '真实入侵' },
   { label: '躁扰告警', value: '躁扰告警' }
 ]
@@ -147,7 +148,8 @@ const statusTagType = (status: HandlingStatus) => {
 
 const confirmTagType = (status: ManualConfirmStatus) => {
   const map: Record<ManualConfirmStatus, 'danger' | 'success' | 'warning' | 'info'> = {
-    待人工确认: 'warning',
+    '人工-真实入侵': 'danger',
+    '人工-躁扰告警': 'warning',
     真实入侵: 'danger',
     躁扰告警: 'info'
   }
@@ -304,12 +306,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: { hidden: true }
   },
   {
-    field: 'duration',
-    label: '持续时长',
-    minWidth: 96,
-    search: { hidden: true }
-  },
-  {
     field: 'pilotLocation',
     label: '飞手位置',
     minWidth: 112,
@@ -424,13 +420,13 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'manualConfirmStatus',
-    label: '人工确认',
-    minWidth: 108,
+    label: '威胁识别',
+    minWidth: 128,
     search: {
       component: 'Select',
       colProps: { span: 6 },
       componentProps: {
-        placeholder: '请选择人工确认',
+        placeholder: '请选择威胁识别',
         style: { width: '100%' },
         clearable: true,
         options: manualConfirmOptions
@@ -539,7 +535,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
           <>
-            {row.handlingStatus !== '已处置' ? (
+            {!row.manualConfirmStatus.startsWith('人工-') && row.handlingStatus !== '已处置' ? (
               <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
                 人工确认
               </BaseButton>

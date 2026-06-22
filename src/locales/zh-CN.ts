@@ -105,8 +105,8 @@ export default {
     small: '小'
   },
   login: {
-    platformTitle: '低空防御综合管控平台',
-    welcome: '欢迎使用低空防御综合管控平台',
+    platformTitle: '低空防御指挥控制平台',
+    welcome: '欢迎使用低空防御指挥控制平台',
     message: '无人机探测识别与反制一体化指挥管控',
     copyright: 'Copyright © XXXXXX有限公司版权所有',
     username: '用户名',

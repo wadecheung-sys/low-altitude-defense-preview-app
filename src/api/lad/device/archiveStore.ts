@@ -48,10 +48,26 @@ function defaultIndicators(id: string, deviceType: string): DeviceArchiveIndicat
       id: `${id}-1`,
       item: '设备重量',
       unit: 'kg',
+      dataType: 'number',
+      config: { integerDigits: 3, decimalPlaces: 1 },
       value: deviceType === '雷达' ? '55' : deviceType === '高功率微波' ? '86' : '42'
     },
-    { id: `${id}-2`, item: '额定电压', unit: 'V', value: '220' },
-    { id: `${id}-3`, item: '工作频段', unit: 'GHz', value: '2.4 / 5.8' }
+    {
+      id: `${id}-2`,
+      item: '额定电压',
+      unit: 'V',
+      dataType: 'number',
+      config: { integerDigits: 3, decimalPlaces: 0 },
+      value: '220'
+    },
+    {
+      id: `${id}-3`,
+      item: '工作频段',
+      unit: 'GHz',
+      dataType: 'text',
+      config: { maxLength: 32 },
+      value: '2.4 / 5.8'
+    }
   ]
 }
 

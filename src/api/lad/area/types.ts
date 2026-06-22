@@ -1,4 +1,4 @@
-/** 区域业务类型（各区域相互独立，无父子树） */
+/** 场地与区域业务类型。 */
 export type AreaRegionType =
   | 'warning'
   | 'alert'
@@ -20,7 +20,7 @@ export interface AreaPoint {
 export interface AreaShape {
   id: string
   type: AreaShapeType
-  /** 填充色（含透明度） */
+  /** 填充色（含透明度）。 */
   color: string
   x?: number
   y?: number
@@ -34,14 +34,14 @@ export interface AreaShape {
 
 export interface AreaRegion {
   id: string
+  siteCode: string
   name: string
+  parentId: string | null
+  parentSiteCode: string
+  parentSiteName: string
   regionType: AreaRegionType
-  /**
-   * 区域优先级（1–99）：数值越大，地图上越优先保留；
-   * 重叠且几何包含时，低优先级区域从该图形内镂空扣除。
-   */
+  /** 数值越大，地图叠加时越优先保留。 */
   clipPriority: number
-  /** 是否参与平台告警（如试飞区可关闭） */
   alarmEnabled: boolean
   color: string
   shapes: AreaShape[]
@@ -51,7 +51,9 @@ export interface AreaRegion {
 
 export interface AreaRegionSavePayload {
   id?: string
+  siteCode: string
   name: string
+  parentId?: string | null
   regionType: AreaRegionType
   clipPriority: number
   alarmEnabled?: boolean
@@ -62,13 +64,24 @@ export interface AreaRegionSavePayload {
 export interface AreaRegionQuery {
   pageIndex?: number
   pageSize?: number
+  siteCode?: string
   name?: string
+  parentId?: string
+  /** 查询指定场地及其全部下级。 */
+  rootId?: string
   regionType?: AreaRegionType
-  /** true | false 字符串或布尔 */
   alarmEnabled?: boolean | 'true' | 'false' | ''
 }
 
 export interface AreaRegionListResult {
   list: AreaRegion[]
   total: number
+}
+
+export interface AreaSiteTreeNode {
+  id: string
+  label: string
+  siteCode: string
+  regionType: AreaRegionType
+  children: AreaSiteTreeNode[]
 }

@@ -26,11 +26,14 @@ export function nextShapeId() {
   return `shape-${Date.now()}-${shapeSeq}`
 }
 
-/** 演示数据：各区域相互独立，仅通过 clipPriority 控制地图镂空 */
 const seed: AreaRegion[] = [
   {
     id: 'ar-10001',
-    name: '核心区',
+    siteCode: 'L3001',
+    name: '核心防护场地',
+    parentId: 'ar-10002',
+    parentSiteCode: 'L2001',
+    parentSiteName: '反制处置区',
     regionType: 'nuclear',
     clipPriority: 90,
     alarmEnabled: true,
@@ -51,7 +54,11 @@ const seed: AreaRegion[] = [
   },
   {
     id: 'ar-10002',
+    siteCode: 'L2001',
     name: '反制处置区',
+    parentId: 'ar-10003',
+    parentSiteCode: 'L1001',
+    parentSiteName: '外围监测区',
     regionType: 'dispose',
     clipPriority: 70,
     alarmEnabled: true,
@@ -72,7 +79,11 @@ const seed: AreaRegion[] = [
   },
   {
     id: 'ar-10003',
+    siteCode: 'L1001',
     name: '外围监测区',
+    parentId: null,
+    parentSiteCode: '',
+    parentSiteName: '',
     regionType: 'warning',
     clipPriority: 40,
     alarmEnabled: true,
@@ -93,7 +104,11 @@ const seed: AreaRegion[] = [
   },
   {
     id: 'ar-10004',
+    siteCode: 'L2002',
     name: '试飞区',
+    parentId: 'ar-10003',
+    parentSiteCode: 'L1001',
+    parentSiteName: '外围监测区',
     regionType: 'testflight',
     clipPriority: 15,
     alarmEnabled: false,
@@ -113,12 +128,9 @@ const seed: AreaRegion[] = [
   }
 ]
 
-let allRegions: AreaRegion[] = seed.map((r) => ({
-  ...r,
-  shapes: r.shapes.map((s) => ({ ...s }))
-}))
+let allRegions = seed.map((row) => ({ ...row, shapes: cloneShapes(row.shapes) }))
 
-function clampPriority(n: number): number {
+function clampPriority(n: number) {
   return Math.min(CLIP_PRIORITY_MAX, Math.max(CLIP_PRIORITY_MIN, Math.round(n)))
 }
 
@@ -127,105 +139,122 @@ function resolveRegionType(body: AreaRegionSavePayload): AreaRegionType {
 }
 
 function cloneRegion(row: AreaRegion): AreaRegion {
+  const parent = row.parentId ? allRegions.find((item) => item.id === row.parentId) : undefined
   return {
     ...row,
-    shapes: row.shapes.map((s) => ({ ...s, points: s.points?.map((p) => ({ ...p })) }))
+    parentSiteCode: parent?.siteCode || '',
+    parentSiteName: parent?.name || '',
+    shapes: cloneShapes(row.shapes)
   }
 }
 
-export function listAreaRegions(): AreaRegion[] {
+function descendantIds(rootId: string) {
+  const ids = new Set([rootId])
+  let changed = true
+  while (changed) {
+    changed = false
+    allRegions.forEach((row) => {
+      if (row.parentId && ids.has(row.parentId) && !ids.has(row.id)) {
+        ids.add(row.id)
+        changed = true
+      }
+    })
+  }
+  return ids
+}
+
+export function listAreaRegions() {
   return allRegions.map(cloneRegion)
 }
 
 export function queryAreaRegionList(params: AreaRegionQuery = {}): AreaRegionListResult {
   let rows = listAreaRegions()
+  if (params.siteCode?.trim()) {
+    const keyword = params.siteCode.trim().toLowerCase()
+    rows = rows.filter((row) => row.siteCode.toLowerCase().includes(keyword))
+  }
   if (params.name?.trim()) {
-    const kw = params.name.trim()
-    rows = rows.filter((r) => r.name.includes(kw))
+    const keyword = params.name.trim()
+    rows = rows.filter((row) => row.name.includes(keyword))
   }
-  if (params.regionType) {
-    rows = rows.filter((r) => r.regionType === params.regionType)
+  if (params.parentId) rows = rows.filter((row) => row.parentId === params.parentId)
+  if (params.rootId) {
+    const ids = descendantIds(params.rootId)
+    rows = rows.filter((row) => ids.has(row.id))
   }
+  if (params.regionType) rows = rows.filter((row) => row.regionType === params.regionType)
   if (params.alarmEnabled !== undefined && params.alarmEnabled !== '') {
-    const on = params.alarmEnabled === true || params.alarmEnabled === 'true'
-    rows = rows.filter((r) => r.alarmEnabled === on)
+    const enabled = params.alarmEnabled === true || params.alarmEnabled === 'true'
+    rows = rows.filter((row) => row.alarmEnabled === enabled)
   }
-  rows.sort((a, b) => b.clipPriority - a.clipPriority)
+  rows.sort((a, b) => a.siteCode.localeCompare(b.siteCode))
   const pageIndex = Number(params.pageIndex) || 1
   const pageSize = Number(params.pageSize) || 10
   const start = (pageIndex - 1) * pageSize
-  return {
-    list: rows.slice(start, start + pageSize),
-    total: rows.length
-  }
+  return { list: rows.slice(start, start + pageSize), total: rows.length }
 }
 
-export function getAreaRegion(id: string): AreaRegion | null {
-  const row = allRegions.find((r) => r.id === id)
-  if (!row) return null
-  return {
-    ...row,
-    shapes: row.shapes.map((s) => ({ ...s, points: s.points?.map((p) => ({ ...p })) }))
-  }
+export function getAreaRegion(id: string) {
+  const row = allRegions.find((item) => item.id === id)
+  return row ? cloneRegion(row) : null
 }
 
 export function saveAreaRegion(body: AreaRegionSavePayload): AreaRegion {
-  const regionType = resolveRegionType(body)
-  const clipPriority = clampPriority(body.clipPriority ?? defaultClipPriorityForType(regionType))
-  const alarmEnabled = body.alarmEnabled ?? defaultAlarmForType(regionType)
-
-  const now = formatNow()
-  const shapes = body.shapes.map((s) => ({
-    ...s,
-    color: s.color || body.color,
-    points: s.points?.map((p) => ({ ...p }))
-  }))
-
-  if (body.id) {
-    const idx = allRegions.findIndex((r) => r.id === body.id)
-    if (idx < 0) throw new Error('区域不存在')
-    const row: AreaRegion = {
-      ...allRegions[idx],
-      name: body.name.trim(),
-      regionType,
-      clipPriority,
-      alarmEnabled,
-      color: body.color,
-      shapes,
-      createdAt: allRegions[idx].createdAt || allRegions[idx].updatedAt,
-      updatedAt: now
-    }
-    allRegions[idx] = row
-    return { ...row, shapes: shapes.map((s) => ({ ...s })) }
+  const siteCode = body.siteCode.trim().toUpperCase()
+  if (!siteCode) throw new Error('请输入场地编号')
+  if (allRegions.some((row) => row.siteCode === siteCode && row.id !== body.id)) {
+    throw new Error('场地编号已存在')
+  }
+  if (body.id && body.parentId && descendantIds(body.id).has(body.parentId)) {
+    throw new Error('上级场地不能选择当前场地或其下级场地')
   }
 
-  const nums = allRegions
-    .map((r) => parseInt(r.id.replace(/^ar-/, ''), 10))
-    .filter((n) => !Number.isNaN(n))
-  const max = nums.length ? Math.max(...nums) : 10000
-  const id = `ar-${max + 1}`
-  const row: AreaRegion = {
-    id,
+  const regionType = resolveRegionType(body)
+  const now = formatNow()
+  const shapes = cloneShapes(body.shapes).map((shape) => ({
+    ...shape,
+    color: shape.color || body.color
+  }))
+  const values = {
+    siteCode,
     name: body.name.trim(),
+    parentId: body.parentId || null,
     regionType,
-    clipPriority,
-    alarmEnabled,
+    clipPriority: clampPriority(body.clipPriority ?? defaultClipPriorityForType(regionType)),
+    alarmEnabled: body.alarmEnabled ?? defaultAlarmForType(regionType),
     color: body.color,
-    shapes,
+    shapes
+  }
+
+  if (body.id) {
+    const index = allRegions.findIndex((row) => row.id === body.id)
+    if (index < 0) throw new Error('场地不存在')
+    allRegions[index] = { ...allRegions[index], ...values, updatedAt: now }
+    return cloneRegion(allRegions[index])
+  }
+
+  const max = Math.max(10000, ...allRegions.map((row) => Number(row.id.replace('ar-', '')) || 0))
+  const row: AreaRegion = {
+    id: `ar-${max + 1}`,
+    ...values,
+    parentSiteCode: '',
+    parentSiteName: '',
     createdAt: now,
     updatedAt: now
   }
   allRegions.push(row)
-  return { ...row, shapes: shapes.map((s) => ({ ...s })) }
+  return cloneRegion(row)
 }
 
 export function deleteAreaRegion(id: string) {
-  allRegions = allRegions.filter((r) => r.id !== id)
+  allRegions = allRegions
+    .filter((row) => row.id !== id)
+    .map((row) => (row.parentId === id ? { ...row, parentId: null } : row))
 }
 
 export function cloneShapes(shapes: AreaShape[]): AreaShape[] {
-  return shapes.map((s) => ({
-    ...s,
-    points: s.points?.map((p) => ({ ...p }))
+  return shapes.map((shape) => ({
+    ...shape,
+    points: shape.points?.map((point) => ({ ...point }))
   }))
 }

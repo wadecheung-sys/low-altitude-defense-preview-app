@@ -118,4 +118,6 @@ export interface DeviceInfoSavePayload {
   controlRangeM?: number
   remark?: string
   extendedFields?: DeviceExtendedField[]
+  /** 当前设备基于基础档案填写的实际指标值。 */
+  archiveIndicatorValues?: Record<string, string>
 }

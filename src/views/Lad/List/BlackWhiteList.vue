@@ -8,7 +8,11 @@ import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { deleteBlackWhiteApi, getBlackWhiteListApi } from '@/api/lad/list'
+import {
+  deleteBlackWhiteApi,
+  getBlackWhiteListApi,
+  updateBlackWhiteListTypeApi
+} from '@/api/lad/list'
 import type { BlackWhiteListItem, ListType } from '@/api/lad/list/types'
 import BlackWhiteFormDialog from './components/BlackWhiteFormDialog.vue'
 
@@ -110,6 +114,26 @@ onMounted(() => {
 })
 
 const delLoading = ref(false)
+const listTypeLoading = ref(false)
+
+const updateSelectedListType = async (listType: '黑名单' | '白名单') => {
+  const elTableExpose = await getElTableExpose()
+  const selected = elTableExpose?.getSelectionRows() as BlackWhiteListItem[] | undefined
+  if (!selected?.length) {
+    ElMessage.warning(`请先勾选要添加到${listType}的记录`)
+    return
+  }
+
+  listTypeLoading.value = true
+  try {
+    await Promise.all(selected.map((row) => updateBlackWhiteListTypeApi({ id: row.id, listType })))
+    ElMessage.success(`已将选中的 ${selected.length} 条记录更新为${listType}`)
+    await getList()
+    elTableExpose?.clearSelection()
+  } finally {
+    listTypeLoading.value = false
+  }
+}
 
 const delData = async (row: BlackWhiteListItem | null) => {
   const elTableExpose = await getElTableExpose()
@@ -218,26 +242,6 @@ const crudSchemas = reactive<CrudSchema[]>([
           )
       }
     }
-  },
-  {
-    field: 'discoveredAt',
-    label: '发现时间',
-    minWidth: 168,
-    search: { hidden: true },
-    table: { showOverflowTooltip: true }
-  },
-  {
-    field: 'updatedAt',
-    label: '最后更新时间',
-    minWidth: 168,
-    search: { hidden: true },
-    table: { showOverflowTooltip: true }
-  },
-  {
-    field: 'duration',
-    label: '持续时长',
-    minWidth: 96,
-    search: { hidden: true }
   },
   {
     field: 'model',
@@ -399,6 +403,20 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
     <div class="mb-10px">
       <BaseButton type="primary" @click="openAdd">新增</BaseButton>
+      <BaseButton
+        type="danger"
+        :loading="listTypeLoading"
+        @click="updateSelectedListType('黑名单')"
+      >
+        添加黑名单
+      </BaseButton>
+      <BaseButton
+        type="success"
+        :loading="listTypeLoading"
+        @click="updateSelectedListType('白名单')"
+      >
+        添加白名单
+      </BaseButton>
       <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
     </div>
 

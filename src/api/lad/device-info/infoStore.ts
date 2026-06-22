@@ -15,6 +15,7 @@ import type {
 interface DeviceInfoExt extends DeviceInfoDeployment {
   remark: string
   extendedFields: DeviceExtendedField[]
+  archiveIndicatorValues: Record<string, string>
 }
 
 const DEFAULT_EXT: DeviceInfoExt = {
@@ -28,7 +29,8 @@ const DEFAULT_EXT: DeviceInfoExt = {
   deviceIcon: 'jammer',
   controlRangeM: 500,
   contactPhone: '',
-  extendedFields: []
+  extendedFields: [],
+  archiveIndicatorValues: {}
 }
 
 let extendSeq = 0
@@ -45,7 +47,10 @@ function defaultExtendedFields(row: DeviceInfoItem): DeviceExtendedField[] {
   ]
 }
 
-function resolveLinkedArchive(archiveId?: string): DeviceLinkedArchive | null {
+function resolveLinkedArchive(
+  archiveId?: string,
+  indicatorValues: Record<string, string> = {}
+): DeviceLinkedArchive | null {
   if (!archiveId) return null
   const arch = queryDeviceArchiveDetail(archiveId)
   if (!arch) return null
@@ -57,7 +62,18 @@ function resolveLinkedArchive(archiveId?: string): DeviceLinkedArchive | null {
     vendor: arch.vendor,
     deviceModel: arch.deviceModel,
     imageUrl: arch.imageUrl,
-    indicators: arch.indicators.map((i) => ({ ...i }))
+    indicators: arch.indicators.map((indicator) => ({
+      ...indicator,
+      config: indicator.config
+        ? {
+            ...indicator.config,
+            options: indicator.config.options ? [...indicator.config.options] : undefined
+          }
+        : undefined,
+      value: Object.prototype.hasOwnProperty.call(indicatorValues, indicator.id)
+        ? indicatorValues[indicator.id]!
+        : indicator.value
+    }))
   }
 }
 
@@ -100,7 +116,8 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
             ? 600
             : 500,
     contactPhone: `138${String(10000000 + index).slice(-8)}`,
-    extendedFields: []
+    extendedFields: [],
+    archiveIndicatorValues: {}
   }
 }
 
@@ -124,7 +141,10 @@ function mergeExt(body: DeviceInfoSavePayload, prev?: DeviceInfoExt): DeviceInfo
     deviceIcon: body.deviceIcon?.trim() || prev?.deviceIcon || DEFAULT_EXT.deviceIcon,
     controlRangeM: Number(body.controlRangeM ?? prev?.controlRangeM ?? DEFAULT_EXT.controlRangeM),
     contactPhone: body.contactPhone?.trim() ?? prev?.contactPhone ?? '',
-    extendedFields
+    extendedFields,
+    archiveIndicatorValues: body.archiveIndicatorValues
+      ? { ...body.archiveIndicatorValues }
+      : { ...(prev?.archiveIndicatorValues || {}) }
   }
 }
 
@@ -291,7 +311,7 @@ export function buildDeviceInfoDetail(row: DeviceInfoItem): DeviceInfoDetail {
     ...row,
     ...ext,
     remark: ext.remark,
-    linkedArchive: resolveLinkedArchive(row.archiveId),
+    linkedArchive: resolveLinkedArchive(row.archiveId, ext.archiveIndicatorValues),
     extendedFields: ext.extendedFields.map((f) => ({ ...f })),
     supportsSelfCheck: deviceSupportsSelfCheck(row.deviceType)
   }

@@ -29,12 +29,31 @@ const connectionLabel = computed(() => {
   return '设备连接已断开'
 })
 
-const curvePoints = computed(() => {
-  const seed = props.item.metrics.detectCount + props.item.metrics.alertCount * 7
-  return Array.from({ length: 12 }, (_, index) => {
-    const value = 18 + ((seed + index * 17 + (index % 3) * 11) % 64)
-    return `${index * 28},${92 - value}`
-  }).join(' ')
+const accessProtocol = computed(() => {
+  const type = String(props.item.deviceType)
+  if (type.includes('光电')) return 'ONVIF / GB28181'
+  if (type.includes('雷达')) return 'ASTERIX / TCP'
+  if (type.includes('声光')) return 'Modbus TCP'
+  if (type.includes('无线电')) return 'TCP/IP 专用协议'
+  return 'TCP/IP 专用协议'
+})
+
+const extendedInfo = computed(() => {
+  const versionSuffix = (props.item.deviceId.length + props.item.deviceName.length) % 9
+  return [
+    { label: '运行状态', value: props.item.onlineStatus },
+    { label: '设备序列号', value: props.item.serialNo || '—' },
+    { label: '设备类型', value: props.item.deviceType || '—' },
+    { label: '厂商 / 型号', value: `${props.item.manufacturer} / ${props.item.deviceModel}` },
+    { label: '固件版本', value: `V2.3.${versionSuffix}` },
+    { label: '接入协议', value: accessProtocol.value },
+    { label: '通信地址', value: props.item.ipAddress ? `${props.item.ipAddress}:8000` : '—' },
+    { label: '所属场地', value: props.item.deployLocation || '—' },
+    { label: '负责人', value: props.item.personInCharge || '—' },
+    { label: '维护状态', value: props.item.onlineStatus === '正常' ? '在保 · 巡检正常' : '待检修' },
+    { label: '最后心跳', value: props.item.lastHeartbeat },
+    { label: '数据上报周期', value: '5 秒' }
+  ]
 })
 </script>
 
@@ -96,7 +115,7 @@ const curvePoints = computed(() => {
       <ElPopover
         placement="top-end"
         trigger="click"
-        :width="360"
+        :width="420"
         popper-class="device-monitor-popper"
       >
         <template #reference>
@@ -116,37 +135,11 @@ const curvePoints = computed(() => {
           </div>
           <div class="device-monitor-detail-popover__section-title">扩展信息</div>
           <div class="device-monitor-detail-popover__grid">
-            <div
-              ><span>运行状态</span><strong>{{ item.onlineStatus }}</strong></div
-            >
-            <div
-              ><span>设备序列号</span><strong>{{ item.serialNo || '—' }}</strong></div
-            >
-            <div
-              ><span>负责人</span><strong>{{ item.personInCharge || '—' }}</strong></div
-            >
-            <div
-              ><span>最后心跳</span><strong>{{ item.lastHeartbeat }}</strong></div
-            >
+            <div v-for="info in extendedInfo" :key="info.label">
+              <span>{{ info.label }}</span>
+              <strong :title="String(info.value)">{{ info.value }}</strong>
+            </div>
           </div>
-
-          <div class="device-monitor-detail-popover__section-title">数据曲线</div>
-          <div class="device-monitor-detail-popover__curve-head">
-            <span>近 12 个采样周期</span>
-            <span>信号强度</span>
-          </div>
-          <svg
-            viewBox="0 0 308 100"
-            preserveAspectRatio="none"
-            role="img"
-            aria-label="设备数据曲线"
-          >
-            <line x1="0" y1="25" x2="308" y2="25" class="grid-line" />
-            <line x1="0" y1="50" x2="308" y2="50" class="grid-line" />
-            <line x1="0" y1="75" x2="308" y2="75" class="grid-line" />
-            <line x1="0" y1="38" x2="308" y2="38" class="threshold-line" />
-            <polyline :points="curvePoints" class="data-line" />
-          </svg>
         </div>
       </ElPopover>
     </div>
@@ -382,39 +375,6 @@ const curvePoints = computed(() => {
       font-weight: 500;
     }
   }
-
-  &__curve-head {
-    display: flex;
-    justify-content: space-between;
-    color: var(--el-text-color-secondary);
-    font-size: 10px;
-  }
-
-  svg {
-    width: 100%;
-    height: 112px;
-    padding: 4px 0 0;
-    overflow: visible;
-  }
-}
-
-.grid-line {
-  stroke: #e3e9ed;
-  stroke-width: 1;
-}
-
-.threshold-line {
-  stroke: #e6a23c;
-  stroke-width: 1;
-  stroke-dasharray: 5 4;
-}
-
-.data-line {
-  fill: none;
-  stroke: #279bd3;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .device-video-monitor {

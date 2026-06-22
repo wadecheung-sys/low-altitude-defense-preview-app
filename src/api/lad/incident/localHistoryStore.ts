@@ -86,7 +86,7 @@ function buildSeedList() {
               ? '待处置'
               : '处置中'
             : '已处置',
-        manualConfirmStatus: keepOpen ? '待人工确认' : i % 5 === 0 ? '躁扰告警' : '真实入侵',
+        manualConfirmStatus: i % 5 === 0 ? '躁扰告警' : '真实入侵',
         listType: '未知',
         remark: keepOpen ? '等待值守人员人工确认' : i % 7 === 0 ? '多源轨迹已合并' : ''
       })
@@ -136,7 +136,7 @@ function applyConfirm(
   remark?: string
 ) {
   const now = formatTimestamp(new Date())
-  row.manualConfirmStatus = result
+  row.manualConfirmStatus = `人工-${result}`
   row.handledAt = now
   row.endedAt = row.endedAt === '--' ? now : row.endedAt
 
