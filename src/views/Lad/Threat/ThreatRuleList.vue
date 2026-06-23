@@ -242,6 +242,18 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
+    field: 'priority',
+    label: '优先级',
+    search: { hidden: true },
+    table: {
+      width: 90,
+      align: 'center',
+      slots: {
+        default: ({ row }: { row: ThreatRule }) => row.priority
+      }
+    }
+  },
+  {
     field: 'status',
     label: '状态',
     search: {

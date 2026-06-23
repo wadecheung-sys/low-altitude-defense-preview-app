@@ -276,7 +276,9 @@ function fillFormFromPlan(plan: PlanStrategy) {
         : plan.manualResponseSeconds || PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS,
     threatLevel: plan.threatLevel || '全部',
     areaLevel: normalizeAreaLevel(plan.areaLevel),
-    priority: Number(plan.priority) || PLAN_DEFAULT_PRIORITY,
+    priority: Number.isFinite(Number(plan.priority))
+      ? Number(plan.priority)
+      : PLAN_DEFAULT_PRIORITY,
     enabled: plan.enabled
   }
   triggerRules.value = (plan.triggerRules || []).map((item) => normalizeRule(item))
@@ -365,7 +367,9 @@ async function onSave() {
         : 0,
       threatLevel: form.value.threatLevel,
       areaLevel: form.value.areaLevel.length ? form.value.areaLevel.join(',') : '全部',
-      priority: Number(form.value.priority) || PLAN_DEFAULT_PRIORITY,
+      priority: Number.isFinite(Number(form.value.priority))
+        ? Number(form.value.priority)
+        : PLAN_DEFAULT_PRIORITY,
       triggerRules: triggerRules.value.map((item) => ({ ...item }))
     })
     ElMessage.success(UI.saveOk)
@@ -464,11 +468,14 @@ async function onSave() {
       <ElFormItem :label="UI.planPriority">
         <ElInputNumber
           v-model="form.priority"
-          :min="1"
-          :max="99"
+          :min="0"
+          :max="999"
+          :step="1"
+          step-strictly
           controls-position="right"
           class="!w-160px"
         />
+        <div class="plan-form__tip">范围 0-999，数值越大，预案重要性越高。</div>
       </ElFormItem>
       <ElFormItem :label="UI.enabled">
         <ElSwitch v-model="form.enabled" inline-prompt active-text="ON" inactive-text="OFF" />
@@ -590,5 +597,12 @@ async function onSave() {
 .trigger-rule-sort {
   cursor: move;
   user-select: none;
+}
+
+.plan-form__tip {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--el-text-color-secondary);
 }
 </style>

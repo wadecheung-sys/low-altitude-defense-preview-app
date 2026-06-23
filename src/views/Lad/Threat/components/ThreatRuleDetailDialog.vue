@@ -56,6 +56,7 @@ watch(
           {{ threatLevelForRule(data.rule) }}
         </ElTag>
       </ElDescriptionsItem>
+      <ElDescriptionsItem label="优先级">{{ data?.rule.priority }}</ElDescriptionsItem>
       <ElDescriptionsItem label="告警级别参考">{{ data?.alarmLevel }}</ElDescriptionsItem>
       <ElDescriptionsItem label="规则摘要">{{ data?.summary }}</ElDescriptionsItem>
       <ElDescriptionsItem label="启停">

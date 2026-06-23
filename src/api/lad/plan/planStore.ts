@@ -59,8 +59,14 @@ type SeedInput = Omit<
   triggerRules: PlanTriggerRule[]
 }
 
-export const PLAN_STORE_VERSION = 16
-export const PLAN_DEFAULT_PRIORITY = 5
+export const PLAN_STORE_VERSION = 17
+export const PLAN_DEFAULT_PRIORITY = 500
+
+function normalizePriority(value: unknown) {
+  const priority = Number(value)
+  if (!Number.isFinite(priority)) return PLAN_DEFAULT_PRIORITY
+  return Math.min(999, Math.max(0, Math.trunc(priority)))
+}
 
 const seed: SeedInput[] = [
   {
@@ -452,7 +458,7 @@ function enrichPlan(plan: SeedInput | PlanStrategy): PlanStrategy {
     ...(plan as PlanStrategy),
     ...disposal,
     triggerRules,
-    priority: Number((plan as PlanStrategy).priority) || PLAN_DEFAULT_PRIORITY,
+    priority: normalizePriority((plan as PlanStrategy).priority),
     weatherFactor:
       new Set(triggerRules.filter((item) => item.enabled).map((item) => item.weatherFactor)).size >
       1
@@ -524,6 +530,7 @@ function filterPlans(q: PlanStrategyQuery): PlanStrategy[] {
   }
   if (q.updatedAtStart) rows = rows.filter((r) => r.updatedAt >= q.updatedAtStart)
   if (q.updatedAtEnd) rows = rows.filter((r) => r.updatedAt <= q.updatedAtEnd)
+  rows.sort((a, b) => b.priority - a.priority)
   return rows
 }
 
@@ -538,12 +545,14 @@ export function queryPlanList(q: PlanStrategyQuery): PlanStrategyListResult {
 
 export function listPlanOptions() {
   syncPlansFromSeed()
-  return allPlans.map((p) => ({
-    id: p.id,
-    planCode: p.planCode,
-    planName: p.planName,
-    enabled: p.enabled
-  }))
+  return [...allPlans]
+    .sort((a, b) => b.priority - a.priority)
+    .map((p) => ({
+      id: p.id,
+      planCode: p.planCode,
+      planName: p.planName,
+      enabled: p.enabled
+    }))
 }
 
 export function getPlan(id: string): PlanStrategy | null {
@@ -622,7 +631,7 @@ export function savePlan(body: PlanStrategySavePayload): PlanStrategy {
     manualResponseSeconds: normalized.manualResponseSeconds,
     threatLevel: normalized.threatLevel || '全部',
     areaLevel: normalized.areaLevel || '全部',
-    priority: Number(normalized.priority) || PLAN_DEFAULT_PRIORITY,
+    priority: normalizePriority(normalized.priority),
     triggerRules: normalized.triggerRules,
     weatherFactor: '全部',
     deviceGroupName: '',

@@ -3,8 +3,8 @@ import type { ThreatLevelLabel, ThreatRule, ThreatSimulateInput } from './types'
 /** 蜂群目标类型维度 */
 export const SWARM_TARGET_TYPE = '无人机蜂群'
 
-/** 匹配排序时蜂群规则优先级加成（数值越小越先匹配） */
-export const SWARM_PRIORITY_BOOST = 8
+/** 匹配排序时蜂群规则优先级加成（数值越大越先匹配） */
+export const SWARM_PRIORITY_BOOST = 80
 
 export function isSwarmRule(rule: Pick<ThreatRule, 'targetType'>): boolean {
   return rule.targetType === SWARM_TARGET_TYPE
@@ -18,16 +18,16 @@ export function isSwarmSimulateInput(input: ThreatSimulateInput): boolean {
 /** 规则用于排序的有效优先级：蜂群规则更靠前 */
 export function effectiveRulePriority(rule: ThreatRule, input?: ThreatSimulateInput): number {
   let p = rule.priority
-  if (isSwarmRule(rule)) p -= SWARM_PRIORITY_BOOST
-  if (input && isSwarmSimulateInput(input) && isSwarmRule(rule)) p -= 3
+  if (isSwarmRule(rule)) p += SWARM_PRIORITY_BOOST
+  if (input && isSwarmSimulateInput(input) && isSwarmRule(rule)) p += 30
   return p
 }
 
 export function resolveThreatLevelKey(rule: ThreatRule): 'high' | 'mid' | 'low' {
   if (!rule.enabled) return 'low'
   if (isSwarmRule(rule)) return 'high'
-  if (rule.priority <= 5) return 'high'
-  if (rule.priority <= 15) return 'mid'
+  if (rule.priority >= 700) return 'high'
+  if (rule.priority >= 300) return 'mid'
   return 'low'
 }
 

@@ -4,6 +4,7 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
+  ElInputNumber,
   ElLink,
   ElMessage,
   ElOption,
@@ -61,6 +62,7 @@ const form = ref({
   ruleName: '',
   targetType: '全部',
   threatLevel: '中' as ThreatLevelLabel,
+  priority: 500,
   enabled: true,
   conditions: [] as RuleCondition[]
 })
@@ -135,6 +137,7 @@ function resetForm() {
     ruleName: '',
     targetType: '全部',
     threatLevel: '中',
+    priority: 500,
     enabled: true,
     conditions: [newCondition()]
   }
@@ -155,6 +158,7 @@ watch(
           ruleName: row.ruleName,
           targetType: row.targetType,
           threatLevel: row.threatLevel,
+          priority: row.priority,
           enabled: row.enabled,
           conditions: row.conditions.map((item) => ({ ...item }))
         }
@@ -206,7 +210,7 @@ async function onSave() {
         operator: isAreaCondition(item) ? '=' : item.operator,
         value: item.value.trim()
       })),
-      priority: 10,
+      priority: form.value.priority,
       planId: props.row?.planId || defaultPlanId.value,
       enabled: form.value.enabled
     })
@@ -312,6 +316,18 @@ async function onSave() {
           />
         </ElSelect>
       </ElFormItem>
+      <ElFormItem label="优先级" required>
+        <ElInputNumber
+          v-model="form.priority"
+          :min="0"
+          :max="999"
+          :step="1"
+          step-strictly
+          controls-position="right"
+          class="w-full"
+        />
+        <div class="threat-rule-form__tip">范围 0-999，数值越大，规则命中优先级越高。</div>
+      </ElFormItem>
       <ElFormItem label="启停">
         <ElSwitch v-model="form.enabled" inline-prompt active-text="ON" inactive-text="OFF" />
       </ElFormItem>
@@ -329,5 +345,12 @@ async function onSave() {
   width: 40px;
   color: var(--el-text-color-regular);
   text-align: center;
+}
+
+.threat-rule-form__tip {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--el-text-color-secondary);
 }
 </style>

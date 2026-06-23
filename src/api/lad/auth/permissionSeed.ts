@@ -5,7 +5,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
   {
     id: 'pm-root',
     parentId: null,
-    name: '低空防御管控平台',
+    name: '低空防御指挥控制平台',
     permCode: 'lad',
     nodeType: 'directory',
     sort: 0,

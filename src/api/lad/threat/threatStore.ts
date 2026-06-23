@@ -169,6 +169,12 @@ function normalizeThreatLevel(
   return deriveThreatLevel(rule)
 }
 
+function normalizePriority(value: unknown) {
+  const priority = Number(value)
+  if (!Number.isFinite(priority)) return 500
+  return Math.min(999, Math.max(0, Math.trunc(priority)))
+}
+
 function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRule {
   const legacyArea = row.areaLevel as string | undefined
   const legacyScenario = row.scenario as string | undefined
@@ -226,7 +232,7 @@ const seed: ThreatRule[] = [
       { id: 'c1', property: 'speed', operator: '>', value: '5' },
       { id: 'c2', property: 'stayDuration', operator: '>', value: '10' }
     ],
-    priority: 10,
+    priority: 700,
     planId: 'plan-001',
     planName: '自动驱离',
     enabled: true,
@@ -245,7 +251,7 @@ const seed: ThreatRule[] = [
       { id: 'c3', property: 'intrusionCount', operator: '>=', value: '1' },
       { id: 'c4', property: 'speed', operator: '>', value: '3' }
     ],
-    priority: 1,
+    priority: 950,
     planId: 'plan-002',
     planName: '迫降反制',
     enabled: true,
@@ -261,7 +267,7 @@ const seed: ThreatRule[] = [
     targetType: '全部',
     areaName: '缓冲区',
     conditions: [{ id: 'c5', property: 'speed', operator: '>', value: '8' }],
-    priority: 20,
+    priority: 500,
     planId: 'plan-003',
     planName: '光电跟踪联动',
     enabled: true,
@@ -277,7 +283,7 @@ const seed: ThreatRule[] = [
     targetType: '全部',
     areaName: '试飞区',
     conditions: [{ id: 'c6', property: 'stayDuration', operator: '>', value: '5' }],
-    priority: 99,
+    priority: 0,
     planId: 'plan-004',
     planName: '人工复核告警',
     enabled: false,
@@ -293,7 +299,7 @@ const seed: ThreatRule[] = [
     targetType: '黑名单',
     areaName: '核心保护区',
     conditions: [{ id: 'c8', property: 'intrusionCount', operator: '>=', value: '1' }],
-    priority: 2,
+    priority: 900,
     planId: 'plan-006',
     planName: '雷达监测联动',
     enabled: true,
@@ -309,7 +315,7 @@ const seed: ThreatRule[] = [
     targetType: '全部',
     areaName: '试飞区',
     conditions: [{ id: 'c9', property: 'speed', operator: '>', value: '2' }],
-    priority: 50,
+    priority: 200,
     planId: 'plan-007',
     planName: '试飞区告警提示',
     enabled: true,
@@ -325,7 +331,7 @@ const seed: ThreatRule[] = [
     targetType: '全部',
     areaName: '边界缓冲区',
     conditions: [{ id: 'c10', property: 'speed', operator: '>', value: '6' }],
-    priority: 15,
+    priority: 760,
     planId: 'plan-008',
     planName: '边界全向干扰',
     enabled: true,
@@ -341,7 +347,7 @@ const seed: ThreatRule[] = [
     targetType: '多旋翼',
     areaName: '保护区',
     conditions: [{ id: 'c11', property: 'stayDuration', operator: '>', value: '3' }],
-    priority: 25,
+    priority: 680,
     planId: 'plan-009',
     planName: '光电监测上报',
     enabled: true,
@@ -357,7 +363,7 @@ const seed: ThreatRule[] = [
     targetType: '黑名单',
     areaName: '核心保护区',
     conditions: [{ id: 'c12', property: 'speed', operator: '>', value: '2' }],
-    priority: 3,
+    priority: 880,
     planId: 'plan-010',
     planName: '导航诱骗驱离',
     enabled: true,
@@ -373,7 +379,7 @@ const seed: ThreatRule[] = [
     targetType: '全部',
     areaName: '缓冲区',
     conditions: [{ id: 'c13', property: 'intrusionCount', operator: '>=', value: '2' }],
-    priority: 8,
+    priority: 460,
     planId: 'plan-011',
     planName: '网络断链迫降',
     enabled: true,
@@ -389,7 +395,7 @@ const seed: ThreatRule[] = [
     targetType: '多旋翼',
     areaName: '保护区',
     conditions: [{ id: 'c14', property: 'speed', operator: '>', value: '7' }],
-    priority: 18,
+    priority: 240,
     planId: 'plan-012',
     planName: '雷达跟踪备注',
     enabled: true,
@@ -408,7 +414,7 @@ const seed: ThreatRule[] = [
       { id: 'c15', property: 'swarmCount', operator: '>=', value: '3' },
       { id: 'c16', property: 'speed', operator: '>', value: '2' }
     ],
-    priority: 2,
+    priority: 980,
     planId: 'plan-013',
     planName: '蜂群复合反制',
     enabled: true,
@@ -424,7 +430,7 @@ const seed: ThreatRule[] = [
     targetType: '无人机蜂群',
     areaName: '缓冲区',
     conditions: [{ id: 'c17', property: 'swarmCount', operator: '>=', value: '5' }],
-    priority: 3,
+    priority: 940,
     planId: 'plan-014',
     planName: '蜂群高功率微波',
     enabled: true,
@@ -433,7 +439,7 @@ const seed: ThreatRule[] = [
   })
 ]
 
-export const THREAT_STORE_VERSION = 8
+export const THREAT_STORE_VERSION = 9
 
 const seedThreatLevelById = Object.fromEntries(seed.map((s) => [s.id, s.threatLevel])) as Record<
   string,
@@ -522,7 +528,7 @@ function filterRules(q: ThreatRuleQuery): ThreatRule[] {
     const kw = q.updatedBy.trim().toLowerCase()
     rows = rows.filter((r) => r.updatedBy.toLowerCase().includes(kw))
   }
-  rows.sort((a, b) => a.priority - b.priority)
+  rows.sort((a, b) => b.priority - a.priority)
   return rows
 }
 
@@ -565,7 +571,7 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
       areaName: body.areaName?.trim() || allRules[idx].areaName,
       conditions: body.conditions.map((c) => ({ ...c })),
       conditionSummary: summary,
-      priority: body.priority,
+      priority: normalizePriority(body.priority),
       planId: body.planId,
       planName: plan?.planName || '-',
       enabled: body.enabled,
@@ -589,7 +595,7 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
     areaName: body.areaName?.trim() || '-',
     conditions: body.conditions.map((c) => ({ ...c })),
     conditionSummary: summary,
-    priority: body.priority,
+    priority: normalizePriority(body.priority),
     planId: body.planId,
     planName: plan?.planName || '-',
     enabled: body.enabled,
@@ -623,7 +629,7 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
   }
   const enabled = allRules
     .filter((r) => r.enabled)
-    .sort((a, b) => effectiveRulePriority(a, simInput) - effectiveRulePriority(b, simInput))
+    .sort((a, b) => effectiveRulePriority(b, simInput) - effectiveRulePriority(a, simInput))
   const matched = enabled.find((r) => ruleMatches(r, simInput))
   if (!matched) {
     return {

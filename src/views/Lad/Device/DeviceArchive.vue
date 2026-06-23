@@ -1,9 +1,5 @@
 <script setup lang="tsx">
-import {
-  deleteDeviceArchiveApi,
-  getDeviceArchiveListApi,
-  setDeviceArchiveEnabledApi
-} from '@/api/lad/device'
+import { deleteDeviceArchiveApi, getDeviceArchiveListApi } from '@/api/lad/device'
 import type { DeviceArchiveCategory, DeviceArchiveItem } from '@/api/lad/device/types'
 import { BaseButton } from '@/components/Button'
 import { ContentWrap } from '@/components/ContentWrap'
@@ -106,16 +102,6 @@ watch(currentTreeKeyword, (value) => {
 
 function onSelectionChange(list: DeviceArchiveItem[]) {
   ids.value = list.map((item) => item.id)
-}
-
-async function bulkSetEnabled(enabled: boolean) {
-  if (!ids.value.length) {
-    ElMessage.warning('请先勾选需要操作的档案')
-    return
-  }
-  await setDeviceArchiveEnabledApi({ ids: ids.value, enabled })
-  ElMessage.success(`已${enabled ? '生效' : '未生效'} ${ids.value.length} 条档案`)
-  getList()
 }
 
 async function batchRemove() {
@@ -345,7 +331,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
       <div class="mb-10px">
         <BaseButton type="primary" @click="openCreate">新增档案</BaseButton>
-        <BaseButton type="success" @click="bulkSetEnabled(true)">一键生效</BaseButton>
         <BaseButton type="danger" @click="batchRemove">批量删除</BaseButton>
         <BaseButton @click="importArchive">导入</BaseButton>
         <BaseButton @click="exportArchive">导出档案</BaseButton>

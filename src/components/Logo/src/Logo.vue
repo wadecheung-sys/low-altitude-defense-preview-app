@@ -11,8 +11,12 @@ const appStore = useAppStore()
 
 const show = ref(true)
 
-/** 侧栏展示用短标题；浏览器标题仍用 VITE_APP_TITLE */
+/** 侧栏 Logo 展示用标题；浏览器标题仍用 VITE_APP_TITLE */
 const logoTitle = import.meta.env.VITE_APP_TITLE_SHORT || '低空防御指挥控制平台'
+const logoTitleLines = computed(() => [
+  '低空防御',
+  logoTitle.replace('低空防御', '') || '指挥控制平台'
+])
 
 const layout = computed(() => appStore.getLayout)
 
@@ -64,7 +68,7 @@ watch(
       <div
         v-if="show"
         :class="[
-          'ml-10px text-18px font-700 leading-none whitespace-nowrap',
+          'ml-8px min-w-0 max-w-145px text-16px font-700 leading-18px tracking-1px',
           {
             'text-[var(--logo-title-text-color)]': layout === 'classic',
             'text-[var(--top-header-text-color)]':
@@ -72,7 +76,9 @@ watch(
           }
         ]"
       >
-        {{ logoTitle }}
+        <span v-for="line in logoTitleLines" :key="line" class="block truncate whitespace-nowrap">
+          {{ line }}
+        </span>
       </div>
     </router-link>
   </div>
