@@ -9,27 +9,25 @@ import {
   ElInput,
   ElMessage,
   ElMessageBox,
-  ElOption,
-  ElSelect,
   ElSwitch,
   ElTable,
   ElTableColumn,
-  ElTag
+  ElTag,
+  ElUpload
 } from 'element-plus'
 import { reactive, ref } from 'vue'
 
 defineOptions({ name: 'LadSystemSoundAlarm' })
 
 type AlarmLevel = string
-type AlarmAudioMode = '无' | '蜂鸣' | '连续蜂鸣' | '汽笛' | '语音警示'
-type AlarmLightMode = '无' | '闪烁' | '连续' | '频闪'
+type AlarmAudioMode = '无' | '蜂鸣.wav' | '连续蜂鸣.wav' | '汽笛.wav' | '语音警示.wav'
 
 interface AlarmAudioRow {
   id: string
   level: AlarmLevel
   tagColor: string
   audioMode: AlarmAudioMode
-  lightMode: AlarmLightMode
+  lightBlink: boolean
 }
 
 const rows = ref<AlarmAudioRow[]>([
@@ -38,39 +36,42 @@ const rows = ref<AlarmAudioRow[]>([
     level: '低',
     tagColor: '#67c23a',
     audioMode: '无',
-    lightMode: '闪烁'
+    lightBlink: true
   },
   {
     id: 'za-middle',
     level: '中',
     tagColor: '#e6a23c',
-    audioMode: '蜂鸣',
-    lightMode: '闪烁'
+    audioMode: '蜂鸣.wav',
+    lightBlink: true
   },
   {
     id: 'za-high',
     level: '高',
     tagColor: '#f56c6c',
-    audioMode: '汽笛',
-    lightMode: '频闪'
+    audioMode: '汽笛.wav',
+    lightBlink: true
   },
   {
     id: 'za-none',
     level: '无',
     tagColor: '#909399',
     audioMode: '无',
-    lightMode: '无'
+    lightBlink: false
   }
 ])
 
 const globalForm = reactive({
   masterSwitch: true,
-  defaultAudioMode: '蜂鸣' as AlarmAudioMode,
-  defaultLightMode: '闪烁' as AlarmLightMode
+  defaultAudioFile: '蜂鸣.wav' as AlarmAudioMode,
+  defaultLightBlink: true
 })
 
-const audioModeOptions: AlarmAudioMode[] = ['无', '蜂鸣', '连续蜂鸣', '汽笛', '语音警示']
-const lightModeOptions: AlarmLightMode[] = ['无', '闪烁', '连续', '频闪']
+const uploadProps = {
+  action: '#',
+  autoUpload: false,
+  showFileList: false
+}
 
 const editVisible = ref(false)
 const createVisible = ref(false)
@@ -78,15 +79,15 @@ const selectedRows = ref<AlarmAudioRow[]>([])
 const createForm = reactive({
   level: '',
   tagColor: '#409eff',
-  audioMode: '蜂鸣' as AlarmAudioMode,
-  lightMode: '闪烁' as AlarmLightMode
+  audioMode: '无' as AlarmAudioMode,
+  lightBlink: true
 })
 const editForm = reactive({
   id: '',
   level: '低' as AlarmLevel,
   tagColor: '#67c23a',
   audioMode: '无' as AlarmAudioMode,
-  lightMode: '无' as AlarmLightMode
+  lightBlink: false
 })
 
 function levelTagType(level: AlarmLevel): 'info' | 'success' | 'warning' | 'danger' | 'primary' {
@@ -100,9 +101,16 @@ function levelTagType(level: AlarmLevel): 'info' | 'success' | 'warning' | 'dang
 function openCreate() {
   createForm.level = ''
   createForm.tagColor = '#409eff'
-  createForm.audioMode = '蜂鸣'
-  createForm.lightMode = '闪烁'
+  createForm.audioMode = '无'
+  createForm.lightBlink = true
   createVisible.value = true
+}
+
+function applyUploadedAudio(target: { audioMode: AlarmAudioMode }, file: { name?: string }) {
+  const name = file.name?.trim()
+  target.audioMode = (name || '自定义告警音频.wav') as AlarmAudioMode
+  ElMessage.success(`已选择音频文件：${target.audioMode}`)
+  return false
 }
 
 function submitCreate() {
@@ -120,7 +128,7 @@ function submitCreate() {
     level,
     tagColor: createForm.tagColor,
     audioMode: createForm.audioMode,
-    lightMode: createForm.lightMode
+    lightBlink: createForm.lightBlink
   })
   createVisible.value = false
   ElMessage.success(`已新增“${level}”告警级别`)
@@ -158,7 +166,7 @@ async function deleteRows(targets: AlarmAudioRow[] = selectedRows.value) {
 }
 
 function save() {
-  ElMessage.success('声光报警配置已保存（演示）')
+  ElMessage.success('声光报警配置已保存')
 }
 
 function openEdit(row: AlarmAudioRow) {
@@ -166,7 +174,7 @@ function openEdit(row: AlarmAudioRow) {
   editForm.level = row.level
   editForm.tagColor = row.tagColor
   editForm.audioMode = row.audioMode
-  editForm.lightMode = row.lightMode
+  editForm.lightBlink = row.lightBlink
   editVisible.value = true
 }
 
@@ -175,14 +183,14 @@ function submitEdit() {
   if (!current) return
   current.tagColor = editForm.tagColor
   current.audioMode = editForm.audioMode
-  current.lightMode = editForm.lightMode
+  current.lightBlink = editForm.lightBlink
   editVisible.value = false
   ElMessage.success(`已更新${current.level}级告警配置`)
 }
 
 function testAlarm(row: AlarmAudioRow) {
   ElMessage.info(
-    `已向“${row.level}”级别下发联调指令（音频：${row.audioMode}，灯光：${row.lightMode}）`
+    `已向“${row.level}”级别下发联调指令（音频：${row.audioMode}，灯光闪烁：${row.lightBlink ? '开' : '关'}）`
   )
 }
 </script>
@@ -194,14 +202,10 @@ function testAlarm(row: AlarmAudioRow) {
         <ElSwitch v-model="globalForm.masterSwitch" />
       </ElFormItem>
       <ElFormItem label="默认告警音频">
-        <ElSelect v-model="globalForm.defaultAudioMode" style="width: 160px">
-          <ElOption v-for="item in audioModeOptions" :key="item" :label="item" :value="item" />
-        </ElSelect>
+        <span class="threat-sound-alarm__plain-value">{{ globalForm.defaultAudioFile }}</span>
       </ElFormItem>
-      <ElFormItem label="默认灯光模式">
-        <ElSelect v-model="globalForm.defaultLightMode" style="width: 160px">
-          <ElOption v-for="item in lightModeOptions" :key="item" :label="item" :value="item" />
-        </ElSelect>
+      <ElFormItem label="默认灯光闪烁">
+        <ElSwitch v-model="globalForm.defaultLightBlink" active-text="开" inactive-text="关" />
       </ElFormItem>
       <ElFormItem>
         <BaseButton type="primary" @click="save">保存配置</BaseButton>
@@ -230,16 +234,14 @@ function testAlarm(row: AlarmAudioRow) {
       </ElTableColumn>
       <ElTableColumn label="报警音频" min-width="160">
         <template #default="{ row }">
-          <ElSelect v-model="row.audioMode" size="small" style="width: 140px">
-            <ElOption v-for="item in audioModeOptions" :key="item" :label="item" :value="item" />
-          </ElSelect>
+          <span class="threat-sound-alarm__plain-value">{{ row.audioMode }}</span>
         </template>
       </ElTableColumn>
-      <ElTableColumn label="灯光" min-width="140">
+      <ElTableColumn label="灯光闪烁" min-width="120" align="center">
         <template #default="{ row }">
-          <ElSelect v-model="row.lightMode" size="small" style="width: 120px">
-            <ElOption v-for="item in lightModeOptions" :key="item" :label="item" :value="item" />
-          </ElSelect>
+          <ElTag :type="row.lightBlink ? 'success' : 'info'">
+            {{ row.lightBlink ? '开' : '关' }}
+          </ElTag>
         </template>
       </ElTableColumn>
       <ElTableColumn label="操作" width="190" fixed="right">
@@ -268,14 +270,19 @@ function testAlarm(row: AlarmAudioRow) {
           </div>
         </ElFormItem>
         <ElFormItem label="报警音频">
-          <ElSelect v-model="createForm.audioMode" class="w-100%">
-            <ElOption v-for="item in audioModeOptions" :key="item" :label="item" :value="item" />
-          </ElSelect>
+          <div class="threat-sound-alarm__upload">
+            <span>{{ createForm.audioMode }}</span>
+            <ElUpload
+              v-bind="uploadProps"
+              accept=".mp3,.wav,.aac"
+              :before-upload="(file) => applyUploadedAudio(createForm, file)"
+            >
+              <BaseButton type="primary">上传</BaseButton>
+            </ElUpload>
+          </div>
         </ElFormItem>
-        <ElFormItem label="灯光">
-          <ElSelect v-model="createForm.lightMode" class="w-100%">
-            <ElOption v-for="item in lightModeOptions" :key="item" :label="item" :value="item" />
-          </ElSelect>
+        <ElFormItem label="灯光闪烁">
+          <ElSwitch v-model="createForm.lightBlink" active-text="开" inactive-text="关" />
         </ElFormItem>
       </ElForm>
       <template #footer>
@@ -296,14 +303,19 @@ function testAlarm(row: AlarmAudioRow) {
           </div>
         </ElFormItem>
         <ElFormItem label="报警音频">
-          <ElSelect v-model="editForm.audioMode" class="w-100%">
-            <ElOption v-for="item in audioModeOptions" :key="item" :label="item" :value="item" />
-          </ElSelect>
+          <div class="threat-sound-alarm__upload">
+            <span>{{ editForm.audioMode }}</span>
+            <ElUpload
+              v-bind="uploadProps"
+              accept=".mp3,.wav,.aac"
+              :before-upload="(file) => applyUploadedAudio(editForm, file)"
+            >
+              <BaseButton type="primary">上传</BaseButton>
+            </ElUpload>
+          </div>
         </ElFormItem>
-        <ElFormItem label="灯光">
-          <ElSelect v-model="editForm.lightMode" class="w-100%">
-            <ElOption v-for="item in lightModeOptions" :key="item" :label="item" :value="item" />
-          </ElSelect>
+        <ElFormItem label="灯光闪烁">
+          <ElSwitch v-model="editForm.lightBlink" active-text="开" inactive-text="关" />
         </ElFormItem>
       </ElForm>
       <template #footer>
@@ -342,5 +354,17 @@ function testAlarm(row: AlarmAudioRow) {
 .threat-sound-alarm__color-value {
   color: var(--el-text-color-secondary);
   font-size: 13px;
+}
+
+.threat-sound-alarm__plain-value {
+  color: var(--el-text-color-regular);
+}
+
+.threat-sound-alarm__upload {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
 }
 </style>

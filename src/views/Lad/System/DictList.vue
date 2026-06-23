@@ -138,11 +138,10 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams">
-      <template #action>
-        <BaseButton type="primary" @click="openAdd">新增字典</BaseButton>
-      </template>
-    </Search>
+    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
+    <div class="lad-dict-list__toolbar">
+      <BaseButton type="primary" @click="openAdd">新增</BaseButton>
+    </div>
     <Table
       v-model:pageSize="pageSize"
       v-model:currentPage="currentPage"
@@ -155,3 +154,11 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     <DictTypeFormDialog v-model="formVisible" :row="formRow" @success="getList" />
   </ContentWrap>
 </template>
+
+<style scoped lang="less">
+.lad-dict-list__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 12px;
+}
+</style>
