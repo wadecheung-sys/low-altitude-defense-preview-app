@@ -223,15 +223,7 @@ onMounted(async () => {
       <section v-if="viewDetail.disposalTimeline?.length" class="detail-timeline-section">
         <div class="detail-timeline-section__title">设备处置时间链</div>
         <p class="detail-timeline-section__hint">
-          {{
-            viewDetail.handlingStatus === '待处置'
-              ? '已形成阶段性判断，当前处于等待处置触发或值守确认状态。'
-              : viewDetail.handlingStatus === '已结束'
-                ? '事件已结束；未触发处置的阶段将以原因说明形式展示。'
-                : viewDetail.handlingStatus === '处置中'
-                  ? '当前处置指令正在执行，未开始的后续阶段暂不展示。'
-                  : '按设备发现、威胁识别、威胁评估、处置执行、处置结果展示全过程记录。'
-          }}
+          展示小型低空飞行物从发现、识别、评估、处置到复盘归档的全过程记录。
         </p>
         <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
       </section>

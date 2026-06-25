@@ -59,6 +59,15 @@ function identifyTargetType(row: HistoryEventItem) {
   return '无人机'
 }
 
+function identifyRecognitionTargetTag(row: HistoryEventItem, targetType: string) {
+  const text = `${row.manualConfirmStatus}${row.handlingResult}${row.remark}`
+  if (text.includes('飞鸟')) return '飞鸟躁扰'
+  if (text.includes('地面杂波')) return '地面杂波'
+  if (text.includes('误报')) return '误报排除'
+  if (text.includes('躁扰')) return '躁扰告警'
+  return targetType
+}
+
 function identifyIdentityLabel(row: HistoryEventItem) {
   if (isNuisanceEvent(row)) return '非无人机目标'
   if (row.listType === '黑名单') return '黑名单目标'
@@ -132,8 +141,8 @@ function detectionSourceTags(row: HistoryEventItem) {
 function identificationTags(row: HistoryEventItem, targetType: string, identityLabel: string) {
   const isManualRecognition = row.manualConfirmStatus.startsWith('人工-')
   return tagList([
-    isManualRecognition ? '人工核查' : '系统识别',
-    targetType.includes('飞鸟') || targetType.includes('躁扰') ? '非无人机目标' : '无人机目标',
+    isManualRecognition ? '人工识别' : '系统识别',
+    identifyRecognitionTargetTag(row, targetType),
     identityLabel.includes('黑名单') && '黑名单',
     identityLabel.includes('白名单') && '白名单',
     identityLabel.includes('非合作式') && '非合作式'
@@ -142,26 +151,26 @@ function identificationTags(row: HistoryEventItem, targetType: string, identityL
 
 function assessmentTags(row: HistoryEventItem) {
   const isManualRecognition = row.manualConfirmStatus.startsWith('人工-')
-  return tagList([
-    isManualRecognition ? '人工核查' : '自动评估',
-    `威胁${row.threatLevel}`,
-    row.handlingStatus === '已结束' && '结束归档'
-  ])
+  return tagList([isManualRecognition ? '人工核查' : '系统评估'])
 }
 
 function disposalTags(row: HistoryEventItem, status: DisposalTimelineNodeStatus) {
-  if (status === 'skipped') return ['未触发预案']
-  if (row.handlingStatus === '处置中') return ['预案联动', '指令执行中']
-  if (row.handlingStatus === '待处置') return ['待确认']
-  return ['预案联动', '指令已下发']
+  if (status === 'skipped') return []
+  if (row.handlingStatus === '待处置') return ['人工处置']
+  return [hasCountermeasure(row) ? '预案联动' : '人工处置']
 }
 
 function resultTags(row: HistoryEventItem) {
-  return tagList([
-    row.handlingStatus,
-    row.handlingStatus === '已结束' && '自然结束',
-    isNuisanceEvent(row) && '扰动排除'
-  ])
+  const result = resultLabel(row)
+  if (result.includes('迫降')) return ['迫降']
+  if (result.includes('驱离')) return ['驱离']
+  if (result.includes('自离')) return ['自离']
+  if (result.includes('自然') || row.handlingResult.includes('自然')) return ['自离']
+  if (result.includes('飞鸟') || result.includes('躁扰')) return ['扰动排除']
+  if (result.includes('误报')) return ['误报排除']
+  if (result.includes('压制')) return ['压制']
+  if (result.includes('打击')) return ['打击']
+  return tagList([result])
 }
 
 function resultLabel(row: HistoryEventItem) {
