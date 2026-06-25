@@ -1,6 +1,6 @@
 export type ThreatLevel = '高' | '中' | '低' | '未知'
 
-export type HandlingStatus = '待处置' | '处置中' | '已处置' | '已关闭' | '仅记录'
+export type HandlingStatus = '待处置' | '处置中' | '已处置' | '已结束'
 
 export type ManualConfirmResult = '真实入侵' | '躁扰告警'
 

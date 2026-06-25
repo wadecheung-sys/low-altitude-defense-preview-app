@@ -39,11 +39,34 @@ function nextExtendId() {
   return `ext-${Date.now()}-${extendSeq}`
 }
 
-function defaultExtendedFields(row: DeviceInfoItem): DeviceExtendedField[] {
+function defaultExtendedFields(row: DeviceInfoItem, index: number): DeviceExtendedField[] {
+  const acquisitionMethods = ['采购', '赠予', '置换', '赔偿', '其他'] as const
+  const vendors = ['中电科', '航天长峰', '北方智感', '中科低空', '凌云防务']
+  const contacts = ['张工', '李工', '王工', '赵工', '周工']
+  const years = ['2023-03-15', '2023-07-20', '2024-01-12', '2024-04-08', '2024-09-18']
   return [
-    { id: nextExtendId(), label: '安装方位', value: `${row.deployLocation}主朝向` },
-    { id: nextExtendId(), label: '现场编号', value: row.serialNo.slice(-6) },
-    { id: nextExtendId(), label: '维护周期', value: '每季度巡检' }
+    { id: nextExtendId(), label: '部署区域', value: row.deployLocation },
+    { id: nextExtendId(), label: '设备IP', value: row.ipAddress },
+    {
+      id: nextExtendId(),
+      label: '增加方式',
+      value: acquisitionMethods[index % acquisitionMethods.length]
+    },
+    { id: nextExtendId(), label: '生产日期', value: years[index % years.length] },
+    { id: nextExtendId(), label: '出厂日期', value: years[(index + 1) % years.length] },
+    { id: nextExtendId(), label: '启用日期', value: years[(index + 2) % years.length] },
+    { id: nextExtendId(), label: '使用年限（月）', value: String(12 + index * 6) },
+    { id: nextExtendId(), label: '保管机构', value: '低空防御保障中心' },
+    { id: nextExtendId(), label: '保管人', value: row.personInCharge },
+    { id: nextExtendId(), label: '保管人电话', value: `138${String(10000000 + index).slice(-8)}` },
+    { id: nextExtendId(), label: '供应商', value: vendors[index % vendors.length] },
+    { id: nextExtendId(), label: '供应商联系人', value: contacts[index % contacts.length] },
+    {
+      id: nextExtendId(),
+      label: '供应商联系人电话',
+      value: `139${String(20000000 + index).slice(-8)}`
+    },
+    { id: nextExtendId(), label: '软件版本', value: `V2.${(index % 5) + 1}.0` }
   ]
 }
 
@@ -155,7 +178,7 @@ const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
     archiveInfo: '核心区无线电干扰设备档案',
     archiveId: 'da-10004',
     deviceType: '无线电干扰',
-    deployLocation: '楼顶A区',
+    deployLocation: '核心区',
     ipAddress: '192.168.1.10',
     serialNo: 'RD-2025-X01',
     lastHeartbeat: '2026-05-20 14:32:18',
@@ -253,10 +276,10 @@ allList.forEach((row, i) => {
   if (!detailExt[row.id]) {
     detailExt[row.id] = {
       ...defaultExtForRow(row, i),
-      extendedFields: defaultExtendedFields(row)
+      extendedFields: defaultExtendedFields(row, i)
     }
   } else if (!detailExt[row.id]!.extendedFields?.length) {
-    detailExt[row.id]!.extendedFields = defaultExtendedFields(row)
+    detailExt[row.id]!.extendedFields = defaultExtendedFields(row, i)
   }
   if (!row.archiveId && i < 5) {
     row.archiveId = `da-${10001 + i}`

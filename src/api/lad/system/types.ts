@@ -31,6 +31,48 @@ export interface SystemParamSavePayload {
   paramValue: string | number | boolean
 }
 
+export type EventOwnership = '无人机入侵' | '设备故障'
+
+export type EventAlarmLevel = '提示' | '重要' | '紧急'
+
+export interface EventAttributeItem {
+  id: string
+  eventId: string
+  eventName: string
+  eventOwnership: EventOwnership
+  eventType: string
+  alarmEnabled: boolean
+  alarmLevel: EventAlarmLevel
+  priority: number
+  remark?: string
+  updatedAt: string
+}
+
+export interface EventAttributeQuery {
+  pageIndex?: number
+  pageSize?: number
+  keyword?: string
+  eventOwnership?: EventOwnership
+  alarmEnabled?: boolean
+}
+
+export interface EventAttributeListResult {
+  list: EventAttributeItem[]
+  total: number
+}
+
+export interface EventAttributeSavePayload {
+  id?: string
+  eventId: string
+  eventName: string
+  eventOwnership: EventOwnership
+  eventType: string
+  alarmEnabled: boolean
+  alarmLevel: EventAlarmLevel
+  priority: number
+  remark?: string
+}
+
 export interface DictTypeItem {
   id: string
   dictCode: string

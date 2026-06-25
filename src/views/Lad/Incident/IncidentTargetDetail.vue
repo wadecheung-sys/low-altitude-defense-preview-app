@@ -28,6 +28,25 @@ const replayRef = ref<InstanceType<typeof TrajectoryReplay> | null>(null)
 
 const eventId = computed(() => String(route.params.id || ''))
 
+const sourceDeviceRows = [
+  {
+    seq: 1,
+    deviceName: '雷达-01',
+    deviceType: '雷达设备',
+    deviceCode: 'RD-001',
+    discoveredAt: '2024-03-04 08:00:00',
+    endedAt: '2024-03-04 08:00:20'
+  },
+  {
+    seq: 2,
+    deviceName: '无线电-02',
+    deviceType: '无线电设备',
+    deviceCode: 'RF-002',
+    discoveredAt: '2024-03-04 08:00:03',
+    endedAt: '2024-03-04 08:00:21'
+  }
+]
+
 const normalizeText = (text: unknown) =>
   String(text || '')
     .replaceAll('人工确认', '人工核查')
@@ -143,7 +162,7 @@ onMounted(async () => {
             <ElDescriptionsItem label="处置时间">
               {{ viewDetail.handledAt === '--' ? '--' : viewDetail.handledAt }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="当前状态">
+            <ElDescriptionsItem label="处置状态">
               {{ statusLabel(viewDetail.handlingStatus) }}
             </ElDescriptionsItem>
 
@@ -207,9 +226,11 @@ onMounted(async () => {
           {{
             viewDetail.handlingStatus === '待处置'
               ? '当前处于威胁评估阶段，后续节点将在实际发生后展示。'
-              : viewDetail.handlingStatus === '处置中'
-                ? '当前处置指令正在执行，结果节点将在设备回传后展示。'
-                : '从设备发现、威胁识别、评估、人工核查、处置执行到结果归档的全过程记录。'
+              : viewDetail.handlingStatus === '已结束'
+                ? '事件未执行反制即已自然结束，按结束态归档展示。'
+                : viewDetail.handlingStatus === '处置中'
+                  ? '当前处置指令正在执行，结果节点将在设备回传后展示。'
+                  : '从设备发现、威胁识别、评估、人工核查、处置执行到结果归档的全过程记录。'
           }}
         </p>
         <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
@@ -219,6 +240,37 @@ onMounted(async () => {
         <div class="detail-map-section__title">地图轨迹</div>
         <TrajectoryReplay ref="replayRef" :detail="viewDetail" />
       </div>
+
+      <section class="detail-source-section">
+        <div class="detail-source-section__title">原始探测设备信息</div>
+        <div class="detail-source-section__hint">
+          多源数据融合前的原始探测记录演示，每类设备保留一条模拟数据。
+        </div>
+        <div class="detail-source-section__table-wrap">
+          <table class="detail-source-table">
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>设备名</th>
+                <th>设备类型</th>
+                <th>设备编号</th>
+                <th>发现时间</th>
+                <th>结束时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in sourceDeviceRows" :key="row.deviceCode">
+                <td>{{ row.seq }}</td>
+                <td>{{ row.deviceName }}</td>
+                <td>{{ row.deviceType }}</td>
+                <td>{{ row.deviceCode }}</td>
+                <td>{{ row.discoveredAt }}</td>
+                <td>{{ row.endedAt }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </template>
 
     <ElAlert v-else-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
@@ -307,6 +359,56 @@ onMounted(async () => {
     margin-bottom: 12px;
     font-size: 15px;
     font-weight: 600;
+  }
+}
+
+.detail-source-section {
+  padding: 14px 16px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+
+  &__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  &__hint {
+    margin-top: 4px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
+  &__table-wrap {
+    overflow-x: auto;
+  }
+}
+
+.detail-source-table {
+  width: 100%;
+  min-width: 760px;
+  font-size: 13px;
+  border-spacing: 0;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 12px;
+    text-align: left;
+    border: 1px solid var(--el-border-color-lighter);
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--el-text-color-regular);
+    background: var(--el-fill-color-light);
+  }
+
+  td {
+    color: var(--el-text-color-primary);
+    background: var(--el-bg-color);
   }
 }
 

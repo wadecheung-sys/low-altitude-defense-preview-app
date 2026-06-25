@@ -16,6 +16,7 @@ import type {
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import { deviceInfoTypeOptions } from './deviceInfoConstants'
+import DeviceInfoGisMap from './components/DeviceInfoGisMap.vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
   ElAlert,
@@ -61,6 +62,7 @@ const imageInputRef = ref<HTMLInputElement>()
 const selfCheckLoading = ref(false)
 const selfCheckVisible = ref(false)
 const selfCheckResult = ref<DeviceSelfCheckResult | null>(null)
+const mapPlacing = ref(false)
 
 const isCreateMode = computed(() => route.name === 'LadDeviceInfoAdd')
 const isMonitorDetailMode = computed(() => route.name === 'LadDeviceMonitorDetail')
@@ -122,20 +124,72 @@ function nextExtendId() {
   return `ext-${Date.now()}-${extendSeq}`
 }
 
+const acquisitionMethodOptions = ['采购', '赠予', '置换', '赔偿', '其他']
+
 const fixedExtendedLabels = [
-  '安装方位',
-  '现场编号',
-  '维护周期',
-  '部署位置',
-  '详细地址',
-  '负责人',
-  '联系方式',
+  '部署区域',
   '设备IP',
-  '设备序列号'
+  '增加方式',
+  '生产日期',
+  '出厂日期',
+  '启用日期',
+  '使用年限（月）',
+  '保管机构',
+  '保管人',
+  '保管人电话',
+  '供应商',
+  '供应商联系人',
+  '供应商联系人电话',
+  '软件版本'
 ]
 
 function createFixedExtendedRows() {
   return fixedExtendedLabels.map((label) => ({ id: nextExtendId(), label, value: '' }))
+}
+
+const placement = reactive({
+  longitude: 116.397128,
+  latitude: 39.916527,
+  mapX: 50,
+  mapY: 50,
+  controlRangeM: 500
+})
+
+const MAP_BASE_LONGITUDE = 116.397128
+const MAP_BASE_LATITUDE = 39.916527
+const MAP_LONGITUDE_SCALE = 0.0022
+const MAP_LATITUDE_SCALE = 0.0018
+
+function extendedRowValue(label: string) {
+  return extendedRows.value.find((row) => row.label === label)?.value || ''
+}
+
+function isExtendedDateField(label: string) {
+  return ['生产日期', '出厂日期', '启用日期'].includes(label)
+}
+
+function isExtendedNumberField(label: string) {
+  return label === '使用年限（月）'
+}
+
+function syncCoordinateFromMap() {
+  placement.longitude =
+    Math.round((MAP_BASE_LONGITUDE + (placement.mapX - 50) * MAP_LONGITUDE_SCALE) * 1000000) /
+    1000000
+  placement.latitude =
+    Math.round((MAP_BASE_LATITUDE + (50 - placement.mapY) * MAP_LATITUDE_SCALE) * 1000000) / 1000000
+}
+
+function syncMapPointFromCoordinate() {
+  const nextX = 50 + (placement.longitude - MAP_BASE_LONGITUDE) / MAP_LONGITUDE_SCALE
+  const nextY = 50 - (placement.latitude - MAP_BASE_LATITUDE) / MAP_LATITUDE_SCALE
+  placement.mapX = Math.round(Math.max(8, Math.min(92, nextX)) * 10) / 10
+  placement.mapY = Math.round(Math.max(8, Math.min(92, nextY)) * 10) / 10
+}
+
+function toggleMapPlacing() {
+  if (!isEditable.value) return
+  mapPlacing.value = !mapPlacing.value
 }
 
 function mapArchiveDetailToLinkedArchive(
@@ -220,15 +274,18 @@ function applyDetail(data: DeviceInfoDetail) {
     }
   }
   const legacyValues: Record<string, string> = {
-    部署位置: data.deployLocation,
-    详细地址: data.deployAddress,
-    负责人: data.personInCharge,
-    联系方式: data.contactPhone,
+    部署区域: data.deployLocation,
     设备IP: data.ipAddress,
-    设备序列号: data.serialNo
+    保管人: data.personInCharge,
+    保管人电话: data.contactPhone
   }
   fixedExtendedLabels.forEach((label) => appendLegacyField(label, legacyValues[label] || ''))
   extendedRows.value = fields
+  placement.longitude = data.longitude
+  placement.latitude = data.latitude
+  placement.mapX = data.mapX
+  placement.mapY = data.mapY
+  placement.controlRangeM = data.controlRangeM
 }
 
 function resetCreate() {
@@ -247,6 +304,12 @@ function resetCreate() {
   form.remark = ''
   deviceImageUrl.value = ''
   extendedRows.value = createFixedExtendedRows()
+  placement.longitude = MAP_BASE_LONGITUDE
+  placement.latitude = MAP_BASE_LATITUDE
+  placement.mapX = 50
+  placement.mapY = 50
+  placement.controlRangeM = 500
+  mapPlacing.value = false
 }
 
 async function loadArchiveOptions() {
@@ -372,12 +435,17 @@ async function save() {
       archiveInfo,
       archiveId: form.archiveId || undefined,
       deviceType: form.deviceType,
-      deployLocation: extendedValue('部署位置'),
-      deployAddress: extendedValue('详细地址'),
-      ipAddress: extendedValue('设备IP'),
-      serialNo: extendedValue('设备序列号'),
-      personInCharge: extendedValue('负责人'),
-      contactPhone: extendedValue('联系方式'),
+      deployLocation: extendedValue('部署区域'),
+      deployAddress: extendedValue('部署区域'),
+      ipAddress: extendedValue('设备IP') || form.ipAddress,
+      serialNo: form.serialNo,
+      personInCharge: extendedValue('保管人'),
+      contactPhone: extendedValue('保管人电话'),
+      longitude: placement.longitude,
+      latitude: placement.latitude,
+      mapX: placement.mapX,
+      mapY: placement.mapY,
+      controlRangeM: placement.controlRangeM,
       remark: form.remark,
       imageUrl: deviceImageUrl.value,
       extendedFields: extendedRows.value.map((row) => ({
@@ -407,6 +475,13 @@ watch(
   () => form.archiveId,
   (archiveId) => {
     syncLinkedArchive(archiveId)
+  }
+)
+
+watch(
+  () => [placement.mapX, placement.mapY],
+  () => {
+    syncCoordinateFromMap()
   }
 )
 
@@ -563,13 +638,114 @@ watch(
             <ElForm label-position="top" class="device-detail-extended-form">
               <div class="device-detail-extended-grid">
                 <ElFormItem v-for="row in extendedRows" :key="row.id" :label="row.label">
+                  <ElSelect
+                    v-if="row.label === '增加方式'"
+                    v-model="row.value"
+                    :disabled="!isEditable"
+                    placeholder="请选择增加方式"
+                    clearable
+                    class="w-100%"
+                  >
+                    <ElOption
+                      v-for="option in acquisitionMethodOptions"
+                      :key="option"
+                      :label="option"
+                      :value="option"
+                    />
+                  </ElSelect>
+                  <ElDatePicker
+                    v-else-if="isExtendedDateField(row.label)"
+                    v-model="row.value"
+                    type="date"
+                    value-format="YYYY-MM-DD"
+                    format="YYYY-MM-DD"
+                    :disabled="!isEditable"
+                    placeholder="请选择日期"
+                    class="w-100%"
+                  />
+                  <ElInputNumber
+                    v-else-if="isExtendedNumberField(row.label)"
+                    :model-value="row.value ? Number(row.value) : undefined"
+                    :disabled="!isEditable"
+                    :min="0"
+                    :max="9999"
+                    controls-position="right"
+                    class="w-100%"
+                    placeholder="请输入月数"
+                    @update:model-value="row.value = $event === undefined ? '' : String($event)"
+                  />
                   <ElInput
+                    v-else
                     v-model="row.value"
                     :disabled="!isEditable"
                     placeholder="请输入"
                     clearable
                   />
                 </ElFormItem>
+              </div>
+
+              <div class="device-detail-map-block">
+                <div class="device-detail-map-block__head">
+                  <div>
+                    <div class="device-detail-panel__title">地图选点</div>
+                    <p class="device-detail-panel__hint"
+                      >用于演示设备部署点选择，可点击地图放置位置并同步经纬度。</p
+                    >
+                  </div>
+                  <BaseButton v-if="isEditable" type="primary" @click="toggleMapPlacing">
+                    {{ mapPlacing ? '结束选点' : '地图选点' }}
+                  </BaseButton>
+                </div>
+
+                <div class="device-detail-map-block__grid">
+                  <div class="device-detail-map-block__canvas">
+                    <DeviceInfoGisMap
+                      v-model:mapX="placement.mapX"
+                      v-model:mapY="placement.mapY"
+                      :control-range-m="placement.controlRangeM"
+                      :device-label="form.deviceName || '设备'"
+                      :readonly="!isEditable"
+                      :placing="mapPlacing"
+                    />
+                  </div>
+                  <div class="device-detail-map-block__meta">
+                    <ElFormItem label="经度">
+                      <ElInputNumber
+                        v-model="placement.longitude"
+                        class="w-100%"
+                        :disabled="!isEditable"
+                        :precision="6"
+                        :step="0.000001"
+                        controls-position="right"
+                        @change="syncMapPointFromCoordinate"
+                      />
+                    </ElFormItem>
+                    <ElFormItem label="纬度">
+                      <ElInputNumber
+                        v-model="placement.latitude"
+                        class="w-100%"
+                        :disabled="!isEditable"
+                        :precision="6"
+                        :step="0.000001"
+                        controls-position="right"
+                        @change="syncMapPointFromCoordinate"
+                      />
+                    </ElFormItem>
+                    <ElFormItem label="部署区域">
+                      <ElInput :model-value="extendedRowValue('部署区域')" disabled />
+                    </ElFormItem>
+                    <ElFormItem label="控制范围（米）">
+                      <ElInputNumber
+                        v-model="placement.controlRangeM"
+                        class="w-100%"
+                        :disabled="!isEditable"
+                        :min="100"
+                        :max="5000"
+                        controls-position="right"
+                      />
+                    </ElFormItem>
+                  </div>
+                </div>
               </div>
             </ElForm>
           </ElTabPane>
@@ -977,6 +1153,42 @@ watch(
   line-height: 1.4;
 }
 
+.device-detail-map-block {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--el-border-color);
+}
+
+.device-detail-map-block__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.device-detail-map-block__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.device-detail-map-block__canvas {
+  min-width: 0;
+}
+
+.device-detail-map-block__meta {
+  padding: 12px;
+  background: rgb(255 255 255 / 72%);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.device-detail-map-block__meta :deep(.el-form-item:last-child) {
+  margin-bottom: 0;
+}
+
 .device-detail-metrics-empty {
   margin: 24px 0;
   font-size: 13px;
@@ -1013,6 +1225,15 @@ watch(
   .device-detail-extended-grid {
     grid-template-columns: 1fr;
     column-gap: 0;
+  }
+
+  .device-detail-map-block__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .device-detail-map-block__head {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

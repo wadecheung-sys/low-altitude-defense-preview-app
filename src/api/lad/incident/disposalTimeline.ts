@@ -65,7 +65,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
   const pending =
     row.handlingStatus === '待处置'
       ? 2
-      : row.handlingStatus === '仅记录'
+      : row.handlingStatus === '已结束'
         ? 4
         : row.handlingStatus === '处置中'
           ? 3
@@ -116,14 +116,18 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
       time: handled,
       summary:
         row.countermeasureDevice === '--'
-          ? '持续监视，未下发反制'
+          ? row.handlingStatus === '已结束'
+            ? '未执行反制，事件已自然结束'
+            : '持续监视，未下发反制'
           : `已下发处置：${row.countermeasureDevice}`,
       detail:
         recognitionResult === '真实入侵' && row.countermeasureDevice !== '--'
           ? `人工确认真实入侵后联动反制设备；执行结果：${row.handlingResult}${confirmDetail}`
-          : row.handlingStatus === '处置中'
-            ? '处置指令已下发，正在执行中'
-            : `设备执行结果：${row.handlingResult}${confirmDetail}`,
+          : row.handlingStatus === '已结束'
+            ? `未执行反制动作；结束原因：${row.handlingResult}${confirmDetail}`
+            : row.handlingStatus === '处置中'
+              ? '处置指令已下发，正在执行中'
+              : `设备执行结果：${row.handlingResult}${confirmDetail}`,
       tags: [row.handlingStatus, row.countermeasureDevice !== '--' ? '反制' : '监视']
     },
     {

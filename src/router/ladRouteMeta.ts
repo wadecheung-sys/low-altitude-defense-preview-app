@@ -113,6 +113,12 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     reqModule: '8-参数',
     phaseNote: '系统参数配置。'
   },
+  'system-event-attribute': {
+    pageKey: 'system-event-attribute',
+    pageType: 'list',
+    reqModule: '8-事件属性',
+    phaseNote: '事件属性配置列表。'
+  },
   'dict-list': {
     pageKey: 'dict-list',
     pageType: 'list',

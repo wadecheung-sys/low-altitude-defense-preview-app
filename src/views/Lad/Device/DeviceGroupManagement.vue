@@ -4,7 +4,7 @@ import {
   getDeviceGroupListApi,
   saveDeviceGroupApi
 } from '@/api/lad/device-group'
-import type { DeviceGroupItem, DeviceGroupType } from '@/api/lad/device-group/types'
+import type { DeviceGroupItem } from '@/api/lad/device-group/types'
 import { getDeviceInfoListApi } from '@/api/lad/device-info'
 import type { DeviceInfoItem } from '@/api/lad/device-info/types'
 import { BaseButton } from '@/components/Button'
@@ -29,18 +29,13 @@ import { computed, reactive, ref, unref } from 'vue'
 
 defineOptions({ name: 'LadDeviceGroupManagement' })
 
-const groupTypeOptions: { label: DeviceGroupType; value: DeviceGroupType }[] = [
-  { label: '探测组', value: '探测组' },
-  { label: '反制组', value: '反制组' },
-  { label: '光电协同组', value: '光电协同组' },
-  { label: '综合联动组', value: '综合联动组' }
-]
-
 const enabledOptions = [
   { label: '全部', value: '' },
   { label: '启用', value: 'true' },
   { label: '停用', value: 'false' }
 ]
+
+const defaultGroupType = '探测组'
 
 const searchParams = ref<Recordable>({})
 const dialogVisible = ref(false)
@@ -51,7 +46,7 @@ const form = reactive({
   id: '',
   groupCode: '',
   groupName: '',
-  groupType: '探测组' as DeviceGroupType,
+  groupType: defaultGroupType,
   description: '',
   memberIds: [] as string[],
   enabled: true
@@ -68,7 +63,6 @@ const memberNameMap = computed(() => {
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
     groupName: params.groupName,
-    groupType: params.groupType || undefined,
     enabled: params.enabled === 'true' ? true : params.enabled === 'false' ? false : undefined
   }
   currentPage.value = 1
@@ -99,7 +93,7 @@ function resetForm() {
   form.id = ''
   form.groupCode = ''
   form.groupName = ''
-  form.groupType = '探测组'
+  form.groupType = defaultGroupType
   form.description = ''
   form.memberIds = []
   form.enabled = true
@@ -125,7 +119,7 @@ function openEdit(row: DeviceGroupItem) {
 
 async function removeRow(row: DeviceGroupItem) {
   try {
-    await ElMessageBox.confirm(`确认删除设备组「${row.groupName}」吗？`, '删除确认', {
+    await ElMessageBox.confirm(`确认删除设备组“${row.groupName}”吗？`, '删除确认', {
       type: 'warning'
     })
   } catch {
@@ -167,26 +161,21 @@ loadDeviceOptions()
 
 const crudSchemas = reactive<CrudSchema[]>([
   {
+    field: 'index',
+    label: '序号',
+    type: 'index',
+    width: '70px',
+    search: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
+  },
+  {
     field: 'groupName',
     label: '设备组',
     search: {
       component: 'Input',
-      colProps: { span: 8 },
+      colProps: { span: 12 },
       componentProps: { placeholder: '请输入组名或组编码', style: { width: '100%' } }
-    }
-  },
-  {
-    field: 'groupType',
-    label: '组类型',
-    search: {
-      component: 'Select',
-      colProps: { span: 8 },
-      componentProps: {
-        options: [{ label: '全部', value: '' }, ...groupTypeOptions],
-        clearable: true,
-        placeholder: '全部',
-        style: { width: '100%' }
-      }
     }
   },
   {
@@ -194,7 +183,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '状态',
     search: {
       component: 'Select',
-      colProps: { span: 8 },
+      colProps: { span: 12 },
       componentProps: {
         options: enabledOptions,
         clearable: true,
@@ -213,12 +202,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'groupName',
     label: '组名称',
     minWidth: 150,
-    search: { hidden: true }
-  },
-  {
-    field: 'groupType',
-    label: '类型',
-    minWidth: 120,
     search: { hidden: true }
   },
   {
@@ -325,16 +308,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
         </ElFormItem>
         <ElFormItem label="组名称">
           <ElInput v-model="form.groupName" placeholder="请输入设备组名称" />
-        </ElFormItem>
-        <ElFormItem label="组类型">
-          <ElSelect v-model="form.groupType" class="w-100%">
-            <ElOption
-              v-for="option in groupTypeOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </ElSelect>
         </ElFormItem>
         <ElFormItem label="成员设备">
           <ElSelect

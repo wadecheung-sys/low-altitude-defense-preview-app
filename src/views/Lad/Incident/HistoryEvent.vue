@@ -68,8 +68,7 @@ const handlingStatusOptions = [
   { label: '待处置', value: '待处置' },
   { label: '处置中', value: '处置中' },
   { label: '已处置', value: '已处置' },
-  { label: '已关闭', value: '已关闭' },
-  { label: '仅记录', value: '仅记录' }
+  { label: '已结束', value: '已结束' }
 ]
 
 const manualConfirmOptions = [
@@ -143,8 +142,7 @@ const statusTagType = (status: HandlingStatus) => {
     待处置: 'danger',
     处置中: 'warning',
     已处置: 'success',
-    已关闭: 'info',
-    仅记录: 'info'
+    已结束: 'info'
   }
   return map[status]
 }
@@ -550,7 +548,9 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
           <>
-            {!row.manualConfirmStatus.startsWith('人工-') && row.handlingStatus !== '已处置' ? (
+            {!row.manualConfirmStatus.startsWith('人工-') &&
+            row.handlingStatus !== '已处置' &&
+            row.handlingStatus !== '已结束' ? (
               <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
                 人工核查
               </BaseButton>

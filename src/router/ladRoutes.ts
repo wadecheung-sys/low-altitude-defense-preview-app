@@ -16,6 +16,7 @@ const deviceRuntimeMonitorPage = () => import('@/views/Lad/Device/DeviceRuntimeM
 const areaListPage = () => import('@/views/Lad/Area/AreaList.vue')
 const areaEditPage = () => import('@/views/Lad/Area/AreaEdit.vue')
 const systemParamsPage = () => import('@/views/Lad/System/SystemParams.vue')
+const eventAttributeConfigPage = () => import('@/views/Lad/System/EventAttributeConfig.vue')
 const dictListPage = () => import('@/views/Lad/System/DictList.vue')
 const dictDetailPage = () => import('@/views/Lad/System/DictDetail.vue')
 const authUserPage = () => import('@/views/Lad/Auth/AuthUser.vue')
@@ -389,6 +390,14 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         component: systemParamsPage,
         meta: ladMeta('system-params', {
           title: '参数配置'
+        })
+      },
+      {
+        path: 'event-attribute',
+        name: 'LadSystemEventAttribute',
+        component: eventAttributeConfigPage,
+        meta: ladMeta('system-event-attribute', {
+          title: '事件属性配置'
         })
       },
       {

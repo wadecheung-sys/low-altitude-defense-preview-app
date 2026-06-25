@@ -55,13 +55,14 @@ function buildSeedList() {
       const abnormalSec = i % 3 === 0 ? 8 + (i % 40) : 0
       const keepOpen = i < 4
       const forceDisposed = i === 8 || i === 9
+      const forceEnded = i === 6 || i === 7 || i === 13
 
       list.push({
         id: `he-${10001 + i}`,
         targetId: profile.targetId,
         relatedEventCount: profile.eventCount,
         threatLevel: threatLevels[i % threatLevels.length],
-        handledAt: keepOpen ? '--' : handled,
+        handledAt: keepOpen || forceEnded ? '--' : handled,
         discoveredAt: discovered,
         endedAt: ended,
         abnormalDuration:
@@ -77,18 +78,35 @@ function buildSeedList() {
         targetModel: profile.targetModel,
         uavSn: profile.uavSn,
         detectionDevice: detectionDevices[i % detectionDevices.length],
-        countermeasureDevice: keepOpen ? '--' : countermeasures[i % countermeasures.length],
-        handlingResult: keepOpen ? '待执行' : handlingResults[i % handlingResults.length],
+        countermeasureDevice:
+          keepOpen || forceEnded ? '--' : countermeasures[i % countermeasures.length],
+        handlingResult: keepOpen
+          ? '待执行'
+          : forceEnded
+            ? i === 6
+              ? '无人机自离'
+              : i === 7
+                ? '飞鸟躁扰'
+                : '目标自然脱离'
+            : handlingResults[i % handlingResults.length],
         handlingStatus: forceDisposed
           ? '已处置'
-          : keepOpen
-            ? i < 2
-              ? '待处置'
-              : '处置中'
-            : '已处置',
+          : forceEnded
+            ? '已结束'
+            : keepOpen
+              ? i < 2
+                ? '待处置'
+                : '处置中'
+              : '已处置',
         manualConfirmStatus: i % 5 === 0 ? '躁扰告警' : '真实入侵',
         listType: '未知',
-        remark: keepOpen ? '等待值守人员人工确认' : i % 7 === 0 ? '多源轨迹已合并' : ''
+        remark: keepOpen
+          ? '等待值守人员人工确认'
+          : forceEnded
+            ? '事件未执行反制，目标已自然结束'
+            : i % 7 === 0
+              ? '多源轨迹已合并'
+              : ''
       })
     }
   })
@@ -165,7 +183,7 @@ function applyConfirm(
 
   if (result === '躁扰告警') {
     row.threatLevel = '低'
-    row.handlingStatus = '已关闭'
+    row.handlingStatus = '已结束'
     row.handlingResult = '未执行反制'
     row.countermeasureDevice = '--'
     row.remark = remark || `人工确认为躁扰告警（${nuisanceType || '其他'}），已关闭告警`
