@@ -15,7 +15,7 @@ export const UI = {
   colAction: '\u64cd\u4f5c',
   btnSearch: '\u67e5\u8be2',
   btnReset: '\u91cd\u7f6e',
-  btnView: '\u67e5\u770b',
+  btnView: '\u8be6\u60c5',
   btnReconnect: '\u91cd\u8fde',
   btnProbeAll: '\u5168\u91cf\u5fc3\u8df3\u68c0\u6d4b',
   dialogReconnect: '\u91cd\u8fde',

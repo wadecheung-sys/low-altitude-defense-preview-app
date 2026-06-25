@@ -10,7 +10,7 @@ import type { DictTypeItem } from '@/api/lad/system/types'
 import DictTypeFormDialog from './components/DictTypeFormDialog.vue'
 import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElLink, ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'LadSystemDictList' })
 
@@ -112,20 +112,20 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '操作',
     search: { hidden: true },
     table: {
-      width: 220,
+      width: 260,
       fixed: 'right',
       slots: {
         default: (data: { row: DictTypeItem }) => (
           <>
-            <ElLink type="primary" onClick={() => goEntries(data.row)}>
+            <BaseButton type="primary" onClick={() => goEntries(data.row)}>
               字典项
-            </ElLink>
-            <ElLink type="primary" class="ml-12px" onClick={() => openEdit(data.row)}>
+            </BaseButton>
+            <BaseButton type="primary" class="ml-8px" onClick={() => openEdit(data.row)}>
               编辑
-            </ElLink>
-            <ElLink type="danger" class="ml-12px" onClick={() => onDelete(data.row)}>
+            </BaseButton>
+            <BaseButton type="danger" class="ml-8px" onClick={() => onDelete(data.row)}>
               删除
-            </ElLink>
+            </BaseButton>
           </>
         )
       }

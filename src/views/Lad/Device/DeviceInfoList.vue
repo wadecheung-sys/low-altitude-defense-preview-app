@@ -224,8 +224,8 @@ const crudSchemas = reactive<CrudSchema[]>([
             <BaseButton type="primary" onClick={() => goDetail(row)}>
               详情
             </BaseButton>
-            <BaseButton type="success" onClick={() => openEdit(row)}>
-              修改
+            <BaseButton type="primary" onClick={() => openEdit(row)}>
+              编辑
             </BaseButton>
             <BaseButton type="danger" onClick={() => removeRow(row)}>
               删除

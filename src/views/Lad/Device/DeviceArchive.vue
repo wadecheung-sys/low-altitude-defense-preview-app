@@ -274,9 +274,9 @@ const crudSchemas = reactive<CrudSchema[]>([
         default: ({ row }: { row: DeviceArchiveItem }) => (
           <>
             <BaseButton type="primary" onClick={() => goDetail(row)}>
-              查看
+              详情
             </BaseButton>
-            <BaseButton type="success" onClick={() => openEdit(row)}>
+            <BaseButton type="primary" onClick={() => openEdit(row)}>
               编辑
             </BaseButton>
             <BaseButton type="danger" onClick={() => removeArchive(row)}>

@@ -149,15 +149,15 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '操作',
     search: { hidden: true },
     table: {
-      width: 140,
+      width: 180,
       fixed: 'right',
       slots: {
         default: (data: { row: DictEntryItem }) => (
           <>
-            <BaseButton type="primary" link onClick={() => openEdit(data.row)}>
+            <BaseButton type="primary" onClick={() => openEdit(data.row)}>
               编辑
             </BaseButton>
-            <BaseButton type="danger" link class="ml-8px" onClick={() => onDeleteOne(data.row)}>
+            <BaseButton type="danger" class="ml-8px" onClick={() => onDeleteOne(data.row)}>
               删除
             </BaseButton>
           </>

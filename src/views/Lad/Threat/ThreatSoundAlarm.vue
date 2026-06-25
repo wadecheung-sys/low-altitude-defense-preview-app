@@ -244,11 +244,11 @@ function testAlarm(row: AlarmAudioRow) {
           </ElTag>
         </template>
       </ElTableColumn>
-      <ElTableColumn label="操作" width="190" fixed="right">
+      <ElTableColumn label="操作" width="240" fixed="right">
         <template #default="{ row }">
-          <BaseButton link type="primary" @click="openEdit(row)">编辑</BaseButton>
-          <BaseButton link type="primary" @click="testAlarm(row)">试鸣</BaseButton>
-          <BaseButton link type="danger" @click="deleteRows([row])">删除</BaseButton>
+          <BaseButton type="primary" @click="openEdit(row)">编辑</BaseButton>
+          <BaseButton type="primary" class="ml-8px" @click="testAlarm(row)">试鸣</BaseButton>
+          <BaseButton type="danger" class="ml-8px" @click="deleteRows([row])">删除</BaseButton>
         </template>
       </ElTableColumn>
     </ElTable>

@@ -369,11 +369,11 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: (data: { row: BlackWhiteListItem }) => (
           <>
+            <BaseButton type="primary" onClick={() => goDetail(data.row)}>
+              详情
+            </BaseButton>
             <BaseButton type="primary" onClick={() => openEdit(data.row)}>
               编辑
-            </BaseButton>
-            <BaseButton type="success" onClick={() => goDetail(data.row)}>
-              详情
             </BaseButton>
             <BaseButton type="danger" onClick={() => delData(data.row)}>
               删除

@@ -555,7 +555,7 @@ const crudSchemas = reactive<CrudSchema[]>([
                 人工核查
               </BaseButton>
             ) : null}
-            <BaseButton type="success" onClick={() => goDetail(row)}>
+            <BaseButton type="primary" onClick={() => goDetail(row)}>
               详情
             </BaseButton>
             <BaseButton type="danger" onClick={() => delData(row)}>

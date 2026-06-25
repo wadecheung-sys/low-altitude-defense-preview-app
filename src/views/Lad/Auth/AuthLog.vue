@@ -135,7 +135,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: (data: { row: AuthLogItem }) => (
           <BaseButton type="primary" onClick={() => openDetail(data.row)}>
-            查看
+            详情
           </BaseButton>
         )
       }
