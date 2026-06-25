@@ -408,14 +408,14 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
         :loading="listTypeLoading"
         @click="updateSelectedListType('黑名单')"
       >
-        添加黑名单
+        添加至黑名单
       </BaseButton>
       <BaseButton
         type="success"
         :loading="listTypeLoading"
         @click="updateSelectedListType('白名单')"
       >
-        添加白名单
+        添加至白名单
       </BaseButton>
       <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
     </div>

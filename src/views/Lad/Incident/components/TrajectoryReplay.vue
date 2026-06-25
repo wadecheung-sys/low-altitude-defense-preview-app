@@ -47,6 +47,49 @@ function sampleAt(pct: number): TrajectoryPoint {
 }
 
 const currentSample = computed(() => sampleAt(progress.value))
+const currentIndex = computed(() => {
+  const pts = props.detail.trajectory
+  if (!pts.length) return 0
+  return Math.max(
+    0,
+    pts.findIndex((item) => item.progress >= progress.value)
+  )
+})
+
+const previousSample = computed(() => {
+  const pts = props.detail.trajectory
+  if (!pts.length) return currentSample.value
+  return pts[Math.max(0, currentIndex.value - 1)] || currentSample.value
+})
+
+const currentLng = computed(() => (113.39 + currentSample.value.x * 0.05).toFixed(4))
+const currentLat = computed(() => (23.09 + currentSample.value.y * 0.04).toFixed(4))
+const currentSpeed = computed(() => {
+  const deltaX = currentSample.value.x - previousSample.value.x
+  const deltaY = currentSample.value.y - previousSample.value.y
+  const distanceFactor = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+  return Math.max(2, Math.round(8 + distanceFactor * 180 + progress.value * 0.04))
+})
+const currentHeading = computed(() => {
+  const deltaX = currentSample.value.x - previousSample.value.x
+  const deltaY = currentSample.value.y - previousSample.value.y
+  const angle = (Math.atan2(deltaX, -deltaY) * 180) / Math.PI
+  return Math.round((angle + 360) % 360)
+})
+const currentStatus = computed(() => {
+  if (props.detail.handlingStatus === '已结束') return '已结束'
+  if (props.detail.handlingStatus === '已处置')
+    return progress.value >= 92 ? '处置完成' : '持续跟踪'
+  if (props.detail.handlingStatus === '处置中')
+    return progress.value >= 52 ? '处置执行中' : '持续跟踪'
+  return '监视待处置'
+})
+const currentRecordTime = computed(() => {
+  const markers = props.detail.markers
+  if (!markers.length) return props.detail.discoveredAt
+  const matched = [...markers].reverse().find((item) => progress.value >= item.progress)
+  return matched?.time || props.detail.discoveredAt
+})
 
 const pathD = computed(() => {
   const pts = props.detail.trajectory
@@ -204,8 +247,42 @@ defineExpose({ play, pause, togglePlay })
         </g>
       </svg>
       <div class="trajectory-replay__coords">
-        当前：E {{ (113.39 + currentSample.x * 0.05).toFixed(4) }} N
-        {{ (23.09 + currentSample.y * 0.04).toFixed(4) }} 高度 {{ currentSample.altitude }}m
+        当前：E {{ currentLng }} N {{ currentLat }} 高度 {{ currentSample.altitude }}m
+      </div>
+    </div>
+
+    <div class="trajectory-replay__telemetry">
+      <div class="trajectory-replay__telemetry-item">
+        <span>目标状态</span>
+        <strong>{{ currentStatus }}</strong>
+      </div>
+      <div class="trajectory-replay__telemetry-item">
+        <span>飞行速度</span>
+        <strong>{{ currentSpeed }} m/s</strong>
+      </div>
+      <div class="trajectory-replay__telemetry-item">
+        <span>航向角</span>
+        <strong>{{ currentHeading }}°</strong>
+      </div>
+      <div class="trajectory-replay__telemetry-item">
+        <span>飞行高度</span>
+        <strong>{{ currentSample.altitude }} m</strong>
+      </div>
+      <div class="trajectory-replay__telemetry-item">
+        <span>目标位置</span>
+        <strong>E {{ currentLng }} / N {{ currentLat }}</strong>
+      </div>
+      <div class="trajectory-replay__telemetry-item">
+        <span>轨迹进度</span>
+        <strong>{{ progress.toFixed(0) }}%</strong>
+      </div>
+      <div class="trajectory-replay__telemetry-item">
+        <span>记录时间</span>
+        <strong>{{ currentRecordTime }}</strong>
+      </div>
+      <div class="trajectory-replay__telemetry-item">
+        <span>数据来源</span>
+        <strong>{{ detail.dataSource }}</strong>
       </div>
     </div>
 
@@ -285,6 +362,38 @@ defineExpose({ play, pause, togglePlay })
     border-radius: 8px;
   }
 
+  &__telemetry {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  &__telemetry-item {
+    min-width: 0;
+    padding: 10px 12px;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 6px;
+
+    span {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+    }
+
+    strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
+  }
+
   &__times {
     display: flex;
     justify-content: space-between;
@@ -360,6 +469,22 @@ defineExpose({ play, pause, togglePlay })
     margin-left: auto;
     font-size: 13px;
     color: var(--el-text-color-secondary);
+  }
+}
+
+@media (max-width: 1200px) {
+  .trajectory-replay {
+    &__telemetry {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .trajectory-replay {
+    &__telemetry {
+      grid-template-columns: 1fr;
+    }
   }
 }
 </style>

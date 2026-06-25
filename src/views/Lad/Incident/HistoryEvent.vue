@@ -585,10 +585,10 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
     <div class="mb-10px">
       <BaseButton type="danger" :loading="listLoading" @click="addList('黑名单')"
-        >添加黑名单</BaseButton
+        >添加至黑名单</BaseButton
       >
       <BaseButton type="success" :loading="listLoading" @click="addList('白名单')"
-        >添加白名单</BaseButton
+        >添加至白名单</BaseButton
       >
       <BaseButton type="primary" @click="openExportDialog">导出</BaseButton>
       <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
