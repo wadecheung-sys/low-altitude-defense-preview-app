@@ -119,6 +119,51 @@ function actionName(row: HistoryEventItem) {
   return '定向驱离'
 }
 
+function detectionSourceTags(row: HistoryEventItem) {
+  const text = `${row.detectionDevice}${row.dataSource}`
+  return tagList([
+    text.includes('雷达') && '雷达',
+    text.includes('无线电') && '无线电',
+    text.includes('光电') && '光电',
+    text.includes('融合') && '多源融合'
+  ])
+}
+
+function identificationTags(row: HistoryEventItem, targetType: string, identityLabel: string) {
+  const isManualRecognition = row.manualConfirmStatus.startsWith('人工-')
+  return tagList([
+    isManualRecognition ? '人工核查' : '系统识别',
+    targetType.includes('飞鸟') || targetType.includes('躁扰') ? '非无人机目标' : '无人机目标',
+    identityLabel.includes('黑名单') && '黑名单',
+    identityLabel.includes('白名单') && '白名单',
+    identityLabel.includes('非合作式') && '非合作式'
+  ])
+}
+
+function assessmentTags(row: HistoryEventItem) {
+  const isManualRecognition = row.manualConfirmStatus.startsWith('人工-')
+  return tagList([
+    isManualRecognition ? '人工核查' : '自动评估',
+    `威胁${row.threatLevel}`,
+    row.handlingStatus === '已结束' && '结束归档'
+  ])
+}
+
+function disposalTags(row: HistoryEventItem, status: DisposalTimelineNodeStatus) {
+  if (status === 'skipped') return ['未触发预案']
+  if (row.handlingStatus === '处置中') return ['预案联动', '指令执行中']
+  if (row.handlingStatus === '待处置') return ['待确认']
+  return ['预案联动', '指令已下发']
+}
+
+function resultTags(row: HistoryEventItem) {
+  return tagList([
+    row.handlingStatus,
+    row.handlingStatus === '已结束' && '自然结束',
+    isNuisanceEvent(row) && '扰动排除'
+  ])
+}
+
 function resultLabel(row: HistoryEventItem) {
   if (row.handlingStatus === '已结束' && isNuisanceEvent(row)) return '飞鸟或躁扰信号排除'
   if (row.handlingStatus === '已结束') return row.handlingResult || '事件自然结束'
@@ -161,11 +206,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
         { label: '目标位置', value: row.targetLocation },
         { label: '原始特征', value: row.trajectoryFeature }
       ],
-      tags: tagList([
-        '探测',
-        row.dataSource,
-        row.uavSn !== '未解析' ? `识别码 ${row.uavSn}` : '识别码未解析'
-      ])
+      tags: detectionSourceTags(row)
     },
     {
       key: 'threat',
@@ -183,12 +224,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
         { label: '品牌型号', value: row.targetModel },
         { label: '识别码', value: row.uavSn }
       ],
-      tags: tagList([
-        targetType,
-        identityLabel,
-        row.listType !== '未知' && row.listType,
-        isManualRecognition ? '人工核查' : '系统识别'
-      ])
+      tags: identificationTags(row, targetType, identityLabel)
     },
     {
       key: 'assess',
@@ -206,7 +242,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
           value: hasAbnormal ? `持续 ${row.abnormalDuration}` : '未发现明显异常行为'
         }
       ],
-      tags: tagList([`威胁${row.threatLevel}`, row.zoneName, '命中规则'])
+      tags: assessmentTags(row)
     },
     {
       key: 'dispose',
@@ -231,11 +267,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
         { label: '联动设备', value: row.countermeasureDevice },
         { label: '执行动作', value: disposeNodeStatus === 'skipped' ? '未执行' : actionName(row) }
       ],
-      tags: tagList([
-        row.handlingStatus,
-        disposeNodeStatus === 'skipped' ? '未触发预案' : '已联动反制',
-        hasCountermeasure(row) && row.countermeasureDevice
-      ])
+      tags: disposalTags(row, disposeNodeStatus)
     },
     {
       key: 'result',
@@ -253,11 +285,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
         },
         { label: '核查方式', value: isManualRecognition ? '人工核查' : '系统识别' }
       ],
-      tags: tagList([
-        row.handlingStatus,
-        resultLabel(row),
-        isManualRecognition ? '人工核查' : '自动识别'
-      ])
+      tags: resultTags(row)
     }
   ]
 

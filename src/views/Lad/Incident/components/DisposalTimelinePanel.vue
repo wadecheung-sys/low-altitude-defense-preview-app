@@ -44,16 +44,19 @@ function statusLabel(status: DisposalTimelineNode['status']) {
         </div>
         <p class="disposal-timeline__summary">{{ node.summary }}</p>
         <p v-if="node.detail" class="disposal-timeline__detail">{{ node.detail }}</p>
-        <dl v-if="node.details?.length" class="disposal-timeline__details">
-          <div
-            v-for="item in node.details"
-            :key="item.label"
-            class="disposal-timeline__detail-item"
-          >
-            <dt>{{ item.label }}</dt>
-            <dd>{{ item.value || '--' }}</dd>
-          </div>
-        </dl>
+        <details v-if="node.details?.length" class="disposal-timeline__details">
+          <summary>阶段详情</summary>
+          <dl class="disposal-timeline__detail-list">
+            <div
+              v-for="item in node.details"
+              :key="item.label"
+              class="disposal-timeline__detail-item"
+            >
+              <dt>{{ item.label }}</dt>
+              <dd>{{ item.value || '--' }}</dd>
+            </div>
+          </dl>
+        </details>
         <div v-if="node.tags?.length" class="disposal-timeline__tags">
           <ElTag v-for="tag in node.tags" :key="tag" size="small" type="info" effect="plain">
             {{ tag }}
@@ -101,24 +104,39 @@ function statusLabel(status: DisposalTimelineNode['status']) {
   }
 
   &__details {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px 14px;
+    max-width: 560px;
     padding: 8px 10px;
     margin: 8px 0;
     background: var(--el-fill-color-lighter);
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 6px;
+
+    summary {
+      width: fit-content;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--el-color-primary);
+    }
+  }
+
+  &__detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0 0;
   }
 
   &__detail-item {
     display: flex;
-    gap: 6px;
+    align-items: flex-start;
+    gap: 10px;
     min-width: 0;
     margin: 0;
 
     dt {
-      flex: 0 0 auto;
+      flex: 0 0 72px;
       font-size: 12px;
       color: var(--el-text-color-secondary);
     }
@@ -136,14 +154,6 @@ function statusLabel(status: DisposalTimelineNode['status']) {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-  }
-}
-
-@media (max-width: 768px) {
-  .disposal-timeline {
-    &__details {
-      grid-template-columns: 1fr;
-    }
   }
 }
 </style>
