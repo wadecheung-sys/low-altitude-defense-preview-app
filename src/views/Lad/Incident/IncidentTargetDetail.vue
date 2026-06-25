@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  ElAlert,
-  ElDescriptions,
-  ElDescriptionsItem,
-  ElMessage,
-  ElMessageBox,
-  ElTag
-} from 'element-plus'
-import { deleteHistoryEventApi, getHistoryEventDetailApi } from '@/api/lad/incident'
-import type { HistoryEventDetail, HandlingStatus, ThreatLevel } from '@/api/lad/incident/types'
+import { ElAlert, ElDescriptions, ElDescriptionsItem, ElTag } from 'element-plus'
+import { getHistoryEventDetailApi } from '@/api/lad/incident'
+import type {
+  DisposalTimelineNode,
+  HistoryEventDetail,
+  HandlingStatus,
+  ThreatLevel
+} from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import DisposalTimelinePanel from './components/DisposalTimelinePanel.vue'
@@ -21,14 +19,53 @@ defineOptions({
 })
 
 const route = useRoute()
-const { push, go } = useRouter()
+const { go } = useRouter()
 
 const loading = ref(true)
 const detail = ref<HistoryEventDetail | null>(null)
 const loadError = ref('')
 const replayRef = ref<InstanceType<typeof TrajectoryReplay> | null>(null)
 
-const eventId = computed(() => route.params.id as string)
+const eventId = computed(() => String(route.params.id || ''))
+
+const normalizeText = (text: unknown) =>
+  String(text || '')
+    .replaceAll('人工确认', '人工核查')
+    .replaceAll('SN码', '识别码')
+    .replaceAll('SN 码', '识别码')
+
+const normalizedTimeline = (nodes: DisposalTimelineNode[] | undefined) =>
+  (nodes || []).map((node) => ({
+    ...node,
+    title: normalizeText(node.title),
+    summary: normalizeText(node.summary),
+    detail: normalizeText(node.detail),
+    tags: node.tags?.map((tag) => normalizeText(tag))
+  }))
+
+const viewDetail = computed<HistoryEventDetail | null>(() => {
+  if (!detail.value) return null
+
+  return {
+    ...detail.value,
+    targetId: normalizeText(detail.value.targetId),
+    targetModel: normalizeText(detail.value.targetModel),
+    uavSn: normalizeText(detail.value.uavSn),
+    zoneName: normalizeText(detail.value.zoneName),
+    frequencyInfo: normalizeText(detail.value.frequencyInfo),
+    targetType: normalizeText(detail.value.targetType),
+    detectionDevice: normalizeText(detail.value.detectionDevice),
+    countermeasureDevice: normalizeText(detail.value.countermeasureDevice),
+    handlingResult: normalizeText(detail.value.handlingResult),
+    disposalDetail: normalizeText(detail.value.disposalDetail),
+    manualConfirmStatus: normalizeText(detail.value.manualConfirmStatus).replace(
+      /^人工-/,
+      '人工核查-'
+    ),
+    remark: normalizeText(detail.value.remark),
+    disposalTimeline: normalizedTimeline(detail.value.disposalTimeline)
+  }
+})
 
 const threatTagType = (level: ThreatLevel) => {
   const map: Record<ThreatLevel, 'danger' | 'warning' | 'success' | 'info'> = {
@@ -46,7 +83,7 @@ const statusLabel = (status: HandlingStatus) => {
 }
 
 const lastAltitude = computed(() => {
-  const points = detail.value?.trajectory
+  const points = viewDetail.value?.trajectory
   if (!points?.length) return '--'
   return `${points[points.length - 1].altitude}m`
 })
@@ -55,38 +92,19 @@ const fetchDetail = async () => {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await getHistoryEventDetailApi(eventId.value)
+    const res = await getHistoryEventDetailApi(eventId.value || 'he-10001')
     detail.value = res.data
   } catch (error) {
-    detail.value = null
-    loadError.value = error instanceof Error ? error.message : '详情加载失败'
+    try {
+      const fallback = await getHistoryEventDetailApi('he-10001')
+      detail.value = fallback.data
+    } catch {
+      detail.value = null
+      loadError.value = error instanceof Error ? error.message : '详情加载失败'
+    }
   } finally {
     loading.value = false
   }
-}
-
-const goBack = () => {
-  push('/lad/incident/history')
-}
-
-const onDownload = () => {
-  ElMessage.info('轨迹与事件数据打包下载（预览占位）')
-}
-
-const exportTrajectory = (format: 'word' | 'excel') => {
-  const label = format === 'word' ? 'Word' : 'Excel'
-  ElMessage.success(`已导出轨迹合并报告（${label}，演示）`)
-}
-
-const onReplay = () => {
-  replayRef.value?.play()
-}
-
-const onDelete = async () => {
-  await ElMessageBox.confirm('删除后不可恢复，是否继续？', '删除事件', { type: 'warning' })
-  await deleteHistoryEventApi([eventId.value])
-  ElMessage.success('已删除')
-  goBack()
 }
 
 onMounted(async () => {
@@ -103,17 +121,10 @@ onMounted(async () => {
     <template #header>
       <div class="detail-header">
         <BaseButton @click="go(-1)">返回</BaseButton>
-        <div v-if="detail" class="detail-header__actions">
-          <BaseButton type="primary" @click="onDownload">下载数据</BaseButton>
-          <BaseButton @click="exportTrajectory('excel')">导出 Excel</BaseButton>
-          <BaseButton @click="exportTrajectory('word')">导出 Word</BaseButton>
-          <BaseButton type="primary" @click="onReplay">回放</BaseButton>
-          <BaseButton type="warning" @click="onDelete">删除</BaseButton>
-        </div>
       </div>
     </template>
 
-    <template v-if="detail">
+    <template v-if="viewDetail">
       <el-row :gutter="16" class="detail-info">
         <el-col :xs="24" :md="7" :lg="6">
           <div class="detail-info__image">
@@ -124,96 +135,94 @@ onMounted(async () => {
         <el-col :xs="24" :md="17" :lg="18">
           <div class="detail-info__desc-title">基本信息</div>
           <ElDescriptions :column="3" border size="small">
-            <ElDescriptionsItem label="目标ID">{{ detail.targetId }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="品牌型号">{{ detail.targetModel }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="SN 码">{{ detail.uavSn }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="目标ID">{{ viewDetail.targetId }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="品牌型号">{{ viewDetail.targetModel }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="识别码">{{ viewDetail.uavSn }}</ElDescriptionsItem>
 
-            <ElDescriptionsItem label="发现时间">{{ detail.discoveredAt }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="发现时间">{{ viewDetail.discoveredAt }}</ElDescriptionsItem>
             <ElDescriptionsItem label="处置时间">
-              {{ detail.handledAt === '--' ? '--' : detail.handledAt }}
+              {{ viewDetail.handledAt === '--' ? '--' : viewDetail.handledAt }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="当前状态">
-              {{ statusLabel(detail.handlingStatus) }}
+              {{ statusLabel(viewDetail.handlingStatus) }}
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="威胁等级">
-              <ElTag :type="threatTagType(detail.threatLevel)" effect="dark" round>
-                {{ detail.threatLevel }}
+              <ElTag :type="threatTagType(viewDetail.threatLevel)" effect="dark" round>
+                {{ viewDetail.threatLevel }}
               </ElTag>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="威胁识别">
-              {{ detail.manualConfirmStatus }}
+              {{ viewDetail.manualConfirmStatus }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="最新高度">
               {{ lastAltitude }}
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="飞手位置">
-              <template v-if="detail.pilotLocation === '未定位'">未定位</template>
+              <template v-if="viewDetail.pilotLocation === '未定位'">未定位</template>
               <template v-else>
-                {{ detail.pilotLocation }}
-                <span v-if="detail.pilotConfidence !== '--'" class="detail-info__confidence">
-                  置信度：{{ detail.pilotConfidence }}
+                {{ viewDetail.pilotLocation }}
+                <span v-if="viewDetail.pilotConfidence !== '--'" class="detail-info__confidence">
+                  置信度：{{ viewDetail.pilotConfidence }}
                 </span>
               </template>
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="区域">{{ detail.zoneName }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="持续时长">{{ detail.duration }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="区域">{{ viewDetail.zoneName }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="持续时长">{{ viewDetail.duration }}</ElDescriptionsItem>
 
-            <ElDescriptionsItem label="频率信息">{{ detail.frequencyInfo }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="目标类型">{{ detail.targetType }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="处置结果">{{ detail.handlingResult }}</ElDescriptionsItem>
-
-            <ElDescriptionsItem label="探测设备">{{ detail.detectionDevice }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="反制设备">{{
-              detail.countermeasureDevice
+            <ElDescriptionsItem label="频率信息">{{ viewDetail.frequencyInfo }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="目标类型">{{ viewDetail.targetType }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="处置结果">{{
+              viewDetail.handlingResult
             }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="处置详情">{{ detail.disposalDetail }}</ElDescriptionsItem>
 
-            <ElDescriptionsItem v-if="detail.relatedEventCount > 1" label="关联事件">
-              同目标共 {{ detail.relatedEventCount }} 条飞行记录
+            <ElDescriptionsItem label="探测设备">{{
+              viewDetail.detectionDevice
+            }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="反制设备">
+              {{ viewDetail.countermeasureDevice }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="处置详情">{{
+              viewDetail.disposalDetail
+            }}</ElDescriptionsItem>
+
+            <ElDescriptionsItem v-if="viewDetail.relatedEventCount > 1" label="关联事件">
+              同目标共 {{ viewDetail.relatedEventCount }} 条飞行记录
             </ElDescriptionsItem>
             <ElDescriptionsItem
-              v-if="detail.remark"
+              v-if="viewDetail.remark"
               label="备注"
-              :span="detail.relatedEventCount > 1 ? 2 : 3"
+              :span="viewDetail.relatedEventCount > 1 ? 2 : 3"
             >
-              {{ detail.remark }}
+              {{ viewDetail.remark }}
             </ElDescriptionsItem>
           </ElDescriptions>
         </el-col>
       </el-row>
 
-      <section v-if="detail.disposalTimeline?.length" class="detail-timeline-section">
+      <section v-if="viewDetail.disposalTimeline?.length" class="detail-timeline-section">
         <div class="detail-timeline-section__title">设备处置时间链</div>
         <p class="detail-timeline-section__hint">
           {{
-            detail.handlingStatus === '待处置'
+            viewDetail.handlingStatus === '待处置'
               ? '当前处于威胁评估阶段，后续节点将在实际发生后展示。'
-              : detail.handlingStatus === '处置中'
+              : viewDetail.handlingStatus === '处置中'
                 ? '当前处置指令正在执行，结果节点将在设备回传后展示。'
-                : '从设备发现、威胁识别、评估、人工确认、处置执行到结果归档的全过程记录。'
+                : '从设备发现、威胁识别、评估、人工核查、处置执行到结果归档的全过程记录。'
           }}
         </p>
-        <DisposalTimelinePanel :nodes="detail.disposalTimeline" />
+        <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
       </section>
-
-      <ElAlert
-        v-if="detail.trajectoryMergeNote || detail.relatedEventCount > 1"
-        type="info"
-        :closable="false"
-        show-icon
-        class="detail-merge-alert"
-        :title="detail.trajectoryMergeNote || '已按同架次合并多源探测轨迹（演示）'"
-      />
 
       <div class="detail-map-section">
         <div class="detail-map-section__title">地图轨迹</div>
-        <TrajectoryReplay ref="replayRef" :detail="detail" />
+        <TrajectoryReplay ref="replayRef" :detail="viewDetail" />
       </div>
     </template>
 
     <ElAlert v-else-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
+    <div v-else class="detail-empty">暂无飞行记录详情</div>
   </ContentDetailWrap>
 </template>
 
@@ -225,12 +234,6 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
 }
 
 .detail-info {
@@ -297,15 +300,21 @@ onMounted(async () => {
   }
 }
 
-.detail-merge-alert {
-  margin-bottom: 12px;
-}
-
 .detail-map-section {
+  margin-bottom: 20px;
+
   &__title {
     margin-bottom: 12px;
     font-size: 15px;
     font-weight: 600;
   }
+}
+
+.detail-empty {
+  padding: 24px;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
 }
 </style>

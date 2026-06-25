@@ -1,25 +1,11 @@
 <script setup lang="tsx">
-import {
-  deleteBlackWhiteApi,
-  getBlackWhiteDetailApi,
-  updateBlackWhiteListTypeApi
-} from '@/api/lad/list'
+import { getBlackWhiteDetailApi, updateBlackWhiteListTypeApi } from '@/api/lad/list'
 import type { BlackWhiteTargetDetail, ListType } from '@/api/lad/list/types'
-import {
-  deleteHistoryEventApi,
-  getHistoryEventDetailApi,
-  getHistoryEventListApi
-} from '@/api/lad/incident'
-import type {
-  HandlingStatus,
-  HistoryEventDetail,
-  HistoryEventItem,
-  ThreatLevel
-} from '@/api/lad/incident/types'
+import { deleteHistoryEventApi, getHistoryEventListApi } from '@/api/lad/incident'
+import type { HandlingStatus, HistoryEventItem, ThreatLevel } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import { ContentWrap } from '@/components/ContentWrap'
-import { Dialog } from '@/components/Dialog'
 import { Table } from '@/components/Table'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
@@ -38,7 +24,6 @@ import {
 } from 'element-plus'
 import { computed, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import TrajectoryReplay from '../Incident/components/TrajectoryReplay.vue'
 
 defineOptions({
   name: 'LadBlackWhiteTargetDetail'
@@ -50,10 +35,6 @@ const { push } = useRouter()
 const loading = ref(true)
 const detail = ref<BlackWhiteTargetDetail | null>(null)
 const loadError = ref('')
-const replayVisible = ref(false)
-const replayLoading = ref(false)
-const replayDetail = ref<HistoryEventDetail | null>(null)
-const replayRef = ref<InstanceType<typeof TrajectoryReplay> | null>(null)
 
 const recordId = computed(() => route.params.id as string)
 
@@ -198,39 +179,11 @@ const onSetListType = async (listType: ListType) => {
   ElMessage.success(`已加入${listType}`)
 }
 
-const onDeleteTarget = async () => {
-  if (!detail.value) return
-  await ElMessageBox.confirm('删除主数据后不可恢复，是否继续？', '删除目标', { type: 'warning' })
-  await deleteBlackWhiteApi([detail.value.id])
-  ElMessage.success('已删除')
-  goBackList()
-}
-
 const goEventDetail = (row: HistoryEventItem) => {
   push({
-    path: `/lad/incident/target/${row.id}`
+    path: `/lad/list/incident/target/${row.id}`
   })
 }
-
-const onReplay = async (row: HistoryEventItem) => {
-  replayVisible.value = true
-  replayLoading.value = true
-  replayDetail.value = null
-  try {
-    const res = await getHistoryEventDetailApi(row.id)
-    replayDetail.value = res.data
-  } finally {
-    replayLoading.value = false
-  }
-}
-
-watch(replayVisible, (visible) => {
-  if (!visible) {
-    replayRef.value?.pause()
-    return
-  }
-  setTimeout(() => replayRef.value?.play(), 120)
-})
 
 const onDeleteEvent = async (row: HistoryEventItem) => {
   await ElMessageBox.confirm('删除该条历史事件后不可恢复，是否继续？', '删除事件', {
@@ -313,7 +266,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'action',
     label: '操作',
-    width: '240px',
+    width: '160px',
     fixed: 'right',
     table: {
       slots: {
@@ -321,9 +274,6 @@ const crudSchemas = reactive<CrudSchema[]>([
           <>
             <BaseButton type="primary" onClick={() => goEventDetail(data.row)}>
               详情
-            </BaseButton>
-            <BaseButton type="primary" onClick={() => onReplay(data.row)}>
-              回放
             </BaseButton>
             <BaseButton type="danger" onClick={() => onDeleteEvent(data.row)}>
               删除
@@ -355,13 +305,7 @@ watch(
     <template v-if="detail">
       <ContentWrap class="target-detail-profile">
         <el-row :gutter="16">
-          <el-col :xs="24" :md="7" :lg="6">
-            <div class="target-detail-profile__image">
-              <span class="target-detail-profile__image-label">无人机光电图像</span>
-              <span class="target-detail-profile__image-hint">暂无图像，接入光电后展示</span>
-            </div>
-          </el-col>
-          <el-col :xs="24" :md="17" :lg="18">
+          <el-col :span="24">
             <div class="target-detail-profile__head">
               <span class="target-detail-profile__title">目标档案</span>
               <ElTag :type="listTypeTag(detail.listType)" size="small" effect="light">
@@ -378,7 +322,7 @@ watch(
             >
               <ElDescriptionsItem label="目标 ID">{{ detail.targetId }}</ElDescriptionsItem>
               <ElDescriptionsItem label="品牌型号">{{ detail.model }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="SN 码">{{ detail.sn }}</ElDescriptionsItem>
+              <ElDescriptionsItem label="识别码">{{ detail.sn }}</ElDescriptionsItem>
               <ElDescriptionsItem label="目标类型">{{ detail.targetType }}</ElDescriptionsItem>
 
               <ElDescriptionsItem label="频段信息">{{ detail.frequency }}</ElDescriptionsItem>
@@ -483,7 +427,6 @@ watch(
             >
               + 加入白名单
             </BaseButton>
-            <BaseButton type="warning" @click="onDeleteTarget">删除</BaseButton>
           </div>
         </div>
 
@@ -501,36 +444,6 @@ watch(
 
     <ElAlert v-else-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
   </ContentDetailWrap>
-
-  <Dialog
-    v-model="replayVisible"
-    title="飞行轨迹回放"
-    width="900px"
-    max-height="85vh"
-    destroy-on-close
-  >
-    <div v-loading="replayLoading" class="target-detail-replay">
-      <template v-if="replayDetail">
-        <div class="target-detail-replay__head">
-          <span>目标 ID：{{ replayDetail.targetId }}</span>
-          <span>SN：{{ replayDetail.uavSn }}</span>
-          <span>发现时间：{{ replayDetail.discoveredAt }}</span>
-          <span>区域：{{ replayDetail.zoneName }}</span>
-        </div>
-        <TrajectoryReplay ref="replayRef" :detail="replayDetail" />
-      </template>
-      <ElAlert
-        v-else-if="!replayLoading"
-        title="暂未获取到轨迹数据"
-        type="warning"
-        :closable="false"
-        show-icon
-      />
-    </div>
-    <template #footer>
-      <BaseButton @click="replayVisible = false">关闭</BaseButton>
-    </template>
-  </Dialog>
 </template>
 
 <style scoped lang="less">
@@ -577,44 +490,6 @@ watch(
     font-size: 12px;
     line-height: 1.5;
     color: var(--el-text-color-secondary);
-  }
-
-  &__image {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    padding: 16px;
-    text-align: center;
-    background: var(--el-fill-color-light);
-    border: 1px dashed var(--el-border-color);
-    border-radius: 8px;
-  }
-
-  &__image-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-  }
-
-  &__image-hint {
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.target-detail-replay {
-  min-height: 480px;
-
-  &__head {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 18px;
-    margin-bottom: 12px;
-    font-size: 13px;
-    color: var(--el-text-color-regular);
   }
 }
 

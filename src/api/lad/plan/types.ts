@@ -2,11 +2,22 @@ export type PlanEnabled = boolean
 
 export type PlanDisposalMode = 'auto' | 'manual'
 
+export type PlanConditionOperator = '>' | '<' | '=' | '!='
+
 export interface PlanTriggerRule {
   id: string
   ruleName: string
   sortOrder?: number
-  weatherFactor: string
+  weatherFactor?: string
+  areaLevel?: string[]
+  temperatureOperator?: PlanConditionOperator | ''
+  temperatureValue?: number | null
+  humidityOperator?: PlanConditionOperator | ''
+  humidityValue?: number | null
+  windPowerOperator?: PlanConditionOperator | ''
+  windPowerValue?: number | null
+  rainfallOperator?: PlanConditionOperator | ''
+  rainfallValue?: number | null
   deviceGroupId: string
   deviceGroupName: string
   deviceGroupType: string
@@ -28,7 +39,8 @@ export interface PlanStrategy {
   areaLevel: string
   triggerRules: PlanTriggerRule[]
   priority: number
-  weatherFactor: string
+  weatherFactor?: string
+  triggerConditionSummary?: string
   deviceGroupName: string
   deviceGroupType: string
   deviceFunction: string
@@ -47,9 +59,12 @@ export interface PlanStrategyQuery {
   planName?: string
   planRule?: string
   deviceAction?: string
-  weatherFactor?: string
-  disposalMode?: PlanDisposalMode | ''
   areaLevel?: string
+  temperature?: number
+  humidity?: number
+  windPower?: number
+  rainfall?: number
+  disposalMode?: PlanDisposalMode | ''
   updatedBy?: string
   updatedAtStart?: string
   updatedAtEnd?: string
@@ -80,7 +95,16 @@ export interface PlanExecutionPayload {
   planName: string
   triggerRuleId: string
   triggerRuleName: string
-  weatherFactor: string
+  weatherFactor?: string
+  areaLevel?: string[]
+  temperatureOperator?: PlanConditionOperator | ''
+  temperatureValue?: number | null
+  humidityOperator?: PlanConditionOperator | ''
+  humidityValue?: number | null
+  windPowerOperator?: PlanConditionOperator | ''
+  windPowerValue?: number | null
+  rainfallOperator?: PlanConditionOperator | ''
+  rainfallValue?: number | null
   deviceGroupName: string
   deviceFunction: string
   deviceAction: string

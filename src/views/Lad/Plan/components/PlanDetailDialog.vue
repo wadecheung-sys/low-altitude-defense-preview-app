@@ -6,8 +6,10 @@ import { BaseButton } from '@/components/Button'
 import { getPlanDetailApi } from '@/api/lad/plan'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import { formatDisposalModeDetail } from '@/api/lad/plan/planDisposal'
+import { formatTriggerCondition } from '@/api/lad/plan/planTrigger'
 import type { PlanStrategy } from '@/api/lad/plan/types'
 import { functionLabel } from '../planDeviceConstants'
+import { createPlanAreaLabelMap, formatPlanAreaLabel } from '../planAreaOptions'
 import { UI } from '../planConstants'
 
 const props = defineProps<{ modelValue: boolean; planId?: string }>()
@@ -23,13 +25,12 @@ const detail = ref<PlanStrategy>()
 const areaLabelMap = ref<Record<string, string>>({})
 
 function formatAreaLabel(value?: string) {
-  if (!value || value === '全部') return '全部'
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((id) => areaLabelMap.value[id] || id)
-    .join('、')
+  return formatPlanAreaLabel(value, areaLabelMap.value)
+}
+
+function formatRuleAreaLabel(value?: string[]) {
+  if (!value?.length) return '全部'
+  return value.map((id) => areaLabelMap.value[id] || id).join('、')
 }
 
 const execNoteDisplay = computed(() => {
@@ -54,7 +55,7 @@ watch(
         getAreaRegionListApi({ pageIndex: 1, pageSize: 200 })
       ])
       detail.value = planRes.data
-      areaLabelMap.value = Object.fromEntries(areaRes.data.list.map((item) => [item.id, item.name]))
+      areaLabelMap.value = createPlanAreaLabelMap(areaRes.data.list)
     } finally {
       loading.value = false
     }
@@ -105,14 +106,23 @@ watch(
     <ElTable v-loading="loading" :data="detail?.triggerRules || []" border size="small">
       <ElTableColumn prop="ruleName" :label="UI.triggerRuleName" min-width="140" />
       <ElTableColumn prop="sortOrder" :label="UI.triggerSortOrder" width="88" align="center" />
-      <ElTableColumn prop="weatherFactor" :label="UI.weather" width="100" />
+      <ElTableColumn :label="UI.locatedArea" min-width="160" show-overflow-tooltip>
+        <template #default="{ row }">
+          {{ formatRuleAreaLabel(row.areaLevel) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="触发条件" min-width="220" show-overflow-tooltip>
+        <template #default="{ row }">
+          {{ formatTriggerCondition(row) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn
         prop="deviceGroupName"
         :label="UI.deviceGroup"
         min-width="150"
         show-overflow-tooltip
       />
-      <ElTableColumn :label="UI.deviceFunction" min-width="150" show-overflow-tooltip>
+      <ElTableColumn :label="UI.counterDevice" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">
           {{ functionLabel(row.deviceGroupType, row.deviceFunction) }}
         </template>

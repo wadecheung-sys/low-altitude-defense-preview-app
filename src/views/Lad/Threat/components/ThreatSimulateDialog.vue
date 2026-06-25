@@ -3,12 +3,11 @@ import { computed, ref } from 'vue'
 import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { simulateThreatApi } from '@/api/lad/threat'
-import { SWARM_TARGET_TYPE } from '@/api/lad/threat/threatSwarm'
 import type { ThreatSimulateResult } from '@/api/lad/threat/types'
 import { UI } from '../threatConstants'
 import { dictEntriesToOptions, LAD_DICT_AREA_REGION_TYPE } from '../../shared/ladDictHelpers'
 import { useLadDictOptions } from '../../shared/useLadDictOptions'
-import { targetTypeOptions, weatherOptions } from '../../shared/ladOptionConstants'
+import { targetTypeOptions } from '../../shared/ladOptionConstants'
 import { ElAlert, ElForm, ElFormItem, ElInputNumber, ElOption, ElSelect } from 'element-plus'
 
 const props = defineProps<{
@@ -42,25 +41,29 @@ const L = {
   swarmCount: '蜂群机数',
   targetType: '目标类型',
   areaRegionType: '区域类型',
-  weatherFactor: '天气场景',
+  temperature: '温度',
+  humidity: '湿度',
+  windPower: '风力',
+  rainfall: '雨量',
   run: '开始模拟'
 }
 
-const weatherSimOptions = weatherOptions.filter((o) => o.value !== '')
+const simulateTargetTypeOptions = targetTypeOptions.filter(
+  (o) => o.value !== '全部' && o.value !== '无人机蜂群'
+)
 
 const form = ref({
   speed: 6,
   stayMinutes: 12,
   intrusionCount: 1,
   swarmCount: 4,
-  targetType: SWARM_TARGET_TYPE,
+  targetType: simulateTargetTypeOptions[0]?.value || '未知',
   areaRegionType: 'warning',
-  weatherFactor: '全部'
+  temperature: 30,
+  humidity: 60,
+  windPower: 3,
+  rainfall: 0
 })
-
-const isSwarmMode = computed(
-  () => form.value.targetType === SWARM_TARGET_TYPE || form.value.swarmCount >= 3
-)
 
 async function onRun() {
   loading.value = true
@@ -76,20 +79,11 @@ async function onRun() {
 
 <template>
   <Dialog v-model="visible" :title="UI.dialogSimulate" width="560px" max-height="85vh">
-    <ElAlert
-      v-if="isSwarmMode"
-      type="warning"
-      :closable="false"
-      show-icon
-      class="mb-12px"
-      title="蜂群模拟"
-      :description="UI.swarmHint"
-    />
     <ElForm label-width="108px">
       <ElFormItem :label="L.targetType">
         <ElSelect v-model="form.targetType" class="w-full">
           <ElOption
-            v-for="opt in targetTypeOptions.filter((o) => o.value !== '全部')"
+            v-for="opt in simulateTargetTypeOptions"
             :key="opt.value"
             :label="opt.label"
             :value="opt.value"
@@ -118,15 +112,17 @@ async function onRun() {
           />
         </ElSelect>
       </ElFormItem>
-      <ElFormItem :label="L.weatherFactor">
-        <ElSelect v-model="form.weatherFactor" class="w-full">
-          <ElOption
-            v-for="opt in weatherSimOptions"
-            :key="opt.value"
-            :label="opt.label"
-            :value="opt.value"
-          />
-        </ElSelect>
+      <ElFormItem :label="L.temperature">
+        <ElInputNumber v-model="form.temperature" :min="-50" :max="80" class="w-full" />
+      </ElFormItem>
+      <ElFormItem :label="L.humidity">
+        <ElInputNumber v-model="form.humidity" :min="0" :max="100" class="w-full" />
+      </ElFormItem>
+      <ElFormItem :label="L.windPower">
+        <ElInputNumber v-model="form.windPower" :min="0" :max="20" class="w-full" />
+      </ElFormItem>
+      <ElFormItem :label="L.rainfall">
+        <ElInputNumber v-model="form.rainfall" :min="0" :max="999" class="w-full" />
       </ElFormItem>
     </ElForm>
     <ElAlert
@@ -137,9 +133,6 @@ async function onRun() {
       :closable="false"
       show-icon
     >
-      <p v-if="result.swarmNote" class="text-13px mb-4px text-[var(--el-color-warning)]">
-        {{ result.swarmNote }}
-      </p>
       <p v-if="result.matched" class="text-13px mb-4px">
         {{ UI.triggerPlan }}{{ colon }}{{ result.planName }}（{{ result.planCode }}）
       </p>

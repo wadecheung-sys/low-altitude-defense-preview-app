@@ -302,7 +302,10 @@ export function queryLocalHistoryEventList(params: HistoryEventQuery): HistoryEv
 }
 
 export function getLocalHistoryEventDetail(id: string): HistoryEventDetail | null {
-  const row = allList.find((item) => item.id === id)
+  const row =
+    allList.find((item) => item.id === id) ||
+    allList.find((item) => item.targetId === id) ||
+    allList[0]
   return row ? buildHistoryEventDetail(row) : null
 }
 

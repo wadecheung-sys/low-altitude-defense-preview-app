@@ -4,7 +4,21 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveBlackWhiteApi } from '@/api/lad/list'
 import type { BlackWhiteListItem, EntryMethod, ListType } from '@/api/lad/list/types'
-import { ElDatePicker, ElForm, ElFormItem, ElInput, ElOption, ElSelect } from 'element-plus'
+import {
+  ElDatePicker,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElInputNumber,
+  ElMessage,
+  ElOption,
+  ElSelect
+} from 'element-plus'
+
+type FrequencyBand = {
+  id: string
+  value?: number
+}
 
 const props = defineProps<{
   modelValue: boolean
@@ -23,6 +37,7 @@ const visible = computed({
 
 const isEdit = computed(() => !!props.row?.id)
 const loading = ref(false)
+let frequencySeq = 0
 
 const modelOptions = [
   'DJI Mavic 3',
@@ -34,22 +49,68 @@ const modelOptions = [
   '其他'
 ]
 
-const createDefaultForm = () => ({
-  listType: '未知' as ListType,
-  targetId: '',
-  targetType: '多旋翼',
-  validUntil: '',
-  model: modelOptions[0],
-  frequency: '2.4GHz + 5.8GHz',
-  sn: '',
-  zoneName: '核心防护区A区',
-  longitude: 113.4,
-  latitude: 23.1,
-  entryMethod: '人工录入' as EntryMethod,
-  remark: ''
-})
+function createFrequencyBand(value?: number): FrequencyBand {
+  frequencySeq += 1
+  return {
+    id: `freq-${Date.now()}-${frequencySeq}`,
+    value
+  }
+}
+
+function parseFrequencyBands(frequency?: string): FrequencyBand[] {
+  const matches = [...(frequency || '').matchAll(/(\d+(?:\.\d+)?)\s*(GHz|MHz)?/gi)]
+  const values = matches
+    .map((match) => {
+      const value = Number(match[1])
+      if (!Number.isFinite(value)) return undefined
+      return match[2]?.toLowerCase() === 'mhz' ? Number((value / 1000).toFixed(3)) : value
+    })
+    .filter((value): value is number => value !== undefined)
+  const uniqueValues = [...new Set(values)]
+  return uniqueValues.length
+    ? uniqueValues.map((value) => createFrequencyBand(value))
+    : [createFrequencyBand()]
+}
+
+function createDefaultForm() {
+  return {
+    listType: '未知' as ListType,
+    targetId: '',
+    targetType: '多旋翼',
+    validUntil: '',
+    model: modelOptions[0],
+    frequencyBands: [createFrequencyBand(2.4), createFrequencyBand(5.8)] as FrequencyBand[],
+    sn: '',
+    zoneName: '核心防护区A区',
+    longitude: 113.4,
+    latitude: 23.1,
+    entryMethod: '人工录入' as EntryMethod,
+    remark: ''
+  }
+}
 
 const form = ref(createDefaultForm())
+
+function formatFrequencyValue(value: number) {
+  return Number(value.toFixed(3)).toString()
+}
+
+function buildFrequencyText() {
+  return form.value.frequencyBands
+    .map((item) => item.value)
+    .filter((value): value is number => Number.isFinite(value) && value > 0)
+    .map((value) => `${formatFrequencyValue(value)}GHz`)
+    .join(' + ')
+}
+
+function addFrequencyBand() {
+  form.value.frequencyBands.push(createFrequencyBand())
+}
+
+function removeFrequencyBand(id: string) {
+  if (form.value.frequencyBands.length <= 1) return
+  form.value.frequencyBands = form.value.frequencyBands.filter((item) => item.id !== id)
+}
 
 watch(
   () => props.modelValue,
@@ -63,7 +124,7 @@ watch(
         targetType: props.row.targetType,
         validUntil: props.row.validUntil === '永久' ? '' : props.row.validUntil,
         model: props.row.model || '其他',
-        frequency: props.row.frequency,
+        frequencyBands: parseFrequencyBands(props.row.frequency),
         sn: props.row.sn,
         zoneName: props.row.zoneName,
         longitude: props.row.longitude,
@@ -81,12 +142,32 @@ watch(
 )
 
 const onSubmit = async () => {
+  const frequency = buildFrequencyText()
+  if (!frequency) {
+    ElMessage.warning('请至少录入一个有效的频段数值')
+    return
+  }
+  if (!isEdit.value && !form.value.sn.trim()) {
+    ElMessage.warning('请填写识别码')
+    return
+  }
+
   loading.value = true
   try {
     await saveBlackWhiteApi({
       id: props.row?.id,
-      ...form.value,
-      validUntil: form.value.validUntil || '永久'
+      listType: form.value.listType,
+      targetId: form.value.targetId,
+      targetType: form.value.targetType,
+      validUntil: form.value.validUntil || '永久',
+      model: form.value.model,
+      frequency,
+      sn: form.value.sn.trim(),
+      zoneName: form.value.zoneName,
+      longitude: form.value.longitude,
+      latitude: form.value.latitude,
+      entryMethod: form.value.entryMethod,
+      remark: form.value.remark
     })
     emit('success')
     visible.value = false
@@ -114,8 +195,8 @@ const onSubmit = async () => {
       <ElFormItem label="目标 ID" required>
         <ElInput v-model="form.targetId" placeholder="融合目标编号" />
       </ElFormItem>
-      <ElFormItem label="SN 码">
-        <ElInput v-model="form.sn" placeholder="无人机设备 SN" />
+      <ElFormItem label="识别码" :required="!isEdit">
+        <ElInput v-model="form.sn" placeholder="请输入识别码" />
       </ElFormItem>
       <ElFormItem label="机型/型号">
         <ElSelect v-model="form.model" style="width: 100%" placeholder="请选择机型/型号">
@@ -131,7 +212,30 @@ const onSubmit = async () => {
         </ElSelect>
       </ElFormItem>
       <ElFormItem label="频段/频率">
-        <ElInput v-model="form.frequency" />
+        <div class="black-white-frequency-editor">
+          <div v-for="band in form.frequencyBands" :key="band.id" class="black-white-frequency-row">
+            <ElInputNumber
+              v-model="band.value"
+              :min="0.001"
+              :max="300"
+              :precision="3"
+              :step="0.1"
+              controls-position="right"
+              class="black-white-frequency-row__input"
+              placeholder="请输入频段"
+            />
+            <span class="black-white-frequency-row__unit">GHz</span>
+            <BaseButton
+              v-if="form.frequencyBands.length > 1"
+              type="danger"
+              link
+              @click="removeFrequencyBand(band.id)"
+            >
+              删除
+            </BaseButton>
+          </div>
+          <BaseButton type="primary" link @click="addFrequencyBand">+ 新增频段</BaseButton>
+        </div>
       </ElFormItem>
       <ElFormItem label="有效期至">
         <ElDatePicker
@@ -153,3 +257,24 @@ const onSubmit = async () => {
     </template>
   </Dialog>
 </template>
+
+<style scoped lang="less">
+.black-white-frequency-editor {
+  width: 100%;
+}
+
+.black-white-frequency-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.black-white-frequency-row__input {
+  width: 180px;
+}
+
+.black-white-frequency-row__unit {
+  color: var(--el-text-color-regular);
+}
+</style>

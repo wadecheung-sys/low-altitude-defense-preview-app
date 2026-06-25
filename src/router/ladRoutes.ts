@@ -92,6 +92,7 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
           title: '飞行记录详情',
           hidden: true,
           canTo: true,
+          noCache: true,
           activeMenu: '/lad/incident/history'
         })
       }
@@ -114,6 +115,18 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         component: blackWhiteListPage,
         meta: ladMeta('black-white-list', {
           title: '黑白名单管理'
+        })
+      },
+      {
+        path: 'incident/target/:id',
+        name: 'LadBlackWhiteIncidentTargetDetail',
+        component: incidentTargetDetailPage,
+        meta: ladMeta('incident-target-detail', {
+          title: '飞行记录详情',
+          hidden: true,
+          canTo: true,
+          noCache: true,
+          activeMenu: '/lad/list/black-white'
         })
       },
       {
@@ -247,6 +260,18 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         component: deviceRuntimeMonitorPage,
         meta: ladMeta('device-monitor', {
           title: '设备运行监控'
+        })
+      },
+      {
+        path: 'monitor/detail/:id',
+        name: 'LadDeviceMonitorDetail',
+        component: deviceInfoDetailPage,
+        meta: ladMeta('device-detail', {
+          title: '设备详情',
+          hidden: true,
+          canTo: true,
+          noTagsView: true,
+          activeMenu: '/lad/device/monitor'
         })
       },
       {

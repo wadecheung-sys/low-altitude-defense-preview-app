@@ -3,6 +3,7 @@ import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
+import { Dialog } from '@/components/Dialog'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
@@ -31,6 +32,8 @@ const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({})
 const confirmVisible = ref(false)
 const confirmRow = ref<HistoryEventItem>()
+const exportVisible = ref(false)
+const exportFormat = ref<'word' | 'excel'>('excel')
 const delLoading = ref(false)
 const listLoading = ref(false)
 
@@ -70,8 +73,8 @@ const handlingStatusOptions = [
 ]
 
 const manualConfirmOptions = [
-  { label: '人工-真实入侵', value: '人工-真实入侵' },
-  { label: '人工-躁扰告警', value: '人工-躁扰告警' },
+  { label: '人工核查-真实入侵', value: '人工-真实入侵' },
+  { label: '人工核查-躁扰告警', value: '人工-躁扰告警' },
   { label: '真实入侵', value: '真实入侵' },
   { label: '躁扰告警', value: '躁扰告警' }
 ]
@@ -156,6 +159,8 @@ const confirmTagType = (status: ManualConfirmStatus) => {
   return map[status]
 }
 
+const formatConfirmStatus = (status: ManualConfirmStatus) => status.replace(/^人工-/, '人工核查-')
+
 const goDetail = (row: HistoryEventItem) => {
   push(`/lad/incident/target/${row.id}`)
 }
@@ -171,13 +176,19 @@ const openManualConfirm = (row: HistoryEventItem) => {
 }
 
 const onConfirmSuccess = () => {
-  ElMessage.success('人工确认已保存')
+  ElMessage.success('人工核查已保存')
   getList()
 }
 
-const exportReport = (format: 'word' | 'excel') => {
-  const label = format === 'word' ? 'Word' : 'Excel'
-  ElMessage.success(`已生成历史事件 ${label} 报表（演示，未写入文件）`)
+const openExportDialog = () => {
+  exportFormat.value = 'excel'
+  exportVisible.value = true
+}
+
+const exportReport = () => {
+  const label = exportFormat.value === 'word' ? 'Word' : 'Excel'
+  ElMessage.success(`已生成历史事件 ${label} 报表（${unref(total)} 条，演示，未写入文件）`)
+  exportVisible.value = false
 }
 
 const addList = async (listType: '黑名单' | '白名单') => {
@@ -332,13 +343,13 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'uavSn',
-    label: '无人机SN码',
+    label: '识别码',
     minWidth: 128,
     search: {
       component: 'Input',
       colProps: { span: 6 },
       componentProps: {
-        placeholder: '请输入无人机 SN',
+        placeholder: '请输入识别码',
         style: { width: '100%' }
       }
     },
@@ -435,7 +446,9 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
-          <ElTag type={confirmTagType(row.manualConfirmStatus)}>{row.manualConfirmStatus}</ElTag>
+          <ElTag type={confirmTagType(row.manualConfirmStatus)}>
+            {formatConfirmStatus(row.manualConfirmStatus)}
+          </ElTag>
         )
       }
     }
@@ -517,7 +530,9 @@ const crudSchemas = reactive<CrudSchema[]>([
       showOverflowTooltip: true,
       slots: {
         default: ({ row }: { row: HistoryEventItem }) =>
-          row.remark === '等待值守人员确认' || row.remark === '等待值守人员人工确认'
+          row.remark === '等待值守人员确认' ||
+          row.remark === '等待值守人员人工确认' ||
+          row.remark === '等待值守人员人工核查'
             ? ''
             : row.remark
       }
@@ -537,7 +552,7 @@ const crudSchemas = reactive<CrudSchema[]>([
           <>
             {!row.manualConfirmStatus.startsWith('人工-') && row.handlingStatus !== '已处置' ? (
               <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
-                人工确认
+                人工核查
               </BaseButton>
             ) : null}
             <BaseButton type="success" onClick={() => goDetail(row)}>
@@ -575,8 +590,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       <BaseButton type="success" :loading="listLoading" @click="addList('白名单')"
         >添加白名单</BaseButton
       >
-      <BaseButton type="primary" @click="exportReport('excel')">导出 Excel</BaseButton>
-      <BaseButton @click="exportReport('word')">导出 Word</BaseButton>
+      <BaseButton type="primary" @click="openExportDialog">导出</BaseButton>
       <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
     </div>
 
@@ -592,5 +606,70 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     />
 
     <ManualConfirmDialog v-model="confirmVisible" :row="confirmRow" @success="onConfirmSuccess" />
+
+    <Dialog v-model="exportVisible" title="导出" width="520px" max-height="320px">
+      <div class="export-dialog">
+        <div class="export-dialog__block">
+          <div class="export-dialog__label">导出类型</div>
+          <div class="export-dialog__format-switch">
+            <BaseButton
+              :type="exportFormat === 'excel' ? 'primary' : 'default'"
+              @click="exportFormat = 'excel'"
+            >
+              Excel
+            </BaseButton>
+            <BaseButton
+              :type="exportFormat === 'word' ? 'primary' : 'default'"
+              @click="exportFormat = 'word'"
+            >
+              Word
+            </BaseButton>
+          </div>
+        </div>
+
+        <div class="export-dialog__block">
+          <div class="export-dialog__label">数据量</div>
+          <div class="export-dialog__count">{{ total }} 条</div>
+        </div>
+      </div>
+
+      <template #footer>
+        <BaseButton @click="exportVisible = false">取消</BaseButton>
+        <BaseButton type="primary" @click="exportReport">确定导出</BaseButton>
+      </template>
+    </Dialog>
   </ContentWrap>
 </template>
+
+<style scoped lang="less">
+.export-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  &__block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  &__format-switch {
+    display: flex;
+    gap: 10px;
+  }
+
+  &__count {
+    padding: 12px 14px;
+    font-size: 15px;
+    color: var(--el-color-primary);
+    background: var(--el-fill-color-light);
+    border-radius: 6px;
+  }
+}
+</style>

@@ -16,7 +16,12 @@ import { BaseButton } from '@/components/Button'
 import { getThreatRuleDetailApi, saveThreatRuleApi } from '@/api/lad/threat'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import { getPlanOptionsApi } from '@/api/lad/plan'
-import type { RuleCondition, ThreatLevelLabel, ThreatRule } from '@/api/lad/threat/types'
+import type {
+  RuleCondition,
+  RuleConditionLogic,
+  ThreatLevelLabel,
+  ThreatRule
+} from '@/api/lad/threat/types'
 import { dictEntriesToOptions, LAD_DICT_THREAT_LEVEL } from '../../shared/ladDictHelpers'
 import { useLadDictOptions } from '../../shared/useLadDictOptions'
 import {
@@ -56,6 +61,10 @@ const threatLevelOptions = computed(() => dictEntriesToOptions(threatLevelEntrie
 const loading = ref(false)
 const areaOptions = ref<AreaOption[]>([])
 const defaultPlanId = ref('')
+const conditionLogicOptions: { label: string; value: RuleConditionLogic }[] = [
+  { label: '且', value: 'and' },
+  { label: '或', value: 'or' }
+]
 
 const form = ref({
   ruleCode: '',
@@ -64,6 +73,7 @@ const form = ref({
   threatLevel: '中' as ThreatLevelLabel,
   priority: 500,
   enabled: true,
+  conditionLogic: 'and' as RuleConditionLogic,
   conditions: [] as RuleCondition[]
 })
 
@@ -78,7 +88,8 @@ function newCondition(): RuleCondition {
     id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     property: 'speed',
     operator: '>',
-    value: ''
+    value: '',
+    nextLogic: undefined
   }
 }
 
@@ -112,11 +123,15 @@ function onPropertyChange(condition: RuleCondition) {
 }
 
 function addCondition() {
+  const last = form.value.conditions[form.value.conditions.length - 1]
+  if (last && !last.nextLogic) last.nextLogic = 'and'
   form.value.conditions.push(newCondition())
 }
 
 function removeCondition(id: string) {
   form.value.conditions = form.value.conditions.filter((item) => item.id !== id)
+  const last = form.value.conditions[form.value.conditions.length - 1]
+  if (last) last.nextLogic = undefined
 }
 
 async function loadDefaults() {
@@ -139,6 +154,7 @@ function resetForm() {
     threatLevel: '中',
     priority: 500,
     enabled: true,
+    conditionLogic: 'and',
     conditions: [newCondition()]
   }
 }
@@ -160,7 +176,14 @@ watch(
           threatLevel: row.threatLevel,
           priority: row.priority,
           enabled: row.enabled,
-          conditions: row.conditions.map((item) => ({ ...item }))
+          conditionLogic: row.conditionLogic || 'and',
+          conditions: row.conditions.map((item, index) => ({
+            ...item,
+            nextLogic:
+              index < row.conditions.length - 1
+                ? item.nextLogic || row.conditionLogic || 'and'
+                : undefined
+          }))
         }
       } finally {
         loading.value = false
@@ -205,10 +228,12 @@ async function onSave() {
       areaRegionType: '全部',
       targetType: form.value.targetType,
       threatLevel: form.value.threatLevel,
-      conditions: form.value.conditions.map((item) => ({
+      conditionLogic: form.value.conditionLogic,
+      conditions: form.value.conditions.map((item, index) => ({
         ...item,
         operator: isAreaCondition(item) ? '=' : item.operator,
-        value: item.value.trim()
+        value: item.value.trim(),
+        nextLogic: index < form.value.conditions.length - 1 ? item.nextLogic || 'and' : undefined
       })),
       priority: form.value.priority,
       planId: props.row?.planId || defaultPlanId.value,
@@ -227,7 +252,7 @@ async function onSave() {
   <Dialog
     v-model="visible"
     :title="isEdit ? '编辑规则' : '新增规则'"
-    width="720px"
+    width="760px"
     max-height="85vh"
   >
     <ElForm label-width="100px">
@@ -249,14 +274,17 @@ async function onSave() {
       </ElFormItem>
       <ElFormItem label="目标属性">
         <div class="w-full">
+          <div class="threat-condition-toolbar">
+            <BaseButton type="primary" link @click="addCondition">+ 新增</BaseButton>
+          </div>
           <div
-            v-for="condition in form.conditions"
+            v-for="(condition, index) in form.conditions"
             :key="condition.id"
-            class="mb-8px flex items-center gap-8px"
+            class="threat-condition-row"
           >
             <ElSelect
               v-model="condition.property"
-              style="width: 140px"
+              class="threat-condition-row__property"
               @change="onPropertyChange(condition)"
             >
               <ElOption
@@ -275,7 +303,7 @@ async function onSave() {
                 collapse-tags
                 collapse-tags-tooltip
                 clearable
-                style="width: 280px"
+                class="threat-condition-row__area"
                 placeholder="请选择区域"
                 @update:model-value="updateConditionValue(condition, $event)"
               >
@@ -289,7 +317,7 @@ async function onSave() {
             </template>
 
             <template v-else>
-              <ElSelect v-model="condition.operator" style="width: 72px">
+              <ElSelect v-model="condition.operator" class="threat-condition-row__operator">
                 <ElOption
                   v-for="option in conditionOperatorOptions"
                   :key="option.value"
@@ -297,13 +325,23 @@ async function onSave() {
                   :value="option.value"
                 />
               </ElSelect>
-              <ElInput v-model="condition.value" style="width: 160px" clearable />
+              <ElInput v-model="condition.value" class="threat-condition-row__value" clearable />
             </template>
 
             <ElLink type="danger" @click="removeCondition(condition.id)">删除</ElLink>
+            <ElSelect
+              v-if="index < form.conditions.length - 1"
+              v-model="condition.nextLogic"
+              class="threat-condition-row__logic"
+            >
+              <ElOption
+                v-for="option in conditionLogicOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </ElSelect>
           </div>
-
-          <BaseButton type="primary" link @click="addCondition">+ 新增</BaseButton>
         </div>
       </ElFormItem>
       <ElFormItem label="威胁等级" required>
@@ -341,6 +379,40 @@ async function onSave() {
 </template>
 
 <style scoped lang="less">
+.threat-condition-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.threat-condition-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.threat-condition-row__property {
+  width: 140px;
+}
+
+.threat-condition-row__operator {
+  width: 72px;
+}
+
+.threat-condition-row__value {
+  width: 160px;
+}
+
+.threat-condition-row__area {
+  width: 280px;
+}
+
+.threat-condition-row__logic {
+  width: 76px;
+}
+
 .threat-rule-form__operator-label {
   width: 40px;
   color: var(--el-text-color-regular);

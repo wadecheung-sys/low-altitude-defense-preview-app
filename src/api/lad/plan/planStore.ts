@@ -7,6 +7,7 @@ import {
   PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS
 } from './planDisposal'
 import {
+  formatTriggerCondition,
   formatTriggerRulesSummary,
   normalizeTriggerRule,
   resolvePlanTriggerRule
@@ -459,11 +460,8 @@ function enrichPlan(plan: SeedInput | PlanStrategy): PlanStrategy {
     ...disposal,
     triggerRules,
     priority: normalizePriority((plan as PlanStrategy).priority),
-    weatherFactor:
-      new Set(triggerRules.filter((item) => item.enabled).map((item) => item.weatherFactor)).size >
-      1
-        ? '多场景'
-        : primary?.weatherFactor || '全部',
+    weatherFactor: undefined,
+    triggerConditionSummary: primary ? formatTriggerCondition(primary) : '全部',
     deviceGroupName: primary?.deviceGroupName || '',
     deviceGroupType: primary?.deviceGroupType || '',
     deviceFunction: primary?.deviceFunction || '',
@@ -505,17 +503,6 @@ function filterPlans(q: PlanStrategyQuery): PlanStrategy[] {
   }
   if (q.disposalMode === 'auto' || q.disposalMode === 'manual') {
     rows = rows.filter((r) => r.disposalMode === q.disposalMode)
-  }
-  if (q.weatherFactor?.trim() && q.weatherFactor !== '全部') {
-    const wf = q.weatherFactor.trim()
-    rows = rows.filter(
-      (r) =>
-        r.weatherFactor === wf ||
-        r.weatherFactor === '多场景' ||
-        r.triggerRules.some(
-          (tr) => tr.enabled && (tr.weatherFactor === wf || tr.weatherFactor === '全部')
-        )
-    )
   }
   if (q.deviceAction?.trim() && q.deviceAction !== '全部') {
     rows = rows.filter((r) => r.deviceAction === q.deviceAction)
@@ -576,7 +563,16 @@ export function buildPlanExecutionPayload(
     planName: enriched.planName,
     triggerRuleId: matched.id,
     triggerRuleName: matched.ruleName,
-    weatherFactor: matched.weatherFactor,
+    weatherFactor: undefined,
+    areaLevel: matched.areaLevel,
+    temperatureOperator: matched.temperatureOperator,
+    temperatureValue: matched.temperatureValue,
+    humidityOperator: matched.humidityOperator,
+    humidityValue: matched.humidityValue,
+    windPowerOperator: matched.windPowerOperator,
+    windPowerValue: matched.windPowerValue,
+    rainfallOperator: matched.rainfallOperator,
+    rainfallValue: matched.rainfallValue,
     deviceGroupName: matched.deviceGroupName,
     deviceFunction: matched.deviceFunction,
     deviceAction: matched.deviceAction,
@@ -633,7 +629,7 @@ export function savePlan(body: PlanStrategySavePayload): PlanStrategy {
     areaLevel: normalized.areaLevel || '全部',
     priority: normalizePriority(normalized.priority),
     triggerRules: normalized.triggerRules,
-    weatherFactor: '全部',
+    weatherFactor: undefined,
     deviceGroupName: '',
     deviceGroupType: '',
     deviceFunction: '',

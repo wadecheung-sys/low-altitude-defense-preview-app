@@ -79,17 +79,17 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <Dialog v-model="visible" title="人工确认" width="920px" max-height="auto">
+  <Dialog v-model="visible" title="人工核查" width="920px" max-height="auto">
     <div class="confirm-layout">
       <section class="optical-panel">
         <div class="optical-toolbar">
           <span><i class="live-dot"></i>光电-01 实时画面</span>
-          <span>EO · 4K · 12.6x</span>
+          <span>EO / 4K / 12.6x</span>
         </div>
         <div class="optical-view">
           <div class="scan-line"></div>
           <div class="target-box">
-            <span class="drone-shape">◆</span>
+            <span class="drone-shape">◎</span>
             <span class="target-label">{{ row?.targetId }}</span>
           </div>
           <div class="crosshair"><i></i><b></b></div>
@@ -100,13 +100,13 @@ const onSubmit = async () => {
         </div>
         <div class="target-summary">
           <span>目标型号：{{ row?.targetModel }}</span>
-          <span>无人机 SN：{{ row?.uavSn }}</span>
+          <span>识别码：{{ row?.uavSn }}</span>
           <span>飞手位置：未定位</span>
         </div>
       </section>
 
       <ElForm label-position="top" class="decision-form">
-        <ElFormItem label="确认结论" required>
+        <ElFormItem label="核查结论" required>
           <ElRadioGroup v-model="result" class="conclusion-group">
             <ElRadio label="真实入侵">真实入侵</ElRadio>
             <ElRadio label="躁扰告警">躁扰告警</ElRadio>
@@ -155,7 +155,7 @@ const onSubmit = async () => {
 
     <template #footer>
       <BaseButton @click="visible = false">取消</BaseButton>
-      <BaseButton type="primary" :loading="loading" @click="onSubmit">确认提交</BaseButton>
+      <BaseButton type="primary" :loading="loading" @click="onSubmit">提交核查</BaseButton>
     </template>
   </Dialog>
 </template>
@@ -218,6 +218,7 @@ const onSubmit = async () => {
   width: 100%;
   height: 1px;
 }
+
 .optical-view::after {
   top: 0;
   left: 50%;
@@ -253,6 +254,7 @@ const onSubmit = async () => {
   color: #d8fff3;
   font-size: 21px;
 }
+
 .target-label {
   position: absolute;
   top: -20px;
@@ -260,6 +262,7 @@ const onSubmit = async () => {
   white-space: nowrap;
   font: 11px monospace;
 }
+
 .crosshair {
   position: absolute;
   z-index: 2;
@@ -271,24 +274,28 @@ const onSubmit = async () => {
   border: 1px solid rgba(174, 255, 233, 0.7);
   border-radius: 50%;
 }
+
 .crosshair i,
 .crosshair b {
   position: absolute;
   display: block;
   background: rgba(174, 255, 233, 0.8);
 }
+
 .crosshair i {
   top: 18px;
   left: -9px;
   width: 56px;
   height: 1px;
 }
+
 .crosshair b {
   top: -9px;
   left: 18px;
   width: 1px;
   height: 56px;
 }
+
 .telemetry {
   position: absolute;
   z-index: 4;
@@ -296,12 +303,15 @@ const onSubmit = async () => {
   color: #a7e9d8;
   font: 11px monospace;
 }
+
 .telemetry-top {
   top: 10px;
 }
+
 .telemetry-bottom {
   bottom: 10px;
 }
+
 .target-summary {
   gap: 8px;
   justify-content: flex-start;
@@ -312,12 +322,14 @@ const onSubmit = async () => {
 .decision-form {
   padding-top: 4px;
 }
+
 .conclusion-group {
   display: grid;
   width: 100%;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+
 .conclusion-group :deep(.el-radio) {
   height: 42px;
   margin: 0;
@@ -325,25 +337,30 @@ const onSubmit = async () => {
   border: 1px solid var(--el-border-color);
   border-radius: 6px;
 }
+
 .conclusion-group :deep(.el-radio.is-checked) {
   border-color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
 }
+
 .threat-levels {
   display: grid;
   width: 100%;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
+
 .nuisance-group {
   display: flex;
   gap: 4px 14px;
   flex-wrap: wrap;
 }
+
 .threat-levels .el-tag {
   justify-content: center;
   cursor: pointer;
 }
+
 .disposal-hint {
   width: 100%;
   margin-top: 10px;
@@ -352,12 +369,15 @@ const onSubmit = async () => {
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);
 }
+
 .disposal-hint[data-level='低'] {
   border-color: var(--el-color-success);
 }
+
 .disposal-hint[data-level='中'] {
   border-color: var(--el-color-warning);
 }
+
 .disposal-hint[data-level='高'] {
   border-color: var(--el-color-danger);
 }
@@ -366,15 +386,18 @@ const onSubmit = async () => {
   from {
     top: -2px;
   }
+
   to {
     top: 100%;
   }
 }
+
 @keyframes drift {
   0%,
   100% {
     transform: translate(0, 0);
   }
+
   50% {
     transform: translate(9px, -5px);
   }
@@ -384,6 +407,7 @@ const onSubmit = async () => {
   .confirm-layout {
     grid-template-columns: 1fr;
   }
+
   .optical-view {
     min-height: 220px;
   }

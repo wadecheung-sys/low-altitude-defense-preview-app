@@ -14,12 +14,14 @@ export type RuleConditionProperty =
   | 'locatedArea'
 
 export type RuleConditionOperator = '>' | '>=' | '<' | '<=' | '='
+export type RuleConditionLogic = 'and' | 'or'
 
 export interface RuleCondition {
   id: string
   property: RuleConditionProperty
   operator: RuleConditionOperator
   value: string
+  nextLogic?: RuleConditionLogic
 }
 
 export interface ThreatRule {
@@ -30,6 +32,7 @@ export interface ThreatRule {
   targetType: string
   threatLevel: ThreatLevelLabel
   areaName: string
+  conditionLogic: RuleConditionLogic
   conditions: RuleCondition[]
   conditionSummary: string
   priority: number
@@ -66,6 +69,7 @@ export interface ThreatRuleSavePayload {
   targetType: string
   threatLevel: ThreatLevelLabel
   areaName?: string
+  conditionLogic: RuleConditionLogic
   conditions: RuleCondition[]
   priority: number
   planId: string
@@ -80,6 +84,10 @@ export interface ThreatSimulateInput {
   targetType?: string
   areaRegionType?: string
   weatherFactor?: string
+  temperature?: number
+  humidity?: number
+  windPower?: number
+  rainfall?: number
 }
 
 export interface ThreatSimulateResult {

@@ -146,7 +146,7 @@ const delData = async (row: BlackWhiteListItem | null) => {
   try {
     await ElMessageBox.confirm(
       row
-        ? `确定删除 SN「${row.sn}」的名单记录吗？`
+        ? `确定删除识别码「${row.sn}」的名单记录吗？`
         : `确定批量删除已选 ${deleteIds.length} 条记录吗？`,
       '删除确认',
       { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
@@ -266,13 +266,13 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'sn',
-    label: 'SN码/ID码',
+    label: '识别码',
     minWidth: 130,
     search: {
       component: 'Input',
       colProps: { span: 6 },
       componentProps: {
-        placeholder: '请输入 SN 码',
+        placeholder: '请输入识别码',
         style: { width: '100%' }
       }
     },

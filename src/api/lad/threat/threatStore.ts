@@ -15,6 +15,7 @@ import {
 } from './threatSwarm'
 import type {
   RuleCondition,
+  RuleConditionLogic,
   ThreatAssessResult,
   ThreatAreaScope,
   ThreatLevelLabel,
@@ -76,7 +77,69 @@ function generateThreatRuleCode() {
   return code
 }
 
-function buildSummary(conditions: RuleCondition[]) {
+function normalizeConditionLogic(value?: string): RuleConditionLogic {
+  return value === 'or' ? 'or' : 'and'
+}
+
+function conditionLogicLabel(logic?: RuleConditionLogic) {
+  return logic === 'or' ? ' 或 ' : ' 且 '
+}
+
+function normalizeConditionList(
+  conditions: RuleCondition[],
+  fallbackLogic: RuleConditionLogic = 'and'
+) {
+  return conditions.map((condition, index) => ({
+    ...condition,
+    nextLogic:
+      index < conditions.length - 1
+        ? normalizeConditionLogic(condition.nextLogic || fallbackLogic)
+        : undefined
+  }))
+}
+
+function buildConditionText(c: RuleCondition) {
+  const prop = propertyLabel[c.property] || c.property
+  if (c.property === 'locatedArea') {
+    return `${prop} = ${formatAreaConditionValue(c.value)}`
+  }
+  const unit =
+    c.property === 'speed'
+      ? 'm/s'
+      : c.property === 'stayDuration'
+        ? 'min'
+        : c.property === 'swarmCount'
+          ? '架'
+          : c.property === 'altitude'
+            ? 'm'
+            : ''
+  return `${prop} ${c.operator} ${c.value}${unit}`
+}
+
+function buildSummary(conditions: RuleCondition[], logic: RuleConditionLogic = 'and') {
+  const normalized = normalizeConditionList(conditions, logic)
+  return normalized
+    .map((c, index) => {
+      const text = buildConditionText(c)
+      if (index >= normalized.length - 1) return text
+      return `${text}${conditionLogicLabel(c.nextLogic)}`
+    })
+    .join('')
+}
+
+function evalConditions(conditions: RuleCondition[], input: ThreatSimulateInput) {
+  if (!conditions.length) return true
+  const normalized = normalizeConditionList(conditions)
+  return normalized.reduce((result, condition, index) => {
+    const current = evalCondition(condition, input)
+    if (index === 0) return current
+    const previous = normalized[index - 1]
+    return previous.nextLogic === 'or' ? result || current : result && current
+  }, true)
+}
+
+function legacyBuildSummary(conditions: RuleCondition[], logic: RuleConditionLogic = 'and') {
+  const joiner = logic === 'or' ? ' 或 ' : ' 且 '
   return conditions
     .map((c) => {
       const prop = propertyLabel[c.property] || c.property
@@ -95,7 +158,7 @@ function buildSummary(conditions: RuleCondition[]) {
                 : ''
       return `${prop} ${c.operator} ${c.value}${unit}`
     })
-    .join('; ')
+    .join(joiner)
 }
 
 function evalCondition(c: RuleCondition, input: ThreatSimulateInput): boolean {
@@ -156,7 +219,7 @@ function ruleMatches(rule: ThreatRule, input: ThreatSimulateInput): boolean {
   ) {
     return false
   }
-  return rule.conditions.every((c) => evalCondition(c, input))
+  return evalConditions(rule.conditions, input)
 }
 
 function normalizeThreatLevel(
@@ -206,6 +269,7 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
     ...rest,
     areaRegionType,
     threatLevel,
+    conditionLogic: normalizeConditionLogic(row.conditionLogic as string | undefined),
     targetType: normalizeThreatTargetType(row.targetType as string | undefined)
   } as ThreatRule
 }
@@ -213,9 +277,11 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
 type SeedRow = Omit<ThreatRule, 'conditionSummary'> & { conditions: RuleCondition[] }
 
 function buildSeedRow(row: SeedRow): ThreatRule {
+  const conditionLogic = normalizeConditionLogic(row.conditionLogic)
   return {
     ...row,
-    conditionSummary: buildSummary(row.conditions)
+    conditionLogic,
+    conditionSummary: buildSummary(row.conditions, conditionLogic)
   }
 }
 
@@ -469,7 +535,8 @@ export function syncRulesFromSeed() {
     const plan = getPlan(s.planId)
     const base = {
       ...s,
-      conditionSummary: buildSummary(s.conditions),
+      conditionLogic: normalizeConditionLogic(s.conditionLogic),
+      conditionSummary: buildSummary(s.conditions, normalizeConditionLogic(s.conditionLogic)),
       planName: plan?.planName || s.planName
     }
     if (!existing) return migrateLegacyRule(base as ThreatRule & Record<string, unknown>)
@@ -479,9 +546,11 @@ export function syncRulesFromSeed() {
       ...base,
       threatLevel: seedLevel ?? base.threatLevel,
       areaRegionType: base.areaRegionType,
+      conditionLogic: normalizeConditionLogic(existing.conditionLogic || s.conditionLogic),
       conditions: existing.conditions?.length ? existing.conditions : s.conditions,
       conditionSummary: buildSummary(
-        existing.conditions?.length ? existing.conditions : s.conditions
+        existing.conditions?.length ? existing.conditions : s.conditions,
+        normalizeConditionLogic(existing.conditionLogic || s.conditionLogic)
       ),
       planName: plan?.planName || existing.planName || s.planName,
       updatedAt: existing.updatedAt,
@@ -552,7 +621,9 @@ export function getThreatRule(id: string): ThreatRule | null {
 
 export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
   const now = formatNow()
-  const summary = buildSummary(body.conditions)
+  const conditionLogic = normalizeConditionLogic(body.conditionLogic)
+  const conditions = normalizeConditionList(body.conditions, conditionLogic)
+  const summary = buildSummary(conditions, conditionLogic)
   const plan = getPlan(body.planId)
   if (body.id) {
     const idx = allRules.findIndex((r) => r.id === body.id)
@@ -569,7 +640,8 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
       threatLevel: normalizeThreatLevel(body.threatLevel, body),
       targetType: normalizeThreatTargetType(body.targetType),
       areaName: body.areaName?.trim() || allRules[idx].areaName,
-      conditions: body.conditions.map((c) => ({ ...c })),
+      conditionLogic,
+      conditions: conditions.map((c) => ({ ...c })),
       conditionSummary: summary,
       priority: normalizePriority(body.priority),
       planId: body.planId,
@@ -593,7 +665,8 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
     threatLevel: normalizeThreatLevel(body.threatLevel, body),
     targetType: normalizeThreatTargetType(body.targetType),
     areaName: body.areaName?.trim() || '-',
-    conditions: body.conditions.map((c) => ({ ...c })),
+    conditionLogic,
+    conditions: conditions.map((c) => ({ ...c })),
     conditionSummary: summary,
     priority: normalizePriority(body.priority),
     planId: body.planId,
@@ -646,7 +719,11 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
     }
   }
   const triggerRule = resolvePlanTriggerRule(plan, {
-    weatherFactor: simInput.weatherFactor
+    areaLevel: simInput.areaRegionType,
+    temperature: simInput.temperature,
+    humidity: simInput.humidity,
+    windPower: simInput.windPower,
+    rainfall: simInput.rainfall
   })
   if (!triggerRule) {
     return {
@@ -661,10 +738,15 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
       ? swarmEscalationNote(triggerRule.deviceAction)
       : undefined
   const swarmPrefix = isSwarmSimulateInput(simInput) ? '\u3010\u8702\u7fa4\u5347\u7ea7\u3011' : ''
-  const scene =
-    simInput.weatherFactor && simInput.weatherFactor !== '\u5168\u90e8'
-      ? `\uff08\u573a\u666f\u300c${simInput.weatherFactor}\u300d\u2192 \u89c4\u5219\u300c${triggerRule.ruleName}\u300d\uff09`
-      : ''
+  const conditionScene = [
+    simInput.temperature !== undefined ? `温度${simInput.temperature}` : '',
+    simInput.humidity !== undefined ? `湿度${simInput.humidity}` : '',
+    simInput.windPower !== undefined ? `风力${simInput.windPower}` : '',
+    simInput.rainfall !== undefined ? `雨量${simInput.rainfall}` : ''
+  ]
+    .filter(Boolean)
+    .join(' / ')
+  const scene = conditionScene ? `（${conditionScene}→ 规则「${triggerRule.ruleName}」）` : ''
   const disposalNote = formatDisposalExecNote(plan)
   return {
     matched: true,

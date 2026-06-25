@@ -12,6 +12,7 @@ import { getAreaRegionListApi } from '@/api/lad/area'
 import type { PlanStrategy } from '@/api/lad/plan/types'
 import PlanFormDialog from './components/PlanFormDialog.vue'
 import PlanDetailDialog from './components/PlanDetailDialog.vue'
+import { createPlanAreaLabelMap, formatPlanAreaLabel } from './planAreaOptions'
 import { PLAN_SEARCH_COL, PLAN_SEARCH_DATE_COL, UI } from './planConstants'
 import { allOption } from '../shared/ladOptionConstants'
 
@@ -33,13 +34,7 @@ const disposalFilterOptions = [
 ]
 
 function formatAreaLabel(value?: string) {
-  if (!value || value === '全部') return '全部'
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((id) => areaLabelMap.value[id] || id)
-    .join('、')
+  return formatPlanAreaLabel(value, areaLabelMap.value)
 }
 
 function primaryRule(row: PlanStrategy) {
@@ -60,7 +55,7 @@ function formatPlanRule(value?: string) {
 
 async function loadAreas() {
   const res = await getAreaRegionListApi({ pageIndex: 1, pageSize: 200 })
-  areaLabelMap.value = Object.fromEntries(res.data.list.map((item) => [item.id, item.name]))
+  areaLabelMap.value = createPlanAreaLabelMap(res.data.list)
 }
 
 const setSearchParams = (params: Recordable) => {

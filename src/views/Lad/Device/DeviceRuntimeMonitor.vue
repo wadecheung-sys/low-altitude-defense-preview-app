@@ -54,7 +54,7 @@ async function getList() {
 }
 
 function goDetail(row: DeviceMonitorItem) {
-  push(`/lad/device/info/detail/${row.id}`)
+  push(`/lad/device/monitor/detail/${row.id}`)
 }
 
 getList()

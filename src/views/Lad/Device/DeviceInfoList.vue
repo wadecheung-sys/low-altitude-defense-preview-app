@@ -189,7 +189,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'serialNo',
-    label: '序列号(SN)',
+    label: '识别码',
     minWidth: 140,
     search: {
       component: 'Input',

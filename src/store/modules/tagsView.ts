@@ -30,6 +30,13 @@ export const useTagsViewStore = defineStore('tagsView', {
     }
   },
   actions: {
+    isSameVisitedView(target: RouteLocationNormalizedLoaded, view: RouteLocationNormalizedLoaded) {
+      const useNameMatch = Boolean(target.meta?.hidden && target.meta?.canTo && target.name)
+      if (useNameMatch) {
+        return target.name === view.name
+      }
+      return target.path === view.path
+    },
     // 新增缓存和tag
     addView(view: RouteLocationNormalizedLoaded): void {
       this.addVisitedView(view)
@@ -37,13 +44,16 @@ export const useTagsViewStore = defineStore('tagsView', {
     },
     // 新增tag
     addVisitedView(view: RouteLocationNormalizedLoaded) {
-      if (this.visitedViews.some((v) => v.path === view.path)) return
       if (view.meta?.noTagsView) return
-      this.visitedViews.push(
-        Object.assign({}, view, {
-          title: view.meta?.title || 'no-name'
-        })
-      )
+      const index = this.visitedViews.findIndex((v) => this.isSameVisitedView(v, view))
+      const nextView = Object.assign({}, view, {
+        title: view.meta?.title || 'no-name'
+      })
+      if (index > -1) {
+        this.visitedViews.splice(index, 1, Object.assign({}, this.visitedViews[index], nextView))
+        return
+      }
+      this.visitedViews.push(nextView)
     },
     // 新增缓存
     addCachedView() {
@@ -69,7 +79,7 @@ export const useTagsViewStore = defineStore('tagsView', {
     // 删除tag
     delVisitedView(view: RouteLocationNormalizedLoaded) {
       for (const [i, v] of this.visitedViews.entries()) {
-        if (v.path === view.path) {
+        if (this.isSameVisitedView(v, view)) {
           this.visitedViews.splice(i, 1)
           break
         }
@@ -136,7 +146,7 @@ export const useTagsViewStore = defineStore('tagsView', {
     },
     updateVisitedView(view: RouteLocationNormalizedLoaded) {
       for (let v of this.visitedViews) {
-        if (v.path === view.path) {
+        if (this.isSameVisitedView(v, view)) {
           v = Object.assign(v, view)
           break
         }

@@ -63,9 +63,13 @@ const selfCheckVisible = ref(false)
 const selfCheckResult = ref<DeviceSelfCheckResult | null>(null)
 
 const isCreateMode = computed(() => route.name === 'LadDeviceInfoAdd')
-const isViewMode = computed(() => route.name === 'LadDeviceDetail')
+const isMonitorDetailMode = computed(() => route.name === 'LadDeviceMonitorDetail')
+const isViewMode = computed(() => route.name === 'LadDeviceDetail' || isMonitorDetailMode.value)
 const isEditable = computed(() => !isViewMode.value)
 const recordId = computed(() => (route.params.id as string) || '')
+const detailFallbackPath = computed(() =>
+  isMonitorDetailMode.value ? '/lad/device/monitor' : '/lad/device/info/list'
+)
 
 const linkedArchive = computed(() => currentLinkedArchive.value)
 const archiveSelectOptions = computed(() => {
@@ -281,7 +285,7 @@ async function fetchDetail() {
   } catch {
     detail.value = null
     ElMessage.error('设备不存在或已删除')
-    push('/lad/device/info/list')
+    push(detailFallbackPath.value)
   } finally {
     loading.value = false
   }
