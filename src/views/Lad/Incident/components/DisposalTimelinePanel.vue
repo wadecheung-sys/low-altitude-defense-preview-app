@@ -20,8 +20,8 @@ function itemHollow(status: DisposalTimelineNode['status']) {
 function statusLabel(status: DisposalTimelineNode['status']) {
   if (status === 'done') return '已完成'
   if (status === 'current') return '进行中'
-  if (status === 'pending') return '待发生'
-  return '已跳过'
+  if (status === 'pending') return '未开始'
+  return '未触发'
 }
 </script>
 
@@ -44,6 +44,16 @@ function statusLabel(status: DisposalTimelineNode['status']) {
         </div>
         <p class="disposal-timeline__summary">{{ node.summary }}</p>
         <p v-if="node.detail" class="disposal-timeline__detail">{{ node.detail }}</p>
+        <dl v-if="node.details?.length" class="disposal-timeline__details">
+          <div
+            v-for="item in node.details"
+            :key="item.label"
+            class="disposal-timeline__detail-item"
+          >
+            <dt>{{ item.label }}</dt>
+            <dd>{{ item.value || '--' }}</dd>
+          </div>
+        </dl>
         <div v-if="node.tags?.length" class="disposal-timeline__tags">
           <ElTag v-for="tag in node.tags" :key="tag" size="small" type="info" effect="plain">
             {{ tag }}
@@ -90,10 +100,50 @@ function statusLabel(status: DisposalTimelineNode['status']) {
     color: var(--el-text-color-secondary);
   }
 
+  &__details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 14px;
+    padding: 8px 10px;
+    margin: 8px 0;
+    background: var(--el-fill-color-lighter);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 6px;
+  }
+
+  &__detail-item {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+
+    dt {
+      flex: 0 0 auto;
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+    }
+
+    dd {
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      color: var(--el-text-color-primary);
+    }
+  }
+
   &__tags {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+  }
+}
+
+@media (max-width: 768px) {
+  .disposal-timeline {
+    &__details {
+      grid-template-columns: 1fr;
+    }
   }
 }
 </style>

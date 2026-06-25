@@ -225,12 +225,12 @@ onMounted(async () => {
         <p class="detail-timeline-section__hint">
           {{
             viewDetail.handlingStatus === '待处置'
-              ? '当前处于威胁评估阶段，后续节点将在实际发生后展示。'
+              ? '已形成阶段性判断，当前处于等待处置触发或值守确认状态。'
               : viewDetail.handlingStatus === '已结束'
-                ? '事件未执行反制即已自然结束，按结束态归档展示。'
+                ? '事件已结束；未触发处置的阶段将以原因说明形式展示。'
                 : viewDetail.handlingStatus === '处置中'
-                  ? '当前处置指令正在执行，结果节点将在设备回传后展示。'
-                  : '从设备发现、威胁识别、评估、人工核查、处置执行到结果归档的全过程记录。'
+                  ? '当前处置指令正在执行，未开始的后续阶段暂不展示。'
+                  : '按设备发现、威胁识别、威胁评估、处置执行、处置结果展示全过程记录。'
           }}
         </p>
         <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
