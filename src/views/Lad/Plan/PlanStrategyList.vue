@@ -294,7 +294,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: {
       component: 'Input',
       colProps: PLAN_SEARCH_COL,
-      componentProps: { clearable: true, placeholder: '请输入修改人', style: { width: '100%' } }
+      componentProps: { clearable: true, placeholder: '请输入更新人', style: { width: '100%' } }
     },
     table: { hidden: true }
   },
@@ -324,7 +324,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: PlanStrategy }) => (
           <>
-            <BaseButton type="primary" onClick={() => openDetail(row)}>
+            <BaseButton type="success" onClick={() => openDetail(row)}>
               {UI.btnDetail}
             </BaseButton>
             <BaseButton type="primary" class="ml-8px" onClick={() => openEdit(row)}>

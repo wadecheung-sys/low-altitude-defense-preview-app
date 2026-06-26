@@ -74,16 +74,20 @@ export function queryDeviceGroupList(params: DeviceGroupQuery): DeviceGroupListR
   const pageSize = Number(params.pageSize) || 10
   let list = [...allGroups]
 
+  if (params.groupCode?.trim()) {
+    const keyword = params.groupCode.trim().toLowerCase()
+    list = list.filter((item) => item.groupCode.toLowerCase().includes(keyword))
+  }
   if (params.groupName?.trim()) {
     const keyword = params.groupName.trim().toLowerCase()
-    list = list.filter(
-      (item) =>
-        item.groupName.toLowerCase().includes(keyword) ||
-        item.groupCode.toLowerCase().includes(keyword)
-    )
+    list = list.filter((item) => item.groupName.toLowerCase().includes(keyword))
   }
   if (params.groupType) {
     list = list.filter((item) => item.groupType === params.groupType)
+  }
+  if (params.description?.trim()) {
+    const keyword = params.description.trim().toLowerCase()
+    list = list.filter((item) => item.description.toLowerCase().includes(keyword))
   }
   if (typeof params.enabled === 'boolean') {
     list = list.filter((item) => item.enabled === params.enabled)

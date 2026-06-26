@@ -92,7 +92,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'ip',
-    label: 'IP',
+    label: 'IP地址',
     search: { hidden: true },
     table: { width: 130 }
   },
@@ -113,7 +113,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'createdAt',
-    label: '时间',
+    label: '操作时间',
     search: {
       component: 'DatePicker',
       componentProps: {
@@ -134,7 +134,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       fixed: 'right',
       slots: {
         default: (data: { row: AuthLogItem }) => (
-          <BaseButton type="primary" onClick={() => openDetail(data.row)}>
+          <BaseButton type="success" onClick={() => openDetail(data.row)}>
             详情
           </BaseButton>
         )

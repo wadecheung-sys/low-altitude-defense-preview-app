@@ -15,6 +15,7 @@ import {
 } from '@/api/lad/list'
 import type { BlackWhiteListItem, ListType } from '@/api/lad/list/types'
 import BlackWhiteFormDialog from './components/BlackWhiteFormDialog.vue'
+import { targetModelOptions } from '../shared/ladOptionConstants'
 
 defineOptions({
   name: 'LadBlackWhiteList'
@@ -245,13 +246,16 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'model',
-    label: '机型/型号',
+    label: '目标型号',
     minWidth: 140,
     search: {
-      component: 'Input',
+      component: 'Select',
       colProps: { span: 6 },
       componentProps: {
-        placeholder: '请输入机型/型号',
+        options: targetModelOptions,
+        clearable: true,
+        filterable: true,
+        placeholder: '请选择目标型号',
         style: { width: '100%' }
       }
     },
@@ -369,7 +373,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: (data: { row: BlackWhiteListItem }) => (
           <>
-            <BaseButton type="primary" onClick={() => goDetail(data.row)}>
+            <BaseButton type="success" onClick={() => goDetail(data.row)}>
               详情
             </BaseButton>
             <BaseButton type="primary" onClick={() => openEdit(data.row)}>

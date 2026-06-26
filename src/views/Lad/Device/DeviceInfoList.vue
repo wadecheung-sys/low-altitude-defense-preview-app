@@ -152,7 +152,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'deviceType',
-    label: '类型',
+    label: '设备类型',
     minWidth: 110,
     search: {
       component: 'Select',
@@ -221,7 +221,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: DeviceInfoItem }) => (
           <>
-            <BaseButton type="primary" onClick={() => goDetail(row)}>
+            <BaseButton type="success" onClick={() => goDetail(row)}>
               详情
             </BaseButton>
             <BaseButton type="primary" onClick={() => openEdit(row)}>

@@ -63,3 +63,9 @@ export function threatLevelTagTypeForRule(rule: {
 }): 'danger' | 'warning' | 'success' | 'info' | '' {
   return threatLevelTagType(threatLevelForRule(rule))
 }
+
+export function listTypeTagType(type?: string): 'danger' | 'success' | 'info' {
+  if (type === '黑名单') return 'danger'
+  if (type === '白名单') return 'success'
+  return 'info'
+}

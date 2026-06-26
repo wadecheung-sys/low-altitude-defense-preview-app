@@ -96,7 +96,7 @@ export function formatTriggerRulesSummary(rules: PlanTriggerRule[]): string {
 export function normalizeTriggerRule(rule: PlanTriggerRule): PlanTriggerRule {
   const fn = resolveDeviceFunction(rule.deviceGroupType, rule.deviceFunction)
   if (!fn) {
-    throw new Error(`规则“${rule.ruleName}”的设备功能与设备组类型不匹配`)
+    throw new Error(`规则“${rule.ruleName}”的反制动作与设备组类型不匹配`)
   }
   return {
     ...rule,

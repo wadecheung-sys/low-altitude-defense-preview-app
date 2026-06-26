@@ -247,42 +247,14 @@ defineExpose({ play, pause, togglePlay })
         </g>
       </svg>
       <div class="trajectory-replay__coords">
-        当前：E {{ currentLng }} N {{ currentLat }} 高度 {{ currentSample.altitude }}m
-      </div>
-    </div>
-
-    <div class="trajectory-replay__telemetry">
-      <div class="trajectory-replay__telemetry-item">
-        <span>目标状态</span>
-        <strong>{{ currentStatus }}</strong>
-      </div>
-      <div class="trajectory-replay__telemetry-item">
-        <span>飞行速度</span>
-        <strong>{{ currentSpeed }} m/s</strong>
-      </div>
-      <div class="trajectory-replay__telemetry-item">
-        <span>航向角</span>
-        <strong>{{ currentHeading }}°</strong>
-      </div>
-      <div class="trajectory-replay__telemetry-item">
-        <span>飞行高度</span>
-        <strong>{{ currentSample.altitude }} m</strong>
-      </div>
-      <div class="trajectory-replay__telemetry-item">
-        <span>目标位置</span>
-        <strong>E {{ currentLng }} / N {{ currentLat }}</strong>
-      </div>
-      <div class="trajectory-replay__telemetry-item">
-        <span>轨迹进度</span>
-        <strong>{{ progress.toFixed(0) }}%</strong>
-      </div>
-      <div class="trajectory-replay__telemetry-item">
-        <span>记录时间</span>
-        <strong>{{ currentRecordTime }}</strong>
-      </div>
-      <div class="trajectory-replay__telemetry-item">
-        <span>数据来源</span>
-        <strong>{{ detail.dataSource }}</strong>
+        <span>当前：E {{ currentLng }} N {{ currentLat }}</span>
+        <span>高度 {{ currentSample.altitude }}m</span>
+        <span>速度 {{ currentSpeed }}m/s</span>
+        <span>航向 {{ currentHeading }}°</span>
+        <span>状态 {{ currentStatus }}</span>
+        <span>进度 {{ progress.toFixed(0) }}%</span>
+        <span>时间 {{ currentRecordTime }}</span>
+        <span>来源 {{ detail.dataSource }}</span>
       </div>
     </div>
 
@@ -348,6 +320,10 @@ defineExpose({ play, pause, togglePlay })
     position: absolute;
     left: 12px;
     bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    max-width: calc(100% - 24px);
     padding: 4px 10px;
     font-size: 12px;
     color: #e2e8f0;
@@ -360,38 +336,6 @@ defineExpose({ play, pause, togglePlay })
     padding: 12px 16px 16px;
     background: var(--el-fill-color-light);
     border-radius: 8px;
-  }
-
-  &__telemetry {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-  }
-
-  &__telemetry-item {
-    min-width: 0;
-    padding: 10px 12px;
-    background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: 6px;
-
-    span {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 12px;
-      color: var(--el-text-color-secondary);
-    }
-
-    strong {
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--el-text-color-primary);
-    }
   }
 
   &__times {

@@ -19,14 +19,16 @@ import ThreatRuleDetailDialog from './components/ThreatRuleDetailDialog.vue'
 import { THREAT_SEARCH_COL } from './threatConstants'
 import {
   LAD_DICT_THREAT_LEVEL,
+  listTypeTagType,
   threatLevelForRule,
   threatLevelTagTypeForRule
 } from '../shared/ladDictHelpers'
 import { useLadDictOptions } from '../shared/useLadDictOptions'
 import {
   conditionPropertyOptions,
+  listTypeOptions,
   ruleStatusOptions,
-  targetTypeOptions
+  targetModelOptionsWithAll
 } from '../shared/ladOptionConstants'
 
 defineOptions({ name: 'LadThreatRuleList' })
@@ -55,6 +57,7 @@ const setSearchParams = (params: Recordable) => {
     ruleName: params.ruleName,
     threatLevel: params.threatLevel === '全部' ? undefined : params.threatLevel,
     targetType: params.targetType === '全部' ? undefined : params.targetType,
+    targetModel: params.targetModel === '全部' ? undefined : params.targetModel,
     status: !params.status || params.status === '全部' ? undefined : params.status,
     targetProperty: params.targetProperty,
     updatedBy: params.updatedBy
@@ -197,18 +200,43 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'targetType',
-    label: '目标类型',
+    label: '名单类型',
     search: {
       component: 'Select',
       colProps: THREAT_SEARCH_COL,
       componentProps: {
-        options: targetTypeOptions,
+        options: listTypeOptions,
         clearable: true,
         placeholder: '全部',
         style: searchFieldStyle
       }
     },
-    table: { width: 110, showOverflowTooltip: true }
+    table: {
+      width: 110,
+      slots: {
+        default: ({ row }: { row: ThreatRule }) => (
+          <ElTag type={listTypeTagType(row.targetType)} size="small" effect="light">
+            {row.targetType}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
+    field: 'targetModel',
+    label: '目标型号',
+    search: {
+      component: 'Select',
+      colProps: THREAT_SEARCH_COL,
+      componentProps: {
+        options: targetModelOptionsWithAll,
+        clearable: true,
+        filterable: true,
+        placeholder: '全部',
+        style: searchFieldStyle
+      }
+    },
+    table: { width: 150, showOverflowTooltip: true }
   },
   {
     field: 'conditionSummary',
@@ -285,13 +313,13 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'updatedBy',
-    label: '修改人',
+    label: '更新人',
     search: {
       component: 'Input',
       colProps: THREAT_SEARCH_COL,
       componentProps: {
         clearable: true,
-        placeholder: '请输入修改人',
+        placeholder: '请输入更新人',
         style: searchFieldStyle
       }
     },
@@ -299,13 +327,13 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'updatedAt',
-    label: '修改时间',
+    label: '更新时间',
     search: { hidden: true },
     table: { width: 168, showOverflowTooltip: true }
   },
   {
     field: 'enabled',
-    label: '启停',
+    label: '状态',
     search: { hidden: true },
     table: {
       width: 88,
@@ -333,7 +361,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: ThreatRule }) => (
           <>
-            <BaseButton type="primary" onClick={() => openDetail(row)}>
+            <BaseButton type="success" onClick={() => openDetail(row)}>
               详情
             </BaseButton>
             <BaseButton type="primary" class="ml-8px" onClick={() => openEdit(row)}>

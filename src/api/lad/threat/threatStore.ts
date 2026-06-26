@@ -37,6 +37,16 @@ const propertyLabel: Record<string, string> = {
   locatedArea: '\u6240\u5904\u533a\u57df'
 }
 
+const threatTargetModelFallbacks = [
+  'DJI Mavic 3',
+  'DJI Matrice 300 RTK',
+  'Autel EVO II',
+  'DJI Mini 4 Pro',
+  'DJI Air 3',
+  'DJI Mavic 3T',
+  'DJI Phantom 4 RTK'
+]
+
 function normalizeThreatTargetType(value?: string) {
   if (
     value === '\u5168\u90e8' ||
@@ -238,6 +248,22 @@ function normalizePriority(value: unknown) {
   return Math.min(999, Math.max(0, Math.trunc(priority)))
 }
 
+function normalizeThreatTargetModel(row: ThreatRule & Record<string, unknown>) {
+  const value = String(row.targetModel || '').trim()
+  if (value) return value
+  if (
+    String(row.ruleCode || '').startsWith('SWARM') ||
+    row.conditions?.some((item) => item.property === 'swarmCount')
+  ) {
+    return '蜂群目标'
+  }
+  const numericId = Number(String(row.id || '').match(/\d+/)?.[0])
+  if (Number.isFinite(numericId) && numericId > 0) {
+    return threatTargetModelFallbacks[(numericId - 1) % threatTargetModelFallbacks.length]
+  }
+  return '未知型号'
+}
+
 function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRule {
   const legacyArea = row.areaLevel as string | undefined
   const legacyScenario = row.scenario as string | undefined
@@ -270,7 +296,8 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
     areaRegionType,
     threatLevel,
     conditionLogic: normalizeConditionLogic(row.conditionLogic as string | undefined),
-    targetType: normalizeThreatTargetType(row.targetType as string | undefined)
+    targetType: normalizeThreatTargetType(row.targetType as string | undefined),
+    targetModel: normalizeThreatTargetModel(row)
   } as ThreatRule
 }
 
@@ -292,7 +319,8 @@ const seed: ThreatRule[] = [
     ruleName: '保护区-自动驱离',
     areaRegionType: 'warning',
     threatLevel: '高',
-    targetType: '多旋翼',
+    targetType: '未知',
+    targetModel: 'DJI Mavic 3',
     areaName: '保护区',
     conditions: [
       { id: 'c1', property: 'speed', operator: '>', value: '5' },
@@ -312,6 +340,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'nuclear',
     threatLevel: '高',
     targetType: '黑名单',
+    targetModel: 'DJI Matrice 300 RTK',
     areaName: '核心保护区',
     conditions: [
       { id: 'c3', property: 'intrusionCount', operator: '>=', value: '1' },
@@ -331,6 +360,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'alert',
     threatLevel: '中',
     targetType: '全部',
+    targetModel: '未知型号',
     areaName: '缓冲区',
     conditions: [{ id: 'c5', property: 'speed', operator: '>', value: '8' }],
     priority: 500,
@@ -347,6 +377,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'testflight',
     threatLevel: '无',
     targetType: '全部',
+    targetModel: '未知型号',
     areaName: '试飞区',
     conditions: [{ id: 'c6', property: 'stayDuration', operator: '>', value: '5' }],
     priority: 0,
@@ -363,6 +394,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'nuclear',
     threatLevel: '高',
     targetType: '黑名单',
+    targetModel: 'Autel EVO II',
     areaName: '核心保护区',
     conditions: [{ id: 'c8', property: 'intrusionCount', operator: '>=', value: '1' }],
     priority: 900,
@@ -379,6 +411,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'testflight',
     threatLevel: '低',
     targetType: '全部',
+    targetModel: 'DJI Mini 4 Pro',
     areaName: '试飞区',
     conditions: [{ id: 'c9', property: 'speed', operator: '>', value: '2' }],
     priority: 200,
@@ -395,6 +428,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'alert',
     threatLevel: '高',
     targetType: '全部',
+    targetModel: '未知型号',
     areaName: '边界缓冲区',
     conditions: [{ id: 'c10', property: 'speed', operator: '>', value: '6' }],
     priority: 760,
@@ -410,7 +444,8 @@ const seed: ThreatRule[] = [
     ruleName: '光电监测上报',
     areaRegionType: 'warning',
     threatLevel: '高',
-    targetType: '多旋翼',
+    targetType: '未知',
+    targetModel: 'DJI Air 3',
     areaName: '保护区',
     conditions: [{ id: 'c11', property: 'stayDuration', operator: '>', value: '3' }],
     priority: 680,
@@ -427,6 +462,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'nuclear',
     threatLevel: '高',
     targetType: '黑名单',
+    targetModel: 'DJI Mavic 3T',
     areaName: '核心保护区',
     conditions: [{ id: 'c12', property: 'speed', operator: '>', value: '2' }],
     priority: 880,
@@ -443,6 +479,7 @@ const seed: ThreatRule[] = [
     areaRegionType: 'alert',
     threatLevel: '中',
     targetType: '全部',
+    targetModel: '未知型号',
     areaName: '缓冲区',
     conditions: [{ id: 'c13', property: 'intrusionCount', operator: '>=', value: '2' }],
     priority: 460,
@@ -458,7 +495,8 @@ const seed: ThreatRule[] = [
     ruleName: '雷达跟踪备注',
     areaRegionType: 'warning',
     threatLevel: '低',
-    targetType: '多旋翼',
+    targetType: '未知',
+    targetModel: 'DJI Phantom 4 RTK',
     areaName: '保护区',
     conditions: [{ id: 'c14', property: 'speed', operator: '>', value: '7' }],
     priority: 240,
@@ -474,7 +512,8 @@ const seed: ThreatRule[] = [
     ruleName: '蜂群入侵-复合反制',
     areaRegionType: 'nuclear',
     threatLevel: '高',
-    targetType: '无人机蜂群',
+    targetType: '未知',
+    targetModel: '蜂群目标',
     areaName: '核心保护区',
     conditions: [
       { id: 'c15', property: 'swarmCount', operator: '>=', value: '3' },
@@ -493,7 +532,8 @@ const seed: ThreatRule[] = [
     ruleName: '蜂群入侵-高功率微波',
     areaRegionType: 'alert',
     threatLevel: '高',
-    targetType: '无人机蜂群',
+    targetType: '未知',
+    targetModel: '蜂群目标',
     areaName: '缓冲区',
     conditions: [{ id: 'c17', property: 'swarmCount', operator: '>=', value: '5' }],
     priority: 940,
@@ -505,7 +545,7 @@ const seed: ThreatRule[] = [
   })
 ]
 
-export const THREAT_STORE_VERSION = 9
+export const THREAT_STORE_VERSION = 10
 
 const seedThreatLevelById = Object.fromEntries(seed.map((s) => [s.id, s.threatLevel])) as Record<
   string,
@@ -588,6 +628,10 @@ function filterRules(q: ThreatRuleQuery): ThreatRule[] {
   if (q.targetType && q.targetType !== '\u5168\u90e8' && q.targetType !== '') {
     rows = rows.filter((r) => r.targetType === q.targetType || r.targetType === '\u5168\u90e8')
   }
+  if (q.targetModel?.trim()) {
+    const kw = q.targetModel.trim().toLowerCase()
+    rows = rows.filter((r) => r.targetModel.toLowerCase().includes(kw))
+  }
   if (q.targetProperty) {
     rows = rows.filter((r) => r.conditions.some((c) => c.property === q.targetProperty))
   }
@@ -639,6 +683,9 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
       areaRegionType: body.areaRegionType,
       threatLevel: normalizeThreatLevel(body.threatLevel, body),
       targetType: normalizeThreatTargetType(body.targetType),
+      targetModel:
+        body.targetModel?.trim() ||
+        normalizeThreatTargetModel(allRules[idx] as ThreatRule & Record<string, unknown>),
       areaName: body.areaName?.trim() || allRules[idx].areaName,
       conditionLogic,
       conditions: conditions.map((c) => ({ ...c })),
@@ -664,6 +711,13 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
     areaRegionType: body.areaRegionType,
     threatLevel: normalizeThreatLevel(body.threatLevel, body),
     targetType: normalizeThreatTargetType(body.targetType),
+    targetModel:
+      body.targetModel?.trim() ||
+      normalizeThreatTargetModel({
+        id: `rule-${Date.now()}`,
+        ruleCode,
+        conditions
+      } as ThreatRule & Record<string, unknown>),
     areaName: body.areaName?.trim() || '-',
     conditionLogic,
     conditions: conditions.map((c) => ({ ...c })),
@@ -785,7 +839,7 @@ export function assessThreatRule(id: string): ThreatAssessResult {
     planDeviceType: triggerRule?.deviceType,
     planDeviceFunction: fnLabel,
     alarmLevel: levelKey === 'high' ? '\u4e00\u7ea7\u544a\u8b66' : '\u4e8c\u7ea7\u9884\u8b66',
-    summary: `${swarmSummary}\u89c4\u5219\u5a01\u80f1\u7b49\u7ea7\u300c${rule.threatLevel}\u300d\uff1b\u76ee\u6807\u7c7b\u578b\u300c${rule.targetType}\u300d\uff1b\u89e6\u53d1\u6761\u4ef6\uff1a${rule.conditionSummary}`,
+    summary: `${swarmSummary}\u89c4\u5219\u5a01\u80f1\u7b49\u7ea7\u300c${rule.threatLevel}\u300d\uff1b\u540d\u5355\u7c7b\u578b\u300c${rule.targetType}\u300d\uff1b\u76ee\u6807\u578b\u53f7\u300c${rule.targetModel}\u300d\uff1b\u89e6\u53d1\u6761\u4ef6\uff1a${rule.conditionSummary}`,
     swarmNote,
     triggerNote:
       plan && triggerRule

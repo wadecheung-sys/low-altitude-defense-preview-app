@@ -4,6 +4,7 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveBlackWhiteApi } from '@/api/lad/list'
 import type { BlackWhiteListItem, EntryMethod, ListType } from '@/api/lad/list/types'
+import { targetModelOptions } from '../../shared/ladOptionConstants'
 import {
   ElDatePicker,
   ElForm,
@@ -39,15 +40,7 @@ const isEdit = computed(() => !!props.row?.id)
 const loading = ref(false)
 let frequencySeq = 0
 
-const modelOptions = [
-  'DJI Mavic 3',
-  'DJI Mini 3 Pro',
-  'DJI Air 3',
-  'Autel EVO II',
-  '大疆经纬 M30',
-  'Parrot Anafi',
-  '其他'
-]
+const modelOptions = targetModelOptions.map((item) => item.value)
 
 function createFrequencyBand(value?: number): FrequencyBand {
   frequencySeq += 1
@@ -198,8 +191,8 @@ const onSubmit = async () => {
       <ElFormItem label="识别码" :required="!isEdit">
         <ElInput v-model="form.sn" placeholder="请输入识别码" />
       </ElFormItem>
-      <ElFormItem label="机型/型号">
-        <ElSelect v-model="form.model" style="width: 100%" placeholder="请选择机型/型号">
+      <ElFormItem label="目标型号">
+        <ElSelect v-model="form.model" style="width: 100%" placeholder="请选择目标型号">
           <ElOption v-for="item in modelOptions" :key="item" :label="item" :value="item" />
         </ElSelect>
       </ElFormItem>

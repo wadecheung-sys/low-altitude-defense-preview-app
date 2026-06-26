@@ -127,7 +127,7 @@ watch(
           {{ functionLabel(row.deviceGroupType, row.deviceFunction) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn prop="deviceAction" label="处置动作" width="100" />
+      <ElTableColumn prop="deviceAction" label="动作分类" width="110" />
       <ElTableColumn :label="UI.enabled" width="72" align="center">
         <template #default="{ row }">
           <ElTag :type="row.enabled ? 'success' : 'info'" size="small">{{

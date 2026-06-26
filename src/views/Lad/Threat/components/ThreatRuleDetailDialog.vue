@@ -5,7 +5,11 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { assessThreatRuleApi } from '@/api/lad/threat'
 import type { ThreatAssessResult } from '@/api/lad/threat/types'
-import { threatLevelForRule, threatLevelTagTypeForRule } from '../../shared/ladDictHelpers'
+import {
+  listTypeTagType,
+  threatLevelForRule,
+  threatLevelTagTypeForRule
+} from '../../shared/ladDictHelpers'
 
 const props = defineProps<{
   modelValue: boolean
@@ -44,7 +48,17 @@ watch(
     <ElDescriptions v-loading="loading" :column="1" border>
       <ElDescriptionsItem label="规则编号">{{ data?.rule.ruleCode }}</ElDescriptionsItem>
       <ElDescriptionsItem label="规则名称">{{ data?.rule.ruleName }}</ElDescriptionsItem>
-      <ElDescriptionsItem label="目标类型">{{ data?.rule.targetType }}</ElDescriptionsItem>
+      <ElDescriptionsItem label="名单类型">
+        <ElTag
+          v-if="data?.rule"
+          :type="listTypeTagType(data.rule.targetType)"
+          size="small"
+          effect="light"
+        >
+          {{ data.rule.targetType }}
+        </ElTag>
+      </ElDescriptionsItem>
+      <ElDescriptionsItem label="目标型号">{{ data?.rule.targetModel }}</ElDescriptionsItem>
       <ElDescriptionsItem label="判级条件">{{ data?.rule.conditionSummary }}</ElDescriptionsItem>
       <ElDescriptionsItem label="威胁等级">
         <ElTag
@@ -59,13 +73,13 @@ watch(
       <ElDescriptionsItem label="优先级">{{ data?.rule.priority }}</ElDescriptionsItem>
       <ElDescriptionsItem label="告警级别参考">{{ data?.alarmLevel }}</ElDescriptionsItem>
       <ElDescriptionsItem label="规则摘要">{{ data?.summary }}</ElDescriptionsItem>
-      <ElDescriptionsItem label="启停">
+      <ElDescriptionsItem label="状态">
         <ElTag :type="data?.rule.enabled ? 'success' : 'info'">
           {{ data?.rule.enabled ? '启用' : '停用' }}
         </ElTag>
       </ElDescriptionsItem>
-      <ElDescriptionsItem label="修改人">{{ data?.rule.updatedBy }}</ElDescriptionsItem>
-      <ElDescriptionsItem label="修改时间">{{ data?.rule.updatedAt }}</ElDescriptionsItem>
+      <ElDescriptionsItem label="更新人">{{ data?.rule.updatedBy }}</ElDescriptionsItem>
+      <ElDescriptionsItem label="更新时间">{{ data?.rule.updatedAt }}</ElDescriptionsItem>
     </ElDescriptions>
     <template #footer>
       <BaseButton @click="visible = false">关闭</BaseButton>

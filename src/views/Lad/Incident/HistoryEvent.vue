@@ -21,6 +21,7 @@ import type {
   ThreatLevel
 } from '@/api/lad/incident/types'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
+import { targetModelOptions } from '../shared/ladOptionConstants'
 
 defineOptions({
   name: 'LadIncidentHistory'
@@ -284,7 +285,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'listType',
-    label: '名单状态',
+    label: '名单类型',
     minWidth: 96,
     search: { hidden: true },
     table: {
@@ -330,10 +331,13 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '目标型号',
     minWidth: 128,
     search: {
-      component: 'Input',
+      component: 'Select',
       colProps: { span: 6 },
       componentProps: {
-        placeholder: '请输入目标型号',
+        options: targetModelOptions,
+        clearable: true,
+        filterable: true,
+        placeholder: '请选择目标型号',
         style: { width: '100%' }
       }
     },
@@ -527,12 +531,10 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       showOverflowTooltip: true,
       slots: {
-        default: ({ row }: { row: HistoryEventItem }) =>
-          row.remark === '等待值守人员确认' ||
-          row.remark === '等待值守人员人工确认' ||
-          row.remark === '等待值守人员人工核查'
-            ? ''
-            : row.remark
+        default: ({ row }: { row: HistoryEventItem }) => {
+          const remark = row.remark.replace('人工确认', '人工核查')
+          return remark === '等待值守人员确认' || remark === '等待值守人员人工核查' ? '' : remark
+        }
       }
     }
   },
@@ -555,7 +557,7 @@ const crudSchemas = reactive<CrudSchema[]>([
                 人工核查
               </BaseButton>
             ) : null}
-            <BaseButton type="primary" onClick={() => goDetail(row)}>
+            <BaseButton type="success" onClick={() => goDetail(row)}>
               详情
             </BaseButton>
             <BaseButton type="danger" onClick={() => delData(row)}>

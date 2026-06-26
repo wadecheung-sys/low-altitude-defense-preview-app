@@ -9,10 +9,11 @@ import type {
   EntryMethod,
   ListType
 } from './types'
+import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
 
 const listTypes: ListType[] = ['黑名单', '白名单', '未知']
 const targetTypes = ['多旋翼', '固定翼', '未知', '行业级']
-const models = ['DJI Mavic 3', 'DJI Mini 3 Pro', 'Autel EVO II', 'Parrot Anafi', '未知型号']
+const models = LAD_TARGET_MODELS.filter((item) => item !== '蜂群目标' && item !== '其他')
 const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
 const zones = ['核心保护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
 const entryMethods: EntryMethod[] = ['自动录入', '人工录入', '自动+人工校验']

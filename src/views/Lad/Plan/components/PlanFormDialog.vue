@@ -322,7 +322,7 @@ async function onSave() {
       return
     }
     if (!rule.deviceGroupId || !rule.deviceFunction) {
-      ElMessage.warning('请为每条触发策略选择执行设备组与设备功能')
+      ElMessage.warning('请为每条触发策略选择执行设备组与反制动作')
       return
     }
     if (!ruleConditionComplete(rule)) {

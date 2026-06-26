@@ -1,5 +1,7 @@
 /** Shared dropdown options for LAD modules */
 
+import { ladTargetModelOptions } from '@/constants/ladTargetModels'
+
 export const allOption = { label: '\u5168\u90e8', value: '\u5168\u90e8' }
 
 export const areaLevelOptions = [
@@ -27,6 +29,12 @@ export const targetTypeOptions = [
   { label: '\u767d\u540d\u5355', value: '\u767d\u540d\u5355' },
   { label: '\u672a\u77e5', value: '\u672a\u77e5' }
 ]
+
+export const listTypeOptions = targetTypeOptions
+
+export const targetModelOptions = ladTargetModelOptions
+
+export const targetModelOptionsWithAll = [allOption, ...targetModelOptions]
 
 export const weatherOptions = [
   allOption,

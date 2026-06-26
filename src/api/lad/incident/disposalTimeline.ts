@@ -230,7 +230,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
         { label: '目标类型', value: targetType },
         { label: '身份属性', value: identityLabel },
         { label: '名单属性', value: row.listType },
-        { label: '品牌型号', value: row.targetModel },
+        { label: '目标型号', value: row.targetModel },
         { label: '识别码', value: row.uavSn }
       ],
       tags: identificationTags(row, targetType, identityLabel)

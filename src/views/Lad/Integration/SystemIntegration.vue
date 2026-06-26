@@ -167,7 +167,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: (data: { row: IntegrationEndpoint }) => (
           <>
-            <BaseButton type="primary" onClick={() => openDetail(data.row)}>
+            <BaseButton type="success" onClick={() => openDetail(data.row)}>
               {UI.btnView}
             </BaseButton>
             {canReconnect(data.row.runStatus) ? (

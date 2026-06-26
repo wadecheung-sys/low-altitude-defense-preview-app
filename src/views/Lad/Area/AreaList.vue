@@ -177,7 +177,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'name',
-    label: '场地',
+    label: '场地名称',
     minWidth: 150,
     search: {
       component: 'Input',
@@ -204,7 +204,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'parentSiteName',
-    label: '上级场地',
+    label: '上级场地名称',
     minWidth: 140,
     search: { hidden: true },
     table: {
@@ -243,7 +243,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   { field: 'clipPriority', label: '区域优先级', minWidth: 105, search: { hidden: true } },
   {
     field: 'createdAt',
-    label: '添加时间',
+    label: '创建时间',
     minWidth: 168,
     search: { hidden: true },
     table: { showOverflowTooltip: true }

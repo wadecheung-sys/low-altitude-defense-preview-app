@@ -92,8 +92,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'jam_band_expel',
-        deviceAction: '驱离',
+        deviceFunction: 'radio_jamming',
+        deviceAction: '无线电干扰',
         enabled: true
       },
       {
@@ -104,7 +104,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '南门光电观察组',
         deviceGroupType: '光电协同组',
         deviceFunction: 'alarm_sound_light',
-        deviceAction: '告警',
+        deviceAction: '声光警示',
         enabled: true
       }
     ]
@@ -131,7 +131,7 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'counter_forced_land',
+        deviceFunction: 'forced_landing',
         deviceAction: '迫降',
         enabled: true
       }
@@ -159,7 +159,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '南门光电观察组',
         deviceGroupType: '光电协同组',
         deviceFunction: 'eo_track_lock',
-        deviceAction: '跟踪',
+        deviceAction: '目标锁定',
         enabled: true
       }
     ]
@@ -186,7 +186,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '南门光电观察组',
         deviceGroupType: '光电协同组',
         deviceFunction: 'alarm_sound_light',
-        deviceAction: '告警',
+        deviceAction: '声光警示',
         enabled: true
       }
     ]
@@ -214,7 +214,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '北区探测协同组',
         deviceGroupType: '探测组',
         deviceFunction: 'radar_track',
-        deviceAction: '跟踪',
+        deviceAction: '持续跟踪',
         enabled: true
       }
     ]
@@ -241,7 +241,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '南门光电观察组',
         deviceGroupType: '光电协同组',
         deviceFunction: 'alarm_sound_light',
-        deviceAction: '告警',
+        deviceAction: '声光警示',
         enabled: true
       }
     ]
@@ -267,8 +267,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'jam_omni',
-        deviceAction: '驱离',
+        deviceFunction: 'radio_jamming',
+        deviceAction: '无线电干扰',
         enabled: true
       }
     ]
@@ -294,8 +294,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1003',
         deviceGroupName: '南门光电观察组',
         deviceGroupType: '光电协同组',
-        deviceFunction: 'eo_monitor_report',
-        deviceAction: '跟踪',
+        deviceFunction: 'eo_evidence_tracking',
+        deviceAction: '取证跟踪',
         enabled: true
       }
     ]
@@ -321,8 +321,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'jam_nav_spoof',
-        deviceAction: '驱离',
+        deviceFunction: 'navigation_spoofing',
+        deviceAction: '导航诱骗',
         enabled: true
       }
     ]
@@ -348,8 +348,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'counter_net_cut',
-        deviceAction: '迫降',
+        deviceFunction: 'link_disruption',
+        deviceAction: '链路阻断',
         enabled: true
       }
     ]
@@ -376,7 +376,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '北区探测协同组',
         deviceGroupType: '探测组',
         deviceFunction: 'radar_track',
-        deviceAction: '跟踪',
+        deviceAction: '持续跟踪',
         enabled: true
       }
     ]
@@ -403,7 +403,7 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'laser_precision_strike',
+        deviceFunction: 'laser_strike',
         deviceAction: '激光打击',
         enabled: true
       },
@@ -414,8 +414,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'hpm_swarm_burst',
-        deviceAction: '高功率微波',
+        deviceFunction: 'hpm_suppression',
+        deviceAction: '高功率微波压制',
         enabled: true
       }
     ]
@@ -441,8 +441,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'hpm_swarm_burst',
-        deviceAction: '高功率微波',
+        deviceFunction: 'hpm_suppression',
+        deviceAction: '高功率微波压制',
         enabled: true
       }
     ]

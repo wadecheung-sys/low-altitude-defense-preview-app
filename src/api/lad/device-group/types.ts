@@ -14,8 +14,10 @@ export interface DeviceGroupItem {
 export interface DeviceGroupQuery {
   pageIndex?: number
   pageSize?: number
+  groupCode?: string
   groupName?: string
   groupType?: string
+  description?: string
   enabled?: boolean
 }
 

@@ -155,7 +155,7 @@ onMounted(async () => {
           <div class="detail-info__desc-title">基本信息</div>
           <ElDescriptions :column="3" border size="small">
             <ElDescriptionsItem label="目标ID">{{ viewDetail.targetId }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="品牌型号">{{ viewDetail.targetModel }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="目标型号">{{ viewDetail.targetModel }}</ElDescriptionsItem>
             <ElDescriptionsItem label="识别码">{{ viewDetail.uavSn }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="发现时间">{{ viewDetail.discoveredAt }}</ElDescriptionsItem>

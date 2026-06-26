@@ -62,7 +62,7 @@ getList()
 const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'deviceName',
-    label: '设备',
+    label: '设备名称',
     search: {
       component: 'Input',
       colProps: DEVICE_MONITOR_SEARCH_COL,
@@ -89,13 +89,13 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'deployLocation',
-    label: '场地',
+    label: '部署位置',
     search: {
       component: 'Input',
       colProps: DEVICE_MONITOR_SEARCH_COL,
       componentProps: {
         clearable: true,
-        placeholder: '部署位置',
+        placeholder: '请输入部署位置',
         style: searchFieldStyle
       }
     }

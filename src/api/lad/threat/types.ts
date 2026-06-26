@@ -30,6 +30,7 @@ export interface ThreatRule {
   ruleName: string
   areaRegionType: ThreatAreaScope
   targetType: string
+  targetModel: string
   threatLevel: ThreatLevelLabel
   areaName: string
   conditionLogic: RuleConditionLogic
@@ -51,6 +52,7 @@ export interface ThreatRuleQuery {
   areaRegionType?: string
   threatLevel?: string
   targetType?: string
+  targetModel?: string
   targetProperty?: string
   status?: 'enabled' | 'disabled' | ''
   updatedBy?: string
@@ -67,6 +69,7 @@ export interface ThreatRuleSavePayload {
   ruleName: string
   areaRegionType: ThreatAreaScope
   targetType: string
+  targetModel?: string
   threatLevel: ThreatLevelLabel
   areaName?: string
   conditionLogic: RuleConditionLogic
@@ -82,6 +85,7 @@ export interface ThreatSimulateInput {
   intrusionCount?: number
   swarmCount?: number
   targetType?: string
+  targetModel?: string
   areaRegionType?: string
   weatherFactor?: string
   temperature?: number

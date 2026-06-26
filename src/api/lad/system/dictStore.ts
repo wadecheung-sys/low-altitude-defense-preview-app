@@ -8,6 +8,7 @@ import type {
   DictTypeListResult,
   DictTypeSavePayload
 } from './types'
+import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
 
 function formatNow() {
   const d = new Date()
@@ -52,6 +53,14 @@ const dictTypesSeed: DictTypeItem[] = [
     remark: '与区域管理一致，供威胁评估等模块引用',
     itemCount: 9,
     updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'dt-008',
+    dictCode: 'target_model',
+    dictName: '目标型号',
+    remark: '历史事件、黑白名单与威胁评估共用',
+    itemCount: LAD_TARGET_MODELS.length,
+    updatedAt: '2026-06-25 10:00:00'
   }
 ]
 
@@ -184,6 +193,14 @@ const dictEntriesSeed: DictEntryItem[] = [
     sort: 5,
     updatedAt: '2026-05-19 14:00:00'
   },
+  ...LAD_TARGET_MODELS.map((item, index) => ({
+    id: `de-target-model-${String(index + 1).padStart(2, '0')}`,
+    dictTypeId: 'dt-008',
+    label: item,
+    value: item,
+    sort: index + 1,
+    updatedAt: '2026-06-25 10:00:00'
+  })),
   {
     id: 'de-023',
     dictTypeId: 'dt-007',

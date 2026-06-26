@@ -272,7 +272,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: (data: { row: HistoryEventItem }) => (
           <>
-            <BaseButton type="primary" onClick={() => goEventDetail(data.row)}>
+            <BaseButton type="success" onClick={() => goEventDetail(data.row)}>
               详情
             </BaseButton>
             <BaseButton type="danger" onClick={() => onDeleteEvent(data.row)}>
@@ -321,7 +321,7 @@ watch(
               class="target-detail-descriptions"
             >
               <ElDescriptionsItem label="目标 ID">{{ detail.targetId }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="品牌型号">{{ detail.model }}</ElDescriptionsItem>
+              <ElDescriptionsItem label="目标型号">{{ detail.model }}</ElDescriptionsItem>
               <ElDescriptionsItem label="识别码">{{ detail.sn }}</ElDescriptionsItem>
               <ElDescriptionsItem label="目标类型">{{ detail.targetType }}</ElDescriptionsItem>
 

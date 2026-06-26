@@ -78,7 +78,7 @@ const tableColumns = reactive<TableColumn[]>([
   },
   {
     field: 'nodeType',
-    label: '类型',
+    label: '权限类型',
     width: 90,
     slots: {
       default: (data: { row: AuthPermissionNode }) => (

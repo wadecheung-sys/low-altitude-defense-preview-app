@@ -27,7 +27,8 @@ import { useLadDictOptions } from '../../shared/useLadDictOptions'
 import {
   conditionOperatorOptions,
   conditionPropertyOptions,
-  targetTypeOptions
+  listTypeOptions,
+  targetModelOptionsWithAll
 } from '../../shared/ladOptionConstants'
 
 type AreaOption = {
@@ -70,6 +71,7 @@ const form = ref({
   ruleCode: '',
   ruleName: '',
   targetType: '全部',
+  targetModel: '',
   threatLevel: '中' as ThreatLevelLabel,
   priority: 500,
   enabled: true,
@@ -151,6 +153,7 @@ function resetForm() {
     ruleCode: generateThreatRuleCode(),
     ruleName: '',
     targetType: '全部',
+    targetModel: '',
     threatLevel: '中',
     priority: 500,
     enabled: true,
@@ -173,6 +176,7 @@ watch(
           ruleCode: row.ruleCode,
           ruleName: row.ruleName,
           targetType: row.targetType,
+          targetModel: row.targetModel || '',
           threatLevel: row.threatLevel,
           priority: row.priority,
           enabled: row.enabled,
@@ -227,6 +231,7 @@ async function onSave() {
       ruleName: form.value.ruleName.trim(),
       areaRegionType: '全部',
       targetType: form.value.targetType,
+      targetModel: form.value.targetModel.trim() || '未知型号',
       threatLevel: form.value.threatLevel,
       conditionLogic: form.value.conditionLogic,
       conditions: form.value.conditions.map((item, index) => ({
@@ -262,10 +267,20 @@ async function onSave() {
       <ElFormItem label="规则名称" required>
         <ElInput v-model="form.ruleName" clearable />
       </ElFormItem>
-      <ElFormItem label="目标类型" required>
+      <ElFormItem label="名单类型" required>
         <ElSelect v-model="form.targetType" class="w-full">
           <ElOption
-            v-for="option in targetTypeOptions"
+            v-for="option in listTypeOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </ElSelect>
+      </ElFormItem>
+      <ElFormItem label="目标型号">
+        <ElSelect v-model="form.targetModel" class="w-full" filterable>
+          <ElOption
+            v-for="option in targetModelOptionsWithAll"
             :key="option.value"
             :label="option.label"
             :value="option.value"
@@ -366,7 +381,7 @@ async function onSave() {
         />
         <div class="threat-rule-form__tip">范围 0-999，数值越大，规则命中优先级越高。</div>
       </ElFormItem>
-      <ElFormItem label="启停">
+      <ElFormItem label="状态">
         <ElSwitch v-model="form.enabled" inline-prompt active-text="ON" inactive-text="OFF" />
       </ElFormItem>
     </ElForm>

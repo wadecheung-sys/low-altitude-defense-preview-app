@@ -22,8 +22,7 @@ import {
   ElMessageBox,
   ElOption,
   ElSelect,
-  ElSwitch,
-  ElTag
+  ElSwitch
 } from 'element-plus'
 import { computed, reactive, ref, unref } from 'vue'
 
@@ -62,7 +61,9 @@ const memberNameMap = computed(() => {
 
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
+    groupCode: params.groupCode,
     groupName: params.groupName,
+    description: params.description,
     enabled: params.enabled === 'true' ? true : params.enabled === 'false' ? false : undefined
   }
   currentPage.value = 1
@@ -170,39 +171,24 @@ const crudSchemas = reactive<CrudSchema[]>([
     detail: { hidden: true }
   },
   {
-    field: 'groupName',
-    label: '设备组',
-    search: {
-      component: 'Input',
-      colProps: { span: 12 },
-      componentProps: { placeholder: '请输入组名或组编码', style: { width: '100%' } }
-    }
-  },
-  {
-    field: 'enabled',
-    label: '状态',
-    search: {
-      component: 'Select',
-      colProps: { span: 12 },
-      componentProps: {
-        options: enabledOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: { width: '100%' }
-      }
-    }
-  },
-  {
     field: 'groupCode',
     label: '组编码',
     minWidth: 130,
-    search: { hidden: true }
+    search: {
+      component: 'Input',
+      colProps: { span: 6 },
+      componentProps: { clearable: true, placeholder: '请输入组编码', style: { width: '100%' } }
+    }
   },
   {
     field: 'groupName',
     label: '组名称',
     minWidth: 150,
-    search: { hidden: true }
+    search: {
+      component: 'Input',
+      colProps: { span: 6 },
+      componentProps: { clearable: true, placeholder: '请输入组名称', style: { width: '100%' } }
+    }
   },
   {
     field: 'memberCount',
@@ -230,19 +216,10 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'description',
     label: '用途说明',
     minWidth: 220,
-    search: { hidden: true }
-  },
-  {
-    field: 'enabled',
-    label: '状态',
-    width: '90px',
-    search: { hidden: true },
-    table: {
-      slots: {
-        default: ({ row }: { row: DeviceGroupItem }) => (
-          <ElTag type={row.enabled ? 'success' : 'info'}>{row.enabled ? '启用' : '停用'}</ElTag>
-        )
-      }
+    search: {
+      component: 'Input',
+      colProps: { span: 6 },
+      componentProps: { clearable: true, placeholder: '请输入用途说明', style: { width: '100%' } }
     }
   },
   {
@@ -250,6 +227,31 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '更新时间',
     minWidth: 160,
     search: { hidden: true }
+  },
+  {
+    field: 'enabled',
+    label: '状态',
+    width: '96px',
+    fixed: 'right',
+    search: {
+      component: 'Select',
+      colProps: { span: 6 },
+      componentProps: {
+        options: enabledOptions,
+        clearable: true,
+        placeholder: '全部',
+        style: { width: '100%' }
+      }
+    },
+    table: {
+      slots: {
+        default: ({ row }: { row: DeviceGroupItem }) => (
+          <BaseButton type={row.enabled ? 'success' : 'info'} size="small">
+            {row.enabled ? '启用' : '停用'}
+          </BaseButton>
+        )
+      }
+    }
   },
   {
     field: 'action',

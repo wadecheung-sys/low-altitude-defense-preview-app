@@ -7,7 +7,7 @@ import type { ThreatSimulateResult } from '@/api/lad/threat/types'
 import { UI } from '../threatConstants'
 import { dictEntriesToOptions, LAD_DICT_AREA_REGION_TYPE } from '../../shared/ladDictHelpers'
 import { useLadDictOptions } from '../../shared/useLadDictOptions'
-import { targetTypeOptions } from '../../shared/ladOptionConstants'
+import { listTypeOptions, targetModelOptions } from '../../shared/ladOptionConstants'
 import { ElAlert, ElForm, ElFormItem, ElInputNumber, ElOption, ElSelect } from 'element-plus'
 
 const props = defineProps<{
@@ -39,7 +39,8 @@ const L = {
   stay: '逗留 (min)',
   intrusion: '入侵次数',
   swarmCount: '蜂群机数',
-  targetType: '目标类型',
+  targetType: '名单类型',
+  targetModel: '目标型号',
   areaRegionType: '区域类型',
   temperature: '温度',
   humidity: '湿度',
@@ -48,9 +49,7 @@ const L = {
   run: '开始模拟'
 }
 
-const simulateTargetTypeOptions = targetTypeOptions.filter(
-  (o) => o.value !== '全部' && o.value !== '无人机蜂群'
-)
+const simulateTargetTypeOptions = listTypeOptions.filter((o) => o.value !== '全部')
 
 const form = ref({
   speed: 6,
@@ -58,6 +57,7 @@ const form = ref({
   intrusionCount: 1,
   swarmCount: 4,
   targetType: simulateTargetTypeOptions[0]?.value || '未知',
+  targetModel: 'DJI Mavic 3',
   areaRegionType: 'warning',
   temperature: 30,
   humidity: 60,
@@ -84,6 +84,16 @@ async function onRun() {
         <ElSelect v-model="form.targetType" class="w-full">
           <ElOption
             v-for="opt in simulateTargetTypeOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </ElSelect>
+      </ElFormItem>
+      <ElFormItem :label="L.targetModel">
+        <ElSelect v-model="form.targetModel" class="w-full" filterable>
+          <ElOption
+            v-for="opt in targetModelOptions"
             :key="opt.value"
             :label="opt.label"
             :value="opt.value"

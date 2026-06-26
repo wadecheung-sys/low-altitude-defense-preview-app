@@ -1,5 +1,6 @@
 import { buildDisposalTimeline } from './disposalTimeline'
 import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore'
+import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
 import type {
   HistoryEventDetail,
   HistoryEventItem,
@@ -11,7 +12,7 @@ import type {
   TrajectoryPoint
 } from './types'
 
-const models = ['DJI Mavic 3', 'DJI Mini 3 Pro', 'Autel EVO II', 'Parrot Anafi', '未知型号']
+const models = LAD_TARGET_MODELS.filter((item) => item !== '其他')
 const trajectories = ['直线逼近', '盘旋', '悬停', '快速穿越', '不规则']
 const threatLevels: ThreatLevel[] = ['高', '中', '低', '未知']
 const handlingResults = ['驱离成功', '迫降成功', '激光打击成功', '无线电压制成功']
@@ -101,7 +102,7 @@ function buildSeedList() {
         manualConfirmStatus: i % 5 === 0 ? '躁扰告警' : '真实入侵',
         listType: '未知',
         remark: keepOpen
-          ? '等待值守人员人工确认'
+          ? '等待值守人员人工核查'
           : forceEnded
             ? '事件未执行反制，目标已自然结束'
             : i % 7 === 0
@@ -177,7 +178,7 @@ function applyConfirm(
       row.handlingResult = '待执行'
       row.countermeasureDevice = '--'
     }
-    row.remark = remark || `人工确认真实入侵，威胁等级${threatLevel}`
+    row.remark = remark || `人工核查真实入侵，威胁等级${threatLevel}`
     return
   }
 
@@ -186,7 +187,7 @@ function applyConfirm(
     row.handlingStatus = '已结束'
     row.handlingResult = '未执行反制'
     row.countermeasureDevice = '--'
-    row.remark = remark || `人工确认为躁扰告警（${nuisanceType || '其他'}），已关闭告警`
+    row.remark = remark || `人工核查为躁扰告警（${nuisanceType || '其他'}），已关闭告警`
     return
   }
 }

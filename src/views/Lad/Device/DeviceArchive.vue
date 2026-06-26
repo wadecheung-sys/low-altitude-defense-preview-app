@@ -186,7 +186,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'archiveName',
-    label: '档案',
+    label: '档案名称',
     minWidth: 180,
     search: {
       component: 'Input',
@@ -273,7 +273,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: DeviceArchiveItem }) => (
           <>
-            <BaseButton type="primary" onClick={() => goDetail(row)}>
+            <BaseButton type="success" onClick={() => goDetail(row)}>
               详情
             </BaseButton>
             <BaseButton type="primary" onClick={() => openEdit(row)}>
