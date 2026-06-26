@@ -382,10 +382,3 @@ object.img {
 #ios-safari-fixed div {
     pointer-events: auto;
 }
-
-div.annnote,
-div.annnotelabel,
-div.annnoteimage,
-div.annnoteline {
-    display: none !important;
-}
