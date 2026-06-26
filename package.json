@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
-    "@iconify/iconify": "^3.1.1",
     "@iconify/vue": "^4.3.0",
     "@vueuse/core": "^12.3.0",
     "@wangeditor/editor": "^5.1.23",
@@ -64,7 +63,6 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
-    "@iconify/json": "^2.2.293",
     "@intlify/unplugin-vue-i18n": "^6.0.3",
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.7",
@@ -119,7 +117,6 @@
     "vite-plugin-eslint": "^1.8.1",
     "vite-plugin-mock": "2.9.6",
     "vite-plugin-progress": "^0.0.7",
-    "vite-plugin-purge-icons": "^0.10.0",
     "vite-plugin-style-import": "2.0.0",
     "vite-plugin-svg-icons": "^2.0.1",
     "vite-plugin-url-copy": "^1.1.4",

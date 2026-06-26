@@ -18,19 +18,15 @@ export const filterBreadcrumb = (
       continue
     }
 
-    const data: AppRouteRecordRaw =
-      !meta.alwaysShow && route.children?.length === 1
-        ? { ...route.children[0], path: pathResolve(route.path, route.children[0].path) }
-        : { ...route }
+    // 保留完整父级链路；单子路由不再折叠（避免「预案策略配置」等缺一级面包屑）
+    const data: AppRouteRecordRaw = { ...route }
 
     data.path = pathResolve(parentPath, data.path)
 
     if (data.children) {
       data.children = filterBreadcrumb(data.children, data.path)
     }
-    if (data) {
-      res.push(data)
-    }
+    res.push(data)
   }
   return res
 }

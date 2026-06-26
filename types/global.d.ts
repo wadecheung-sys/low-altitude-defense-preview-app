@@ -88,11 +88,5 @@ declare global {
     readonly VITE_AMAP_KEY: string
     /** 高德安全密钥（2021 年后申请的 Key 通常需要） */
     readonly VITE_AMAP_SECURITY_CODE: string
-    /** Cesium Ion Access Token（指挥控制中心） */
-    readonly VITE_CESIUM_ION_TOKEN: string
-    readonly VITE_CITY_DEMO_LNG?: string
-    readonly VITE_CITY_DEMO_LAT?: string
-    readonly VITE_CAMPUS_TILESET_URL?: string
-    readonly VITE_DEMO_SHOW_IMAGERY?: string
   }
 }

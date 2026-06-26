@@ -13,6 +13,12 @@ interface Icon {
 
 async function generateIcon() {
   const dir = path.resolve(process.cwd(), 'node_modules/@iconify/json')
+  if (!(await fs.pathExists(dir))) {
+    console.error(
+      'Missing @iconify/json. Install temporarily: npm i -D @iconify/json && npm run icon'
+    )
+    process.exit(1)
+  }
 
   const raw = await fs.readJSON(path.join(dir, 'collections.json'))
 

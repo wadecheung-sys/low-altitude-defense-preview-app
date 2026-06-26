@@ -17,8 +17,8 @@
 
 | 包 | 约占用 | 用途 |
 |----|--------|------|
-| `@iconify/json` | ~400 MB | 图标 JSON（dev；`npm run icon` 用） |
-| `monaco-editor` | ~95 MB | 代码编辑器组件（Form 基础设施） |
+| `@iconify/json` | 按需临时安装 | `npm run icon` 时 `npm i -D @iconify/json` |
+| `monaco-editor` | ~95 MB | Form 基础设施（CodeEditor） |
 | `echarts` | ~50 MB | 图表组件（共享组件库保留） |
 | `element-plus` | ~40 MB | UI 框架 |
 | `leaflet` / `@amap/*` | 较小 | LAD 区域/设备 GIS |
