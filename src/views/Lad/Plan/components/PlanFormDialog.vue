@@ -309,7 +309,7 @@ watch(
 
 async function onSave() {
   if (!form.value.planCode.trim() || !form.value.planName.trim()) {
-    ElMessage.warning('璇峰～鍐欓妗堢紪鍙蜂笌鍚嶇О')
+    ElMessage.warning('请填写预案编号与名称')
     return
   }
   if (!triggerRules.value.length) {

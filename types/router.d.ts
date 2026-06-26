@@ -59,6 +59,8 @@ interface RouteMetaCustom extends Record<string | number | symbol, unknown> {
   styleKernel?: string[]
   /** LAD：阶段备注 */
   phaseNote?: string
+  /** LAD：getParentLayout 包装路由，面包屑跳过本层、保留子节点 */
+  breadcrumbWrap?: boolean
 }
 
 declare module 'vue-router' {

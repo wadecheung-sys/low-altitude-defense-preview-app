@@ -206,7 +206,8 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         name: 'LadDeviceInfoWrap',
         meta: {
           title: '设备信息',
-          reqModule: '4-信息'
+          reqModule: '4-信息',
+          breadcrumbWrap: true
         },
         children: [
           {
@@ -415,7 +416,8 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         name: 'LadSystemDictWrap',
         meta: {
           title: '字典管理',
-          reqModule: '8-字典'
+          reqModule: '8-字典',
+          breadcrumbWrap: true
         },
         children: [
           {

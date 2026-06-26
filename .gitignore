@@ -11,3 +11,7 @@ stats.html
 *.log
 .codex-dev*.log
 dev-server*.log
+
+# 生成物与检查输出
+artifacts/**/outputs/
+artifacts/requirements-v*/

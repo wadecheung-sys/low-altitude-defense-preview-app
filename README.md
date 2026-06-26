@@ -2,12 +2,12 @@
 
 基于 Vue 3 + Element Plus + Vite 的管理端，由 `reference/vue-element-plus-admin` 脚手架初始化，并按 `raw/` 原型持续定制。
 
+> **体积说明**：本地 `node_modules` 约 1 GB 属正常（未进 Git）。结构说明见 [`docs/STRUCTURE.md`](docs/STRUCTURE.md)。
+
 ## 环境要求
 
 - Node.js **>= 18**
-- **npm**（推荐，脚本已统一为 npm 友好；无需安装 pnpm）
-
-可选：若团队已使用 pnpm，仍可 `pnpm install` / `pnpm dev`，与 `pnpm-lock.yaml` 一致。
+- **npm**（`.npmrc` 已配置 `legacy-peer-deps`）
 
 ## 快速开始
 
@@ -38,6 +38,8 @@ npm run dev
 | 命令                  | 说明                     |
 | --------------------- | ------------------------ |
 | `npm run dev`         | 本地开发（默认端口见下） |
+| `npm run clean:dist`  | 删除 dist / stats 等构建产物 |
+| `npm run clean:cache` | 删除 Vite 预构建缓存 |
 | `npm run build:pro`   | 生产构建                 |
 | `npm run build:dev`   | 开发模式构建             |
 | `npm run serve:pro`   | 预览生产构建产物         |
@@ -60,9 +62,9 @@ server: {
 
 ## 包管理说明
 
-- 本目录脚本**不再调用 `pnpm`**，避免本机未安装 pnpm 时报错。
-- 根目录 `.npmrc` 已设置 `legacy-peer-deps=true`，直接 `npm install` 即可。
-- 仓库内保留 `pnpm-lock.yaml` 仅作上游参照；以 **npm + package.json** 为准维护依赖。
+- 本目录**仅使用 npm**（`package-lock.json` 为准）。
+- `.npmrc` 已设置 `legacy-peer-deps=true`，直接 `npm install` 即可。
+- `node_modules` 不提交 Git；克隆后需重新 `npm install`。
 
 ## 当前进度
 
