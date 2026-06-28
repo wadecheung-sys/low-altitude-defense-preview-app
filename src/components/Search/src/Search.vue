@@ -36,7 +36,7 @@ const props = defineProps({
   expandField: propTypes.string.def(''),
   /** 是否默认展开；筛选项较多且 show-expand 时建议 false（默认收起） */
   expandDefault: propTypes.bool.def(false),
-  /** 筛选项超过一行时自动启用展开/折叠（默认按 inline 一行约 4 项判定） */
+  /** 筛选项超过 3 个（即 4 个及以上）时自动启用展开/折叠 */
   autoExpand: propTypes.bool.def(true),
   inline: propTypes.bool.def(true),
   // 是否去除空值项

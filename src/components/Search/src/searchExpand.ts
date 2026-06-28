@@ -1,10 +1,10 @@
 import type { FormSchema } from '@/components/Form'
 
 /**
- * inline 表单项 min-width 约 229.5px（见 Form.vue），常规宽度下一行约容纳 4 个筛选项。
- * 用作「超过一行需展开/折叠」的默认判定阈值。
+ * inline 筛选项默认首行展示数量。
+ * 筛选项超过该数量（即 4 个及以上）时自动启用展开/折叠，从第 4 项起默认收起。
  */
-export const SEARCH_INLINE_FIELDS_PER_ROW = 4
+export const SEARCH_INLINE_FIELDS_PER_ROW = 3
 
 export function getVisibleSearchFields(schema: FormSchema[]): FormSchema[] {
   return schema.filter((item) => item.field !== 'action' && !item.hidden)

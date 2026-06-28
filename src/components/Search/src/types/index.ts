@@ -12,7 +12,7 @@ export interface SearchProps {
   expandField?: string
   /** 是否默认展开筛选项；false = 默认收起（本项目列表页约定） */
   expandDefault?: boolean
-  /** 超过一行（默认 >4 个筛选项）时自动启用展开/折叠 */
+  /** 超过 3 个筛选项（即 4 个及以上）时自动启用展开/折叠 */
   autoExpand?: boolean
   inline?: boolean
   removeNoValueItem?: boolean

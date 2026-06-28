@@ -15,6 +15,7 @@ import { listTypeTagType, threatLevelDisplay, threatLevelTagType } from '../shar
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import DisposalTimelinePanel from './components/DisposalTimelinePanel.vue'
 import TrajectoryReplay from './components/TrajectoryReplay.vue'
+import LadVideoMonitor from '../shared/LadVideoMonitor.vue'
 
 defineOptions({
   name: 'LadIncidentTargetDetail'
@@ -157,6 +158,23 @@ const showManualConfirm = computed(() => {
   )
 })
 
+const eoConnected = computed(() => {
+  const device = viewDetail.value?.detectionDevice || ''
+  return device.includes('光电')
+})
+
+const eoChannelLabel = computed(() => {
+  const device = viewDetail.value?.detectionDevice || ''
+  const match = device.match(/光电[-\w]*/)
+  return match?.[0] || '光电-01'
+})
+
+const eoLocationLabel = computed(() => {
+  const detail = viewDetail.value
+  if (!detail) return '事件关联区域'
+  return `${detail.targetModel || '--'} · ${detail.targetId || '--'}`
+})
+
 const openManualConfirm = () => {
   if (!detail.value) return
   confirmVisible.value = true
@@ -208,13 +226,7 @@ onMounted(async () => {
 
     <template v-if="viewDetail">
       <el-row :gutter="16" class="detail-info">
-        <el-col :xs="24" :md="7" :lg="6">
-          <div class="detail-info__image">
-            <span class="detail-info__image-label">无人机光电图像</span>
-            <span class="detail-info__image-hint">暂无图像，接入光电后展示</span>
-          </div>
-        </el-col>
-        <el-col :xs="24" :md="17" :lg="18">
+        <el-col :span="24">
           <div class="detail-info__desc-title">基本信息</div>
           <ElDescriptions :column="3" border size="small">
             <ElDescriptionsItem label="目标ID">{{ viewDetail.targetId }}</ElDescriptionsItem>
@@ -272,13 +284,27 @@ onMounted(async () => {
         </el-col>
       </el-row>
 
-      <section v-if="viewDetail.disposalTimeline?.length" class="detail-timeline-section">
-        <div class="detail-timeline-section__title">设备处置时间链</div>
-        <p class="detail-timeline-section__hint">
-          展示小型低空飞行物从发现、识别、评估、处置到复盘归档的全过程记录。
-        </p>
-        <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
-      </section>
+      <div v-if="viewDetail.disposalTimeline?.length" class="detail-split-layout">
+        <section class="detail-split-layout__timeline detail-timeline-section">
+          <div class="detail-timeline-section__title">设备处置时间链</div>
+          <p class="detail-timeline-section__hint">
+            展示小型低空飞行物从发现、识别、评估、处置到复盘归档的全过程记录。
+          </p>
+          <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
+        </section>
+        <section class="detail-split-layout__eo detail-eo-section">
+          <div class="detail-eo-section__title">无人机光电</div>
+          <LadVideoMonitor
+            :channel-label="eoChannelLabel"
+            :location-label="eoLocationLabel"
+            camera-label="光电跟踪 / 无人机目标"
+            :timestamp="viewDetail.discoveredAt"
+            :live="eoConnected"
+            :screenshot-name-prefix="`光电截图_${viewDetail.targetId}`"
+            empty-text="暂无光电画面，接入光电设备后展示"
+          />
+        </section>
+      </div>
 
       <div class="detail-map-section">
         <div class="detail-map-section__title">地图轨迹</div>
@@ -363,31 +389,6 @@ onMounted(async () => {
     color: var(--el-text-color-primary);
   }
 
-  &__image {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    padding: 16px;
-    text-align: center;
-    background: var(--el-fill-color-light);
-    border: 1px dashed var(--el-border-color);
-    border-radius: 8px;
-  }
-
-  &__image-label {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-  }
-
-  &__image-hint {
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-
   &__confidence {
     display: block;
     margin-top: 4px;
@@ -396,8 +397,35 @@ onMounted(async () => {
   }
 }
 
-.detail-timeline-section {
+.detail-split-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
   margin-bottom: 20px;
+
+  &__timeline,
+  &__eo {
+    min-width: 0;
+    width: 100%;
+  }
+
+  @media (max-width: 991px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail-eo-section {
+  &__title {
+    margin-bottom: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+}
+
+.detail-timeline-section {
+  height: 100%;
   padding: 14px 16px;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);

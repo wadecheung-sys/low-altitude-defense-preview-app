@@ -573,8 +573,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      show-expand
-      expand-field="threatLevel"
       @search="setSearchParams"
       @reset="setSearchParams"
     />

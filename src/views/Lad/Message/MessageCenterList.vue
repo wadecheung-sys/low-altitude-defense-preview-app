@@ -165,8 +165,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      show-expand
-      expand-field="occurredAtRange"
       @search="setSearchParams"
       @reset="setSearchParams"
     />
