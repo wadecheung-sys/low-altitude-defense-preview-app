@@ -145,7 +145,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'archiveInfo',
-    label: '档案信息',
+    label: '档案指标',
     minWidth: 140,
     search: { hidden: true },
     table: { showOverflowTooltip: true }
@@ -244,8 +244,8 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      is-col
-      label-width="88px"
+      show-expand
+      expand-field="deployLocation"
       @search="setSearchParams"
       @reset="setSearchParams"
     />

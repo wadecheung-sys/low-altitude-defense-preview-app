@@ -278,11 +278,12 @@ allList.forEach((row, i) => {
       ...defaultExtForRow(row, i),
       extendedFields: defaultExtendedFields(row, i)
     }
-  } else if (!detailExt[row.id]!.extendedFields?.length) {
+  } else   if (!detailExt[row.id]!.extendedFields?.length) {
     detailExt[row.id]!.extendedFields = defaultExtendedFields(row, i)
   }
-  if (!row.archiveId && i < 5) {
-    row.archiveId = `da-${10001 + i}`
+  if (!row.archiveId) {
+    const genIndex = Number.parseInt(row.id.replace(/^di-/, ''), 10) - 10006
+    row.archiveId = genIndex >= 0 ? `da-${10006 + (genIndex % 30)}` : `da-${10001 + (i % 5)}`
   }
 })
 

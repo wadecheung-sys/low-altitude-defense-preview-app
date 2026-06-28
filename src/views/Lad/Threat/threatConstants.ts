@@ -1,8 +1,33 @@
+import type { DictEntryItem } from '@/api/lad/system/types'
+import { allOption, targetModelOptions } from '../shared/ladOptionConstants'
+
 /** 查询栅格布局（与预案策略页一致） */
 export const THREAT_SEARCH_COL = { span: 6 } as const
 
+/** 威胁评估页目标型号（不含蜂群目标） */
+export const threatTargetModelOptions = targetModelOptions.filter((o) => o.value !== '蜂群目标')
+
+/** 表单/模拟测试共用的「全部型号」选项 */
+export const threatTargetModelAllOption = { label: '全部型号', value: '全部型号' } as const
+
+/** 编辑、模拟测试等表单下拉（与列表筛选项区分） */
+export const threatTargetModelSelectOptions = [
+  threatTargetModelAllOption,
+  ...threatTargetModelOptions
+]
+
+/** 列表筛选：首项「全部」表示不过滤 */
+export const threatTargetModelFilterOptions = [allOption, ...threatTargetModelOptions]
+
+/** 表单/筛选共用的威胁等级下拉（首项「全部」） */
+export function buildThreatLevelSelectOptions(entries: DictEntryItem[]) {
+  return [
+    allOption,
+    ...entries.map((item) => ({ label: item.label, value: item.label }))
+  ]
+}
+
 export const UI = {
-  ruleCode: '规则编号',
   ruleName: '规则名称',
   threatLevel: '威胁等级',
   threatLevelHint:
@@ -14,7 +39,6 @@ export const UI = {
   swarmCount: '蜂群机数',
   targetProperty: '目标属性',
   status: '状态',
-  updatedBy: '更新人',
   area: '区域',
   priority: '优先级',
   conditions: '触发条件',
@@ -31,6 +55,19 @@ export const UI = {
   dialogAdd: '新增规则',
   dialogEdit: '编辑规则',
   dialogSimulate: '模拟测试',
+  simulateTabGeneral: '一般模式',
+  simulateTabSwarm: '蜂群模式',
+  simulateGeneralPresetHint:
+    '默认参数可命中规则「保护区-自动驱离」；表单字段与编辑规则一致（不含规则名称），命中后在下方显示规则名称与处置结果。',
+  simulateSwarmPresetHint: '默认参数可命中蜂群反制类规则，用于对比一般模式与蜂群模式的评估差异。',
+  simulateRun: '开始模拟',
+  simulateResultSuccess: '模拟命中规则',
+  simulateResultFail: '模拟未命中',
+  simulateMatchedRule: '命中规则',
+  simulateDisposalMode: '处置模式',
+  simulateTriggerStrategy: '预案触发策略',
+  simulateDeviceAction: '设备动作',
+  fallbackTag: '兜底',
   dialogDetail: '规则详情',
   detailThreatLevel: '威胁等级',
   detailAlarmLevel: '告警等级参考',

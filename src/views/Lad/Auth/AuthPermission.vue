@@ -69,6 +69,7 @@ function openEdit(row: AuthPermissionNode) {
 onMounted(loadTree)
 
 const tableColumns = reactive<TableColumn[]>([
+  { field: 'index', label: '序号', type: 'index', width: 65 },
   { field: 'name', label: '权限名称', minWidth: 200, showOverflowTooltip: true },
   {
     field: 'permCode',

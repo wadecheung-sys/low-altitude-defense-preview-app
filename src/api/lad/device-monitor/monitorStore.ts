@@ -1,5 +1,5 @@
 import { queryDeviceArchiveDetail } from '../device/archiveStore'
-import { queryDeviceInfoList } from '../device-info/infoStore'
+import { queryDeviceInfoDetail, queryDeviceInfoList } from '../device-info/infoStore'
 import type { DeviceInfoItem } from '../device-info/types'
 import type {
   DeviceMonitorItem,
@@ -63,9 +63,20 @@ function buildMetrics(seed: number, online: DeviceOnlineStatus) {
   }
 }
 
+function cloneLinkedArchive(detail: ReturnType<typeof queryDeviceInfoDetail>) {
+  if (!detail?.linkedArchive) return null
+  const arch = detail.linkedArchive
+  return {
+    ...arch,
+    indicators: arch.indicators.map((indicator) => ({ ...indicator }))
+  }
+}
+
 function enrichMonitorRow(row: DeviceInfoItem): DeviceMonitorItem {
   const seed = hashSeed(row.id)
   const onlineStatus = resolveRunStatus(row)
+  const infoDetail = queryDeviceInfoDetail(row.id)
+  const linkedArchive = cloneLinkedArchive(infoDetail)
   const archive = row.archiveId ? queryDeviceArchiveDetail(row.archiveId) : null
   const runtimeSec = onlineStatus === '离线' ? seed % 120 : 3600 * (4 + (seed % 48)) + (seed % 3600)
   const metrics = buildMetrics(seed, onlineStatus)
@@ -81,12 +92,16 @@ function enrichMonitorRow(row: DeviceInfoItem): DeviceMonitorItem {
     onlineStatus,
     runtimeText: formatRuntime(runtimeSec),
     metrics,
-    manufacturer: archive?.vendor || VENDOR_BY_TYPE[row.deviceType] || '—',
-    deviceModel: archive?.deviceModel || MODEL_BY_TYPE[row.deviceType] || '—',
+    manufacturer:
+      linkedArchive?.vendor || archive?.vendor || VENDOR_BY_TYPE[row.deviceType] || '—',
+    deviceModel:
+      linkedArchive?.deviceModel || archive?.deviceModel || MODEL_BY_TYPE[row.deviceType] || '—',
     personInCharge: row.personInCharge,
     lastHeartbeat: row.lastHeartbeat,
     hasAlert: metrics.alertCount >= 10 || onlineStatus === '异常',
-    imageUrl: archive?.imageUrl ?? null
+    imageUrl: linkedArchive?.imageUrl ?? archive?.imageUrl ?? null,
+    archiveInfo: row.archiveInfo,
+    linkedArchive
   }
 }
 

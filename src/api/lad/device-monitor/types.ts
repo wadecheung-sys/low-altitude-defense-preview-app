@@ -1,4 +1,4 @@
-import type { DeviceInfoKind } from '../device-info/types'
+import type { DeviceInfoKind, DeviceLinkedArchive } from '../device-info/types'
 
 /** 设备运行监控页展示的运行状态 */
 export type DeviceOnlineStatus = '正常' | '离线' | '异常'
@@ -30,6 +30,10 @@ export interface DeviceMonitorItem {
   lastHeartbeat: string
   hasAlert: boolean
   imageUrl: string | null
+  /** 与设备信息页一致的档案摘要文案 */
+  archiveInfo: string
+  /** 设备信息页关联的基础档案（含指标当前值） */
+  linkedArchive: DeviceLinkedArchive | null
 }
 
 export interface DeviceMonitorQuery {

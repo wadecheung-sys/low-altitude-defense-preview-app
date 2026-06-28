@@ -43,7 +43,6 @@ const deviceOptions = ref<DeviceInfoItem[]>([])
 
 const form = reactive({
   id: '',
-  groupCode: '',
   groupName: '',
   groupType: defaultGroupType,
   description: '',
@@ -61,7 +60,6 @@ const memberNameMap = computed(() => {
 
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
-    groupCode: params.groupCode,
     groupName: params.groupName,
     description: params.description,
     enabled: params.enabled === 'true' ? true : params.enabled === 'false' ? false : undefined
@@ -92,7 +90,6 @@ const { getList } = tableMethods
 
 function resetForm() {
   form.id = ''
-  form.groupCode = ''
   form.groupName = ''
   form.groupType = defaultGroupType
   form.description = ''
@@ -108,7 +105,6 @@ function openCreate() {
 
 function openEdit(row: DeviceGroupItem) {
   form.id = row.id
-  form.groupCode = row.groupCode
   form.groupName = row.groupName
   form.groupType = row.groupType
   form.description = row.description
@@ -142,7 +138,6 @@ async function saveGroup() {
   }
   await saveDeviceGroupApi({
     id: form.id || undefined,
-    groupCode: form.groupCode,
     groupName: form.groupName,
     groupType: form.groupType,
     description: form.description,
@@ -169,16 +164,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: { hidden: true },
     form: { hidden: true },
     detail: { hidden: true }
-  },
-  {
-    field: 'groupCode',
-    label: '组编码',
-    minWidth: 130,
-    search: {
-      component: 'Input',
-      colProps: { span: 6 },
-      componentProps: { clearable: true, placeholder: '请输入组编码', style: { width: '100%' } }
-    }
   },
   {
     field: 'groupName',
@@ -283,8 +268,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      is-col
-      label-width="88px"
       @search="setSearchParams"
       @reset="setSearchParams"
     />
@@ -305,9 +288,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
     <ElDialog v-model="dialogVisible" :title="dialogTitle" width="720px" destroy-on-close>
       <ElForm label-width="100px">
-        <ElFormItem label="组编码">
-          <ElInput v-model="form.groupCode" placeholder="为空时自动生成" />
-        </ElFormItem>
         <ElFormItem label="组名称">
           <ElInput v-model="form.groupName" placeholder="请输入设备组名称" />
         </ElFormItem>

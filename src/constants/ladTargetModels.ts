@@ -9,7 +9,6 @@ export const LAD_TARGET_MODELS = [
   'Autel EVO II',
   '大疆经纬 M30',
   'Parrot Anafi',
-  '蜂群目标',
   '未知型号',
   '其他'
 ]

@@ -93,6 +93,7 @@ async function runCheck() {
       <BaseButton type="primary" :loading="checking" @click="runCheck">立即诊断</BaseButton>
     </div>
     <ElTable :data="items" border stripe>
+      <ElTableColumn type="index" label="序号" width="65" align="center" />
       <ElTableColumn prop="module" label="检测项" min-width="160" />
       <ElTableColumn label="状态" width="100">
         <template #default="{ row }">

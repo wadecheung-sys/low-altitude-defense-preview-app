@@ -1,7 +1,16 @@
 <script setup lang="tsx">
 import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
+import {
+  ElLink,
+  ElMessage,
+  ElMessageBox,
+  ElOption,
+  ElRadio,
+  ElRadioGroup,
+  ElSelect,
+  ElTag
+} from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Dialog } from '@/components/Dialog'
 import { Search } from '@/components/Search'
@@ -17,11 +26,22 @@ import {
 import type {
   HandlingStatus,
   HistoryEventItem,
-  ManualConfirmStatus,
-  ThreatLevel
+  ManualConfirmStatus
 } from '@/api/lad/incident/types'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import { targetModelOptions } from '../shared/ladOptionConstants'
+import {
+  THREAT_LEVEL_OPTIONS,
+  listTypeTagType,
+  threatLevelDisplay,
+  threatLevelTagType
+} from '../shared/ladDictHelpers'
+
+const historyListTypeOptions = [
+  { label: '黑名单', value: '黑名单' },
+  { label: '白名单', value: '白名单' },
+  { label: '未知', value: '未知' }
+]
 
 defineOptions({
   name: 'LadIncidentHistory'
@@ -34,13 +54,17 @@ const searchParams = ref<Recordable>({})
 const confirmVisible = ref(false)
 const confirmRow = ref<HistoryEventItem>()
 const exportVisible = ref(false)
-const exportFormat = ref<'word' | 'excel'>('excel')
+type ExportRange = 'all' | 'query' | 'selected'
+type ExportFormat = 'excel' | 'word'
+const exportRange = ref<ExportRange>('query')
+const exportFormat = ref<ExportFormat>('excel')
 const delLoading = ref(false)
 const listLoading = ref(false)
 
 const setSearchParams = (params: Recordable) => {
   const range = params.discoveredAtRange as string[] | undefined
   searchParams.value = {
+    listType: params.listType,
     targetModel: params.targetModel,
     uavSn: params.uavSn,
     targetId: params.targetId,
@@ -49,21 +73,12 @@ const setSearchParams = (params: Recordable) => {
     manualConfirmStatus: params.manualConfirmStatus,
     detectionDevice: params.detectionDevice,
     countermeasureDevice: params.countermeasureDevice,
-    handlingResult: params.handlingResult,
-    pilotLocated: params.pilotLocated,
     discoveredAtStart: range?.[0],
     discoveredAtEnd: range?.[1]
   }
   currentPage.value = 1
   getList()
 }
-
-const threatLevelOptions = [
-  { label: '高', value: '高' },
-  { label: '中', value: '中' },
-  { label: '低', value: '低' },
-  { label: '未知', value: '未知' }
-]
 
 const handlingStatusOptions = [
   { label: '待处置', value: '待处置' },
@@ -85,15 +100,6 @@ const countermeasureOptions = [
   { label: '诱骗-02', value: '诱骗-02' },
   { label: '干扰-01 (人工)', value: '干扰-01 (人工)' },
   { label: '激光-01 (待命)', value: '激光-01 (待命)' }
-]
-
-const handlingResultOptions = [
-  { label: '自动监控中', value: '自动监控中' },
-  { label: '驱离成功', value: '驱离成功' },
-  { label: '迫降成功', value: '迫降成功' },
-  { label: '激光打击成功', value: '激光打击成功' },
-  { label: '无线电压制成功', value: '无线电压制成功' },
-  { label: '未执行反制', value: '未执行反制' }
 ]
 
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
@@ -127,16 +133,6 @@ const { loading, dataList, total, currentPage, pageSize } = tableState
 const { getList, getElTableExpose, delList } = tableMethods
 
 getList()
-
-const threatTagType = (level: ThreatLevel) => {
-  const map: Record<ThreatLevel, 'danger' | 'warning' | 'success' | 'info'> = {
-    高: 'danger',
-    中: 'warning',
-    低: 'success',
-    未知: 'info'
-  }
-  return map[level]
-}
 
 const statusTagType = (status: HandlingStatus) => {
   const map: Record<HandlingStatus, 'info' | 'warning' | 'success' | 'danger'> = {
@@ -179,14 +175,40 @@ const onConfirmSuccess = () => {
   getList()
 }
 
-const openExportDialog = () => {
+const openExportDialog = async () => {
   exportFormat.value = 'excel'
+  const elTableExpose = await getElTableExpose()
+  const selected = elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined
+  exportRange.value = selected?.length ? 'selected' : 'query'
   exportVisible.value = true
 }
 
-const exportReport = () => {
-  const label = exportFormat.value === 'word' ? 'Word' : 'Excel'
-  ElMessage.success(`已生成历史事件 ${label} 报表（${unref(total)} 条，演示，未写入文件）`)
+const exportReport = async () => {
+  const elTableExpose = await getElTableExpose()
+  const selected = (elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined) ?? []
+  let count = 0
+  let rangeLabel = ''
+
+  if (exportRange.value === 'selected') {
+    count = selected.length
+    rangeLabel = '所选数据'
+    if (!count) {
+      ElMessage.warning('请先勾选要导出的记录')
+      return
+    }
+  } else if (exportRange.value === 'query') {
+    count = unref(total)
+    rangeLabel = '查询结果'
+  } else {
+    const res = await getHistoryEventListApi({ pageIndex: 1, pageSize: 1 })
+    count = res.data.total
+    rangeLabel = '所有数据'
+  }
+
+  const formatLabel = exportFormat.value === 'word' ? 'Word' : 'Excel'
+  ElMessage.success(
+    `已生成历史事件 ${formatLabel} 报表（${rangeLabel}，${count} 条，演示，未写入文件）`
+  )
   exportVisible.value = false
 }
 
@@ -287,7 +309,15 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'listType',
     label: '名单类型',
     minWidth: 96,
-    search: { hidden: true },
+    search: {
+      component: 'Select',
+      componentProps: {
+        placeholder: '请选择名单类型',
+        style: { width: '100%' },
+        clearable: true,
+        options: historyListTypeOptions
+      }
+    },
     table: {
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
@@ -398,35 +428,15 @@ const crudSchemas = reactive<CrudSchema[]>([
         placeholder: '请选择威胁等级',
         style: { width: '100%' },
         clearable: true,
-        options: threatLevelOptions
+        options: THREAT_LEVEL_OPTIONS
       }
     },
     table: {
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
-          <ElTag type={threatTagType(row.threatLevel)}>{row.threatLevel}</ElTag>
-        )
-      }
-    }
-  },
-  {
-    field: 'handlingStatus',
-    label: '处置状态',
-    minWidth: 96,
-    search: {
-      component: 'Select',
-      colProps: { span: 6 },
-      componentProps: {
-        placeholder: '请选择处置状态',
-        style: { width: '100%' },
-        clearable: true,
-        options: handlingStatusOptions
-      }
-    },
-    table: {
-      slots: {
-        default: ({ row }: { row: HistoryEventItem }) => (
-          <ElTag type={statusTagType(row.handlingStatus)}>{row.handlingStatus}</ElTag>
+          <ElTag type={threatLevelTagType(row.threatLevel)} size="small" effect="light">
+            {threatLevelDisplay(row.threatLevel)}
+          </ElTag>
         )
       }
     }
@@ -488,40 +498,26 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { showOverflowTooltip: true }
   },
   {
-    field: 'handlingResult',
-    label: '处置结果',
-    minWidth: 100,
+    field: 'handlingStatus',
+    label: '处置状态',
+    minWidth: 96,
     search: {
       component: 'Select',
       colProps: { span: 6 },
       componentProps: {
-        placeholder: '请选择处置结果',
+        placeholder: '请选择处置状态',
         style: { width: '100%' },
         clearable: true,
-        options: handlingResultOptions
+        options: handlingStatusOptions
       }
     },
-    table: { showOverflowTooltip: true }
-  },
-  {
-    field: 'pilotLocated',
-    label: '飞手定位',
-    search: {
-      component: 'Select',
-      colProps: { span: 6 },
-      componentProps: {
-        placeholder: '飞手是否已定位',
-        style: { width: '100%' },
-        clearable: true,
-        options: [
-          { label: '已定位', value: '已定位' },
-          { label: '未定位', value: '未定位' }
-        ]
+    table: {
+      slots: {
+        default: ({ row }: { row: HistoryEventItem }) => (
+          <ElTag type={statusTagType(row.handlingStatus)}>{row.handlingStatus}</ElTag>
+        )
       }
-    },
-    table: { hidden: true },
-    form: { hidden: true },
-    detail: { hidden: true }
+    }
   },
   {
     field: 'remark',
@@ -577,10 +573,8 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      is-col
-      label-width="100px"
-      :expand-rows="2"
-      :expand-default="false"
+      show-expand
+      expand-field="threatLevel"
       @search="setSearchParams"
       @reset="setSearchParams"
     />
@@ -609,29 +603,23 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
     <ManualConfirmDialog v-model="confirmVisible" :row="confirmRow" @success="onConfirmSuccess" />
 
-    <Dialog v-model="exportVisible" title="导出" width="520px" max-height="320px">
+    <Dialog v-model="exportVisible" title="导出数据" width="520px" max-height="400px">
       <div class="export-dialog">
-        <div class="export-dialog__block">
-          <div class="export-dialog__label">导出类型</div>
-          <div class="export-dialog__format-switch">
-            <BaseButton
-              :type="exportFormat === 'excel' ? 'primary' : 'default'"
-              @click="exportFormat = 'excel'"
-            >
-              Excel
-            </BaseButton>
-            <BaseButton
-              :type="exportFormat === 'word' ? 'primary' : 'default'"
-              @click="exportFormat = 'word'"
-            >
-              Word
-            </BaseButton>
-          </div>
+        <div class="export-dialog__row">
+          <div class="export-dialog__label">导出范围</div>
+          <ElRadioGroup v-model="exportRange" class="export-dialog__radios">
+            <ElRadio label="all">导出所有数据</ElRadio>
+            <ElRadio label="query">导出查询结果</ElRadio>
+            <ElRadio label="selected">导出所选数据</ElRadio>
+          </ElRadioGroup>
         </div>
 
-        <div class="export-dialog__block">
-          <div class="export-dialog__label">数据量</div>
-          <div class="export-dialog__count">{{ total }} 条</div>
+        <div class="export-dialog__row">
+          <div class="export-dialog__label">导出格式</div>
+          <ElSelect v-model="exportFormat" class="export-dialog__select" placeholder="请选择导出格式">
+            <ElOption label="Excel" value="excel" />
+            <ElOption label="Word" value="word" />
+          </ElSelect>
         </div>
       </div>
 
@@ -647,31 +635,36 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 .export-dialog {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 24px;
+  padding: 8px 0;
 
-  &__block {
+  &__row {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 16px;
   }
 
   &__label {
+    flex-shrink: 0;
+    width: 72px;
+    padding-top: 8px;
     font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
+    line-height: 22px;
+    color: var(--el-text-color-regular);
+    text-align: right;
   }
 
-  &__format-switch {
+  &__radios {
     display: flex;
-    gap: 10px;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    padding-top: 4px;
   }
 
-  &__count {
-    padding: 12px 14px;
-    font-size: 15px;
-    color: var(--el-color-primary);
-    background: var(--el-fill-color-light);
-    border-radius: 6px;
+  &__select {
+    flex: 1;
+    max-width: 320px;
   }
 }
 </style>

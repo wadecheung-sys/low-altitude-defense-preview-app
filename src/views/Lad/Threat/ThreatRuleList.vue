@@ -12,11 +12,12 @@ import {
   getThreatRuleListApi,
   toggleThreatRuleEnabledApi
 } from '@/api/lad/threat'
+import { isMonitorCatchAllRule } from '@/api/lad/threat/threatFallback'
 import type { ThreatRule } from '@/api/lad/threat/types'
 import ThreatRuleFormDialog from './components/ThreatRuleFormDialog.vue'
 import ThreatSimulateDialog from './components/ThreatSimulateDialog.vue'
 import ThreatRuleDetailDialog from './components/ThreatRuleDetailDialog.vue'
-import { THREAT_SEARCH_COL } from './threatConstants'
+import { THREAT_SEARCH_COL, buildThreatLevelSelectOptions, threatTargetModelFilterOptions, UI } from './threatConstants'
 import {
   LAD_DICT_THREAT_LEVEL,
   listTypeTagType,
@@ -25,20 +26,17 @@ import {
 } from '../shared/ladDictHelpers'
 import { useLadDictOptions } from '../shared/useLadDictOptions'
 import {
-  conditionPropertyOptions,
   listTypeOptions,
-  ruleStatusOptions,
-  targetModelOptionsWithAll
+  ruleStatusOptions
 } from '../shared/ladOptionConstants'
 
 defineOptions({ name: 'LadThreatRuleList' })
 
 const { entries: threatLevelEntries } = useLadDictOptions(LAD_DICT_THREAT_LEVEL)
 
-const threatLevelFilterOptions = computed(() => [
-  { label: '全部', value: '全部' },
-  ...threatLevelEntries.value.map((item) => ({ label: item.label, value: item.label }))
-])
+const threatLevelFilterOptions = computed(() =>
+  buildThreatLevelSelectOptions(threatLevelEntries.value)
+)
 
 const searchParams = ref<Recordable>({})
 const selectedIds = ref<string[]>([])
@@ -53,14 +51,11 @@ const searchFieldStyle = { width: '100%' }
 
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
-    ruleCode: params.ruleCode,
     ruleName: params.ruleName,
     threatLevel: params.threatLevel === '全部' ? undefined : params.threatLevel,
     targetType: params.targetType === '全部' ? undefined : params.targetType,
     targetModel: params.targetModel === '全部' ? undefined : params.targetModel,
-    status: !params.status || params.status === '全部' ? undefined : params.status,
-    targetProperty: params.targetProperty,
-    updatedBy: params.updatedBy
+    status: !params.enabled || params.enabled === '全部' ? undefined : params.enabled
   }
   currentPage.value = 1
   getList()
@@ -161,20 +156,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: { hidden: true }
   },
   {
-    field: 'ruleCode',
-    label: '规则编号',
-    search: {
-      component: 'Input',
-      colProps: THREAT_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入规则编号',
-        style: searchFieldStyle
-      }
-    },
-    table: { minWidth: 128, showOverflowTooltip: true }
-  },
-  {
     field: 'ruleName',
     label: '规则名称',
     search: {
@@ -191,9 +172,16 @@ const crudSchemas = reactive<CrudSchema[]>([
       showOverflowTooltip: true,
       slots: {
         default: ({ row }: { row: ThreatRule }) => (
-          <ElLink type="primary" underline={false} onClick={() => openDetail(row)}>
-            {row.ruleName}
-          </ElLink>
+          <span class="inline-flex items-center gap-6px">
+            <ElLink type="primary" underline={false} onClick={() => openDetail(row)}>
+              {row.ruleName}
+            </ElLink>
+            {isMonitorCatchAllRule(row) ? (
+              <ElTag type="info" size="small" effect="plain">
+                {UI.fallbackTag}
+              </ElTag>
+            ) : null}
+          </span>
         )
       }
     }
@@ -229,7 +217,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       component: 'Select',
       colProps: THREAT_SEARCH_COL,
       componentProps: {
-        options: targetModelOptionsWithAll,
+        options: threatTargetModelFilterOptions,
         clearable: true,
         filterable: true,
         placeholder: '全部',
@@ -282,11 +270,10 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'status',
+    field: 'enabled',
     label: '状态',
     search: {
       component: 'Select',
-      colProps: THREAT_SEARCH_COL,
       componentProps: {
         options: ruleStatusOptions,
         clearable: true,
@@ -294,47 +281,6 @@ const crudSchemas = reactive<CrudSchema[]>([
         style: searchFieldStyle
       }
     },
-    table: { hidden: true }
-  },
-  {
-    field: 'targetProperty',
-    label: '目标属性',
-    search: {
-      component: 'Select',
-      colProps: THREAT_SEARCH_COL,
-      componentProps: {
-        options: conditionPropertyOptions,
-        clearable: true,
-        placeholder: '请选择目标属性',
-        style: searchFieldStyle
-      }
-    },
-    table: { hidden: true }
-  },
-  {
-    field: 'updatedBy',
-    label: '更新人',
-    search: {
-      component: 'Input',
-      colProps: THREAT_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入更新人',
-        style: searchFieldStyle
-      }
-    },
-    table: { width: 96, showOverflowTooltip: true }
-  },
-  {
-    field: 'updatedAt',
-    label: '更新时间',
-    search: { hidden: true },
-    table: { width: 168, showOverflowTooltip: true }
-  },
-  {
-    field: 'enabled',
-    label: '状态',
-    search: { hidden: true },
     table: {
       width: 88,
       slots: {
@@ -384,10 +330,8 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      is-col
-      label-width="100px"
-      :expand-rows="2"
-      :expand-default="false"
+      show-expand
+      expand-field="threatLevel"
       @search="setSearchParams"
       @reset="setSearchParams"
     />

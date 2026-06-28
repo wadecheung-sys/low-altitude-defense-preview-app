@@ -1,4 +1,4 @@
-/** 场地与区域业务类型。 */
+/** 区域业务类型。 */
 export type AreaRegionType =
   | 'warning'
   | 'alert'
@@ -67,7 +67,7 @@ export interface AreaRegionQuery {
   siteCode?: string
   name?: string
   parentId?: string
-  /** 查询指定场地及其全部下级。 */
+  /** 查询指定区域及其全部下级。 */
   rootId?: string
   regionType?: AreaRegionType
   alarmEnabled?: boolean | 'true' | 'false' | ''

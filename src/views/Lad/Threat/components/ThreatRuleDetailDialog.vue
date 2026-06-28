@@ -46,7 +46,6 @@ watch(
 <template>
   <Dialog v-model="visible" title="规则详情" width="640px" max-height="85vh">
     <ElDescriptions v-loading="loading" :column="1" border>
-      <ElDescriptionsItem label="规则编号">{{ data?.rule.ruleCode }}</ElDescriptionsItem>
       <ElDescriptionsItem label="规则名称">{{ data?.rule.ruleName }}</ElDescriptionsItem>
       <ElDescriptionsItem label="名单类型">
         <ElTag
@@ -78,8 +77,6 @@ watch(
           {{ data?.rule.enabled ? '启用' : '停用' }}
         </ElTag>
       </ElDescriptionsItem>
-      <ElDescriptionsItem label="更新人">{{ data?.rule.updatedBy }}</ElDescriptionsItem>
-      <ElDescriptionsItem label="更新时间">{{ data?.rule.updatedAt }}</ElDescriptionsItem>
     </ElDescriptions>
     <template #footer>
       <BaseButton @click="visible = false">关闭</BaseButton>

@@ -1,6 +1,7 @@
 import { buildDisposalTimeline } from './disposalTimeline'
 import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore'
 import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
+import { normalizeThreatLevel } from '@/api/lad/threat/threatLevelUtils'
 import type {
   HistoryEventDetail,
   HistoryEventItem,
@@ -14,7 +15,7 @@ import type {
 
 const models = LAD_TARGET_MODELS.filter((item) => item !== '其他')
 const trajectories = ['直线逼近', '盘旋', '悬停', '快速穿越', '不规则']
-const threatLevels: ThreatLevel[] = ['高', '中', '低', '未知']
+const threatLevels: ThreatLevel[] = ['高危', '中危', '低危', '无危']
 const handlingResults = ['驱离成功', '迫降成功', '激光打击成功', '无线电压制成功']
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
 const zones = ['核心防护区A区', '缓冲区B区', '管制空域C区', '公共区域']
@@ -150,7 +151,7 @@ function updateRelatedEventCount() {
 function applyConfirm(
   row: HistoryEventItem,
   result: ManualConfirmResult,
-  threatLevel: ThreatLevel = '未知',
+  threatLevel: ThreatLevel = '无危',
   nuisanceType?: string,
   remark?: string
 ) {
@@ -161,15 +162,15 @@ function applyConfirm(
 
   if (result === '真实入侵') {
     row.threatLevel = threatLevel
-    if (threatLevel === '低') {
+    if (threatLevel === '低危') {
       row.handlingStatus = '处置中'
       row.handlingResult = '自动监控中'
       row.countermeasureDevice = '光电-01 (自动)'
-    } else if (threatLevel === '中') {
+    } else if (threatLevel === '中危') {
       row.handlingStatus = '已处置'
       row.handlingResult = '驱离成功'
       row.countermeasureDevice = '干扰-01 (自动)'
-    } else if (threatLevel === '高') {
+    } else if (threatLevel === '高危') {
       row.handlingStatus = '已处置'
       row.handlingResult = '激光打击成功'
       row.countermeasureDevice = '激光-01 (自动)'
@@ -183,7 +184,7 @@ function applyConfirm(
   }
 
   if (result === '躁扰告警') {
-    row.threatLevel = '低'
+    row.threatLevel = '低危'
     row.handlingStatus = '已结束'
     row.handlingResult = '未执行反制'
     row.countermeasureDevice = '--'
@@ -268,8 +269,11 @@ function filterList(params: HistoryEventQuery): HistoryEventItem[] {
   if (params.targetId?.trim()) {
     rows = rows.filter((row) => row.targetId === params.targetId!.trim())
   }
+  if (params.listType) {
+    rows = rows.filter((row) => row.listType === params.listType)
+  }
   if (params.threatLevel) {
-    rows = rows.filter((row) => row.threatLevel === params.threatLevel)
+    rows = rows.filter((row) => normalizeThreatLevel(row.threatLevel) === params.threatLevel)
   }
   if (params.handlingStatus) {
     rows = rows.filter((row) => row.handlingStatus === params.handlingStatus)
@@ -285,14 +289,6 @@ function filterList(params: HistoryEventQuery): HistoryEventItem[] {
   }
   if (params.countermeasureDevice) {
     rows = rows.filter((row) => row.countermeasureDevice === params.countermeasureDevice)
-  }
-  if (params.handlingResult) {
-    rows = rows.filter((row) => row.handlingResult === params.handlingResult)
-  }
-  if (params.pilotLocated === '已定位') {
-    rows = rows.filter((row) => row.pilotLocation !== '未定位')
-  } else if (params.pilotLocated === '未定位') {
-    rows = rows.filter((row) => row.pilotLocation === '未定位')
   }
   if (params.discoveredAtStart) {
     rows = rows.filter((row) => row.discoveredAt >= params.discoveredAtStart!)

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElAlert, ElDescriptions, ElDescriptionsItem, ElTag } from 'element-plus'
+import { ElAlert, ElDescriptions, ElDescriptionsItem, ElMessage, ElTag } from 'element-plus'
 import { getHistoryEventDetailApi } from '@/api/lad/incident'
 import type {
   DisposalTimelineNode,
@@ -11,6 +11,8 @@ import type {
 } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
+import { listTypeTagType, threatLevelDisplay, threatLevelTagType } from '../shared/ladDictHelpers'
+import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import DisposalTimelinePanel from './components/DisposalTimelinePanel.vue'
 import TrajectoryReplay from './components/TrajectoryReplay.vue'
 
@@ -25,6 +27,7 @@ const loading = ref(true)
 const detail = ref<HistoryEventDetail | null>(null)
 const loadError = ref('')
 const replayRef = ref<InstanceType<typeof TrajectoryReplay> | null>(null)
+const confirmVisible = ref(false)
 
 const eventId = computed(() => String(route.params.id || ''))
 
@@ -35,7 +38,12 @@ const sourceDeviceRows = [
     deviceType: '雷达设备',
     deviceCode: 'RD-001',
     discoveredAt: '2024-03-04 08:00:00',
-    endedAt: '2024-03-04 08:00:20'
+    endedAt: '2024-03-04 08:00:20',
+    longitude: '113.4058',
+    latitude: '23.1132',
+    altitude: 80,
+    speed: 8,
+    azimuth: 180
   },
   {
     seq: 2,
@@ -43,9 +51,56 @@ const sourceDeviceRows = [
     deviceType: '无线电设备',
     deviceCode: 'RF-002',
     discoveredAt: '2024-03-04 08:00:03',
-    endedAt: '2024-03-04 08:00:21'
+    endedAt: '2024-03-04 08:00:21',
+    longitude: '113.4062',
+    latitude: '23.1128',
+    altitude: 78,
+    speed: 7.6,
+    azimuth: 175
   }
 ]
+
+const exportSourceDevices = () => {
+  const headers = [
+    '序号',
+    '设备名',
+    '设备类型',
+    '设备编号',
+    '发现时间',
+    '结束时间',
+    '经度',
+    '纬度',
+    '高度(m)',
+    '速度(m/s)',
+    '方位角(°)'
+  ]
+  const lines = [
+    headers.join(','),
+    ...sourceDeviceRows.map((row) =>
+      [
+        row.seq,
+        row.deviceName,
+        row.deviceType,
+        row.deviceCode,
+        row.discoveredAt,
+        row.endedAt,
+        row.longitude,
+        row.latitude,
+        row.altitude,
+        row.speed,
+        row.azimuth
+      ].join(',')
+    )
+  ]
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `原始探测设备信息_${eventId.value || 'demo'}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('原始探测设备信息已导出')
+}
 
 const normalizeText = (text: unknown) =>
   String(text || '')
@@ -75,7 +130,6 @@ const viewDetail = computed<HistoryEventDetail | null>(() => {
     targetType: normalizeText(detail.value.targetType),
     detectionDevice: normalizeText(detail.value.detectionDevice),
     countermeasureDevice: normalizeText(detail.value.countermeasureDevice),
-    handlingResult: normalizeText(detail.value.handlingResult),
     disposalDetail: normalizeText(detail.value.disposalDetail),
     manualConfirmStatus: normalizeText(detail.value.manualConfirmStatus).replace(
       /^人工-/,
@@ -86,26 +140,32 @@ const viewDetail = computed<HistoryEventDetail | null>(() => {
   }
 })
 
-const threatTagType = (level: ThreatLevel) => {
-  const map: Record<ThreatLevel, 'danger' | 'warning' | 'success' | 'info'> = {
-    高: 'danger',
-    中: 'warning',
-    低: 'success',
-    未知: 'info'
-  }
-  return map[level]
-}
+const threatTagType = (level: ThreatLevel) => threatLevelTagType(level)
 
 const statusLabel = (status: HandlingStatus) => {
   if (status === '待处置') return '未处置'
   return status
 }
 
-const lastAltitude = computed(() => {
-  const points = viewDetail.value?.trajectory
-  if (!points?.length) return '--'
-  return `${points[points.length - 1].altitude}m`
+const showManualConfirm = computed(() => {
+  const row = detail.value
+  if (!row) return false
+  return (
+    !row.manualConfirmStatus.startsWith('人工-') &&
+    row.handlingStatus !== '已处置' &&
+    row.handlingStatus !== '已结束'
+  )
 })
+
+const openManualConfirm = () => {
+  if (!detail.value) return
+  confirmVisible.value = true
+}
+
+const onConfirmSuccess = () => {
+  ElMessage.success('人工核查已保存')
+  fetchDetail()
+}
 
 const fetchDetail = async () => {
   loading.value = true
@@ -140,6 +200,9 @@ onMounted(async () => {
     <template #header>
       <div class="detail-header">
         <BaseButton @click="go(-1)">返回</BaseButton>
+        <BaseButton v-if="showManualConfirm" type="primary" @click="openManualConfirm">
+          人工核查
+        </BaseButton>
       </div>
     </template>
 
@@ -162,20 +225,20 @@ onMounted(async () => {
             <ElDescriptionsItem label="处置时间">
               {{ viewDetail.handledAt === '--' ? '--' : viewDetail.handledAt }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="处置状态">
-              {{ statusLabel(viewDetail.handlingStatus) }}
-            </ElDescriptionsItem>
+            <ElDescriptionsItem label="持续时长">{{ viewDetail.duration }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="威胁等级">
               <ElTag :type="threatTagType(viewDetail.threatLevel)" effect="dark" round>
-                {{ viewDetail.threatLevel }}
+                {{ threatLevelDisplay(viewDetail.threatLevel) }}
               </ElTag>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="威胁识别">
               {{ viewDetail.manualConfirmStatus }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="最新高度">
-              {{ lastAltitude }}
+            <ElDescriptionsItem label="名单类型">
+              <ElTag :type="listTypeTagType(viewDetail.listType)" size="small" effect="light">
+                {{ viewDetail.listType }}
+              </ElTag>
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="飞手位置">
@@ -187,33 +250,22 @@ onMounted(async () => {
                 </span>
               </template>
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="区域">{{ viewDetail.zoneName }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="持续时长">{{ viewDetail.duration }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="频率信息">{{ viewDetail.frequencyInfo }}</ElDescriptionsItem>
             <ElDescriptionsItem label="目标类型">{{ viewDetail.targetType }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="处置结果">{{
-              viewDetail.handlingResult
-            }}</ElDescriptionsItem>
-
             <ElDescriptionsItem label="探测设备">{{
               viewDetail.detectionDevice
             }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="反制设备">
+
+            <ElDescriptionsItem label="反制设备" :span="3">
               {{ viewDetail.countermeasureDevice }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="处置详情">{{
-              viewDetail.disposalDetail
-            }}</ElDescriptionsItem>
 
-            <ElDescriptionsItem v-if="viewDetail.relatedEventCount > 1" label="关联事件">
-              同目标共 {{ viewDetail.relatedEventCount }} 条飞行记录
+            <ElDescriptionsItem label="处置状态" :span="3">
+              {{ statusLabel(viewDetail.handlingStatus) }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem
-              v-if="viewDetail.remark"
-              label="备注"
-              :span="viewDetail.relatedEventCount > 1 ? 2 : 3"
-            >
+
+            <ElDescriptionsItem v-if="viewDetail.remark" label="备注" :span="3">
               {{ viewDetail.remark }}
             </ElDescriptionsItem>
           </ElDescriptions>
@@ -234,9 +286,14 @@ onMounted(async () => {
       </div>
 
       <section class="detail-source-section">
-        <div class="detail-source-section__title">原始探测设备信息</div>
-        <div class="detail-source-section__hint">
-          多源数据融合前的原始探测记录演示，每类设备保留一条模拟数据。
+        <div class="detail-source-section__header">
+          <div>
+            <div class="detail-source-section__title">原始探测设备信息</div>
+            <div class="detail-source-section__hint">
+              多源数据融合前的原始探测记录演示，每类设备保留一条模拟数据。
+            </div>
+          </div>
+          <BaseButton type="primary" size="small" @click="exportSourceDevices">导出</BaseButton>
         </div>
         <div class="detail-source-section__table-wrap">
           <table class="detail-source-table">
@@ -248,6 +305,11 @@ onMounted(async () => {
                 <th>设备编号</th>
                 <th>发现时间</th>
                 <th>结束时间</th>
+                <th>经度</th>
+                <th>纬度</th>
+                <th>高度</th>
+                <th>速度</th>
+                <th>方位角</th>
               </tr>
             </thead>
             <tbody>
@@ -258,6 +320,11 @@ onMounted(async () => {
                 <td>{{ row.deviceCode }}</td>
                 <td>{{ row.discoveredAt }}</td>
                 <td>{{ row.endedAt }}</td>
+                <td>{{ row.longitude }}</td>
+                <td>{{ row.latitude }}</td>
+                <td>{{ row.altitude }}m</td>
+                <td>{{ row.speed }}m/s</td>
+                <td>{{ row.azimuth }}°</td>
               </tr>
             </tbody>
           </table>
@@ -267,6 +334,12 @@ onMounted(async () => {
 
     <ElAlert v-else-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
     <div v-else class="detail-empty">暂无飞行记录详情</div>
+
+    <ManualConfirmDialog
+      v-model="confirmVisible"
+      :row="detail ?? undefined"
+      @success="onConfirmSuccess"
+    />
   </ContentDetailWrap>
 </template>
 
@@ -360,6 +433,15 @@ onMounted(async () => {
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
 
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
   &__title {
     font-size: 15px;
     font-weight: 600;
@@ -368,7 +450,6 @@ onMounted(async () => {
 
   &__hint {
     margin-top: 4px;
-    margin-bottom: 12px;
     font-size: 12px;
     color: var(--el-text-color-secondary);
   }
@@ -380,7 +461,7 @@ onMounted(async () => {
 
 .detail-source-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 1120px;
   font-size: 13px;
   border-spacing: 0;
   border-collapse: collapse;

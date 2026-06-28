@@ -48,11 +48,6 @@ function primaryRuleLabel(row: PlanStrategy) {
   return `${rule.ruleName} / ${rule.deviceGroupName}`
 }
 
-function formatPlanRule(value?: string) {
-  if (!value || value === '-') return '-'
-  return value.replace(/\n/g, ' ')
-}
-
 async function loadAreas() {
   const res = await getAreaRegionListApi({ pageIndex: 1, pageSize: 200 })
   areaLabelMap.value = createPlanAreaLabelMap(res.data.list)
@@ -62,10 +57,8 @@ const setSearchParams = (params: Recordable) => {
   const range = params.updatedAtRange as string[] | undefined
   const mode = params.disposalMode as string | undefined
   searchParams.value = {
-    planCode: params.planCode,
     planName: params.planName,
     disposalMode: !mode || mode === '全部' ? undefined : mode,
-    updatedBy: params.updatedBy,
     updatedAtStart: range?.[0],
     updatedAtEnd: range?.[1]
   }
@@ -162,16 +155,6 @@ const crudSchemas = reactive<CrudSchema[]>([
   { field: 'selection', search: { hidden: true }, table: { type: 'selection' } },
   { field: 'index', label: '序号', type: 'index', search: { hidden: true } },
   {
-    field: 'planCode',
-    label: UI.planCode,
-    search: {
-      component: 'Input',
-      colProps: PLAN_SEARCH_COL,
-      componentProps: { clearable: true, placeholder: '请输入预案编号', style: { width: '100%' } }
-    },
-    table: { minWidth: 128, showOverflowTooltip: true }
-  },
-  {
     field: 'planName',
     label: UI.planName,
     search: {
@@ -182,18 +165,8 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { minWidth: 160, showOverflowTooltip: true }
   },
   {
-    field: 'planRule',
-    label: UI.planRule,
-    search: { hidden: true },
-    table: {
-      minWidth: 260,
-      showOverflowTooltip: true,
-      slots: { default: ({ row }: { row: PlanStrategy }) => formatPlanRule(row.planRule) }
-    }
-  },
-  {
     field: 'threatLevel',
-    label: UI.alarmLevel,
+    label: UI.threatLevel,
     search: { hidden: true },
     table: { width: 100, align: 'center' }
   },
@@ -291,11 +264,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'updatedBy',
     label: UI.updatedBy,
-    search: {
-      component: 'Input',
-      colProps: PLAN_SEARCH_COL,
-      componentProps: { clearable: true, placeholder: '请输入更新人', style: { width: '100%' } }
-    },
+    search: { hidden: true },
     table: { hidden: true }
   },
   {
@@ -347,10 +316,8 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      is-col
-      label-width="100px"
-      :expand-rows="2"
-      :expand-default="false"
+      show-expand
+      expand-field="updatedAtRange"
       @search="setSearchParams"
       @reset="setSearchParams"
     />

@@ -55,7 +55,7 @@ const detail = ref<DeviceInfoDetail | null>(null)
 const currentLinkedArchive = ref<DeviceLinkedArchive | null>(null)
 const archiveOptions = ref<DeviceArchiveItem[]>([])
 const formRef = ref<FormInstance>()
-const metricsTab = ref<'archive' | 'extend'>('extend')
+const metricsTab = ref<'extend' | 'map' | 'archive'>('extend')
 const extendedRows = ref<DeviceExtendedField[]>([])
 const deviceImageUrl = ref('')
 const imageInputRef = ref<HTMLInputElement>()
@@ -489,9 +489,14 @@ watch(
   () => `${String(route.name)}|${recordId.value}`,
   () => {
     metricsTab.value = 'extend'
+    mapPlacing.value = false
     fetchDetail()
   }
 )
+
+watch(metricsTab, (tab) => {
+  if (tab !== 'map') mapPlacing.value = false
+})
 </script>
 
 <template>
@@ -683,32 +688,35 @@ watch(
                   />
                 </ElFormItem>
               </div>
-
-              <div class="device-detail-map-block">
-                <div class="device-detail-map-block__head">
-                  <div>
-                    <div class="device-detail-panel__title">地图选点</div>
-                    <p class="device-detail-panel__hint"
-                      >用于演示设备部署点选择，可点击地图放置位置并同步经纬度。</p
-                    >
-                  </div>
-                  <BaseButton v-if="isEditable" type="primary" @click="toggleMapPlacing">
-                    {{ mapPlacing ? '结束选点' : '地图选点' }}
-                  </BaseButton>
+            </ElForm>
+          </ElTabPane>
+          <ElTabPane label="地图" name="map">
+            <div class="device-detail-map-panel">
+              <div class="device-detail-map-block__head">
+                <div>
+                  <div class="device-detail-panel__title">地图选点</div>
+                  <p class="device-detail-panel__hint">
+                    用于演示设备部署点选择，可点击地图放置位置并同步经纬度。
+                  </p>
                 </div>
+                <BaseButton v-if="isEditable" type="primary" @click="toggleMapPlacing">
+                  {{ mapPlacing ? '结束选点' : '地图选点' }}
+                </BaseButton>
+              </div>
 
-                <div class="device-detail-map-block__grid">
-                  <div class="device-detail-map-block__canvas">
-                    <DeviceInfoGisMap
-                      v-model:mapX="placement.mapX"
-                      v-model:mapY="placement.mapY"
-                      :control-range-m="placement.controlRangeM"
-                      :device-label="form.deviceName || '设备'"
-                      :readonly="!isEditable"
-                      :placing="mapPlacing"
-                    />
-                  </div>
-                  <div class="device-detail-map-block__meta">
+              <div class="device-detail-map-block__grid">
+                <div class="device-detail-map-block__canvas">
+                  <DeviceInfoGisMap
+                    v-model:mapX="placement.mapX"
+                    v-model:mapY="placement.mapY"
+                    :control-range-m="placement.controlRangeM"
+                    :device-label="form.deviceName || '设备'"
+                    :readonly="!isEditable"
+                    :placing="mapPlacing"
+                  />
+                </div>
+                <div class="device-detail-map-block__meta">
+                  <ElForm label-position="top">
                     <ElFormItem label="经度">
                       <ElInputNumber
                         v-model="placement.longitude"
@@ -744,18 +752,18 @@ watch(
                         controls-position="right"
                       />
                     </ElFormItem>
-                  </div>
+                  </ElForm>
                 </div>
               </div>
-            </ElForm>
+            </div>
           </ElTabPane>
-          <ElTabPane label="档案信息" name="archive">
+          <ElTabPane label="档案指标" name="archive">
             <p v-if="!linkedArchive" class="device-detail-metrics-empty">
-              未关联基础档案，暂无档案信息。请绑定基础档案后查看。
+              未关联基础档案，暂无档案指标。请绑定基础档案后查看。
             </p>
             <template v-else>
               <p class="device-detail-metrics-tip">
-                以下信息来自基础档案“{{
+                以下指标来自基础档案“{{
                   linkedArchive.archiveName
                 }}”。指标值按档案规则校验，可针对当前设备单独维护。
               </p>
@@ -862,6 +870,7 @@ watch(
           border
           size="small"
         >
+          <ElTableColumn type="index" label="序号" width="65" align="center" />
           <ElTableColumn prop="name" label="检测项" min-width="120" />
           <ElTableColumn label="结果" width="88" align="center">
             <template #default="{ row }">
@@ -1153,10 +1162,11 @@ watch(
   line-height: 1.4;
 }
 
-.device-detail-map-block {
-  margin-top: 8px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--el-border-color);
+.device-detail-map-panel {
+  padding: 16px 18px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  background: var(--el-fill-color-lighter);
 }
 
 .device-detail-map-block__head {

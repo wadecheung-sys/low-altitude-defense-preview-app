@@ -2,10 +2,8 @@ export const PLAN_SEARCH_COL = { span: 6 } as const
 export const PLAN_SEARCH_DATE_COL = { span: 6 } as const
 
 export const UI = {
-  planCode: '预案编号',
   planName: '预案名称',
-  planRule: '执行说明',
-  planRulePlaceholder: '填写执行步骤与限制条件，不在此配置威胁判级规则。',
+  threatLevel: '威胁等级',
   disposalMode: '处置模式',
   disposalModeAuto: '自动处置',
   disposalModeManual: '人工值守',
@@ -13,7 +11,6 @@ export const UI = {
   manualResponseUnit: '秒',
   manualResponseHint: '自动处置专用：触发后进入人工核查窗口；填 0 表示不等待，立即执行。',
   manualResponseManualHint: '人工值守模式下不启用等待窗口，所有动作均需人工核查后下发。',
-  alarmLevel: '告警级别',
   planPriority: '优先级',
   temperature: '温度',
   humidity: '湿度',

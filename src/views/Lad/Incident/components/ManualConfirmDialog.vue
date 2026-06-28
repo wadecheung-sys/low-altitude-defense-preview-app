@@ -5,6 +5,7 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { confirmHistoryEventApi } from '@/api/lad/incident'
 import type { HistoryEventItem, ManualConfirmResult, ThreatLevel } from '@/api/lad/incident/types'
+import { THREAT_LEVEL_OPTIONS } from '../../shared/ladDictHelpers'
 
 const props = defineProps<{
   modelValue: boolean
@@ -22,7 +23,7 @@ const visible = computed({
 })
 
 const result = ref<ManualConfirmResult>('真实入侵')
-const threatLevel = ref<ThreatLevel>('低')
+const threatLevel = ref<ThreatLevel>('低危')
 const nuisanceType = ref('飞鸟')
 const remark = ref('')
 const loading = ref(false)
@@ -30,20 +31,26 @@ const loading = ref(false)
 const threatOptions: Array<{
   value: ThreatLevel
   type: 'info' | 'success' | 'warning' | 'danger'
-}> = [
-  { value: '低', type: 'success' },
-  { value: '中', type: 'warning' },
-  { value: '高', type: 'danger' }
-]
+}> = THREAT_LEVEL_OPTIONS.filter((item) => item.value !== '无危').map((item) => ({
+  value: item.value as ThreatLevel,
+  type:
+    item.value === '低危'
+      ? 'success'
+      : item.value === '中危'
+        ? 'warning'
+        : item.value === '高危'
+          ? 'danger'
+          : 'info'
+}))
 
 const nuisanceOptions = ['飞鸟', '地面杂波', '气球', '风筝', '其他低慢小目标']
 
 const disposalHint = computed(() => {
   const hints: Record<ThreatLevel, string> = {
-    未知: '威胁等级未判定，暂不执行自动处置',
-    低: '系统将持续自动监控目标',
-    中: '系统将联动反制设备自动驱离',
-    高: '系统将联动高能设备自动打击反制'
+    无危: '威胁等级未判定，暂不执行自动处置',
+    低危: '系统将持续自动监控目标',
+    中危: '系统将联动反制设备自动驱离',
+    高危: '系统将联动高能设备自动打击反制'
   }
   return hints[threatLevel.value]
 })
@@ -53,7 +60,7 @@ watch(
   (open) => {
     if (!open) return
     result.value = '真实入侵'
-    threatLevel.value = '低'
+    threatLevel.value = '低危'
     nuisanceType.value = '飞鸟'
     remark.value = ''
   }
@@ -370,15 +377,15 @@ const onSubmit = async () => {
   color: var(--el-text-color-regular);
 }
 
-.disposal-hint[data-level='低'] {
+.disposal-hint[data-level='低危'] {
   border-color: var(--el-color-success);
 }
 
-.disposal-hint[data-level='中'] {
+.disposal-hint[data-level='中危'] {
   border-color: var(--el-color-warning);
 }
 
-.disposal-hint[data-level='高'] {
+.disposal-hint[data-level='高危'] {
   border-color: var(--el-color-danger);
 }
 

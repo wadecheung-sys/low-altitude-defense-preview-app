@@ -129,6 +129,7 @@ const showReconnect = computed(() => ep.value && canReconnect(ep.value.runStatus
         size="small"
         max-height="240"
       >
+        <ElTableColumn type="index" label="序号" width="65" align="center" />
         <ElTableColumn prop="checkedAt" :label="UI.colDataUpdatedAt" width="170" />
         <ElTableColumn label="Result" width="80">
           <template #default="{ row }">

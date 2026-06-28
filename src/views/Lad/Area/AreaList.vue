@@ -50,7 +50,7 @@ const siteTree = computed(() => buildTree(allSites.value))
 const manageTree = computed(() => [
   {
     id: '__all__',
-    label: '全部场地',
+    label: '全部区域',
     siteCode: '',
     regionType: 'other' as const,
     children: siteTree.value
@@ -124,12 +124,12 @@ function openEdit(row: AreaRegion) {
 async function delData(row: AreaRegion | null) {
   const targets = row ? [row.id] : ids.value
   if (!targets.length) {
-    ElMessage.warning('请先勾选需要删除的场地')
+    ElMessage.warning('请先勾选需要删除的区域')
     return
   }
   try {
     await ElMessageBox.confirm(
-      row ? `确认删除场地“${row.name}”吗？` : `确认删除选中的 ${targets.length} 个场地吗？`,
+      row ? `确认删除区域“${row.name}”吗？` : `确认删除选中的 ${targets.length} 个区域吗？`,
       '删除确认',
       { type: 'warning' }
     )
@@ -166,23 +166,23 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'siteCode',
-    label: '场地编号',
+    label: '区域编号',
     minWidth: 120,
     search: {
       component: 'Input',
       colProps: SITE_SEARCH_COL,
-      componentProps: { placeholder: '请输入场地编号', clearable: true, style: { width: '100%' } }
+      componentProps: { placeholder: '请输入区域编号', clearable: true, style: { width: '100%' } }
     },
     table: { showOverflowTooltip: true }
   },
   {
     field: 'name',
-    label: '场地名称',
+    label: '区域名称',
     minWidth: 150,
     search: {
       component: 'Input',
       colProps: SITE_SEARCH_COL,
-      componentProps: { placeholder: '请输入场地名称', clearable: true, style: { width: '100%' } }
+      componentProps: { placeholder: '请输入区域名称', clearable: true, style: { width: '100%' } }
     },
     table: {
       showOverflowTooltip: true,
@@ -197,14 +197,14 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'parentSiteCode',
-    label: '上级场地编号',
+    label: '上级区域编号',
     minWidth: 135,
     search: { hidden: true },
     table: { slots: { default: ({ row }: { row: AreaRegion }) => row.parentSiteCode || '-' } }
   },
   {
     field: 'parentSiteName',
-    label: '上级场地名称',
+    label: '上级区域名称',
     minWidth: 140,
     search: { hidden: true },
     table: {
@@ -280,20 +280,20 @@ onMounted(loadSiteTree)
 <template>
   <div class="site-view-tabs">
     <button :class="{ 'is-active': viewMode === 'manage' }" @click="viewMode = 'manage'"
-      >场地管理</button
+      >区域管理</button
     >
     <button :class="{ 'is-active': viewMode === 'architecture' }" @click="viewMode = 'architecture'"
-      >场地架构</button
+      >区域架构</button
     >
   </div>
 
   <div v-if="viewMode === 'manage'" class="site-manage-layout">
     <ContentWrap class="site-tree-pane">
-      <div class="pane-title">场地层级</div>
+      <div class="pane-title">区域层级</div>
       <ElInput
         v-model="treeKeyword"
         class="mb-12px"
-        placeholder="搜索场地名称或编号"
+        placeholder="搜索区域名称或编号"
         clearable
         @input="filterTree"
       />
@@ -319,15 +319,11 @@ onMounted(loadSiteTree)
     <ContentWrap class="site-list-pane">
       <Search
         :schema="allSchemas.searchSchema"
-        is-col
-        label-width="88px"
-        :expand-rows="0"
-        :expand-default="false"
         @search="setSearchParams"
         @reset="setSearchParams"
       />
       <div class="mb-10px">
-        <BaseButton type="primary" @click="openCreate">新增场地</BaseButton>
+        <BaseButton type="primary" @click="openCreate">新增区域</BaseButton>
         <BaseButton type="danger" :loading="delLoading" @click="delData(null)">批量删除</BaseButton>
       </div>
       <Table
@@ -345,11 +341,11 @@ onMounted(loadSiteTree)
   </div>
 
   <ContentWrap v-else class="architecture-pane">
-    <div class="pane-title">场地架构图</div>
+    <div class="pane-title">区域架构图</div>
     <div v-if="siteTree.length" class="architecture-canvas">
       <SiteArchitectureTree :nodes="siteTree" />
     </div>
-    <div v-else class="architecture-empty">暂无场地数据</div>
+    <div v-else class="architecture-empty">暂无区域数据</div>
   </ContentWrap>
 </template>
 

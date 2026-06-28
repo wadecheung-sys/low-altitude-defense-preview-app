@@ -46,7 +46,7 @@ const gisMapRef = ref<InstanceType<typeof AreaGisMap>>()
 const siteOptions = ref<AreaRegion[]>([])
 
 const isCreateMode = computed(() => route.name === 'LadAreaAdd')
-const pageTitle = computed(() => (isCreateMode.value ? '新增场地' : '编辑场地'))
+const pageTitle = computed(() => (isCreateMode.value ? '新增区域' : '编辑区域'))
 
 const form = ref({
   siteCode: '',
@@ -156,11 +156,11 @@ function goList() {
 
 async function saveRegion() {
   if (!form.value.siteCode.trim()) {
-    ElMessage.warning('请输入场地编号')
+    ElMessage.warning('请输入区域编号')
     return
   }
   if (!form.value.name.trim()) {
-    ElMessage.warning('请输入场地名称')
+    ElMessage.warning('请输入区域名称')
     return
   }
   if (!form.value.shapes.length) {
@@ -230,22 +230,22 @@ watch(
 
     <div class="area-edit-layout">
       <aside class="area-edit-sidebar">
-        <div class="area-edit-panel__title">场地配置</div>
-        <p class="area-edit-tip">维护场地层级与区域属性，并在右侧地图绘制当前场地范围。</p>
+        <div class="area-edit-panel__title">区域配置</div>
+        <p class="area-edit-tip">维护区域层级与区域属性，并在右侧地图绘制当前区域范围。</p>
         <ElForm label-position="top" class="area-edit-form">
-          <ElFormItem label="场地编号" required>
-            <ElInput v-model="form.siteCode" placeholder="请输入场地编号" clearable />
+          <ElFormItem label="区域编号" required>
+            <ElInput v-model="form.siteCode" placeholder="请输入区域编号" clearable />
           </ElFormItem>
-          <ElFormItem label="场地名称" required>
-            <ElInput v-model="form.name" placeholder="请输入场地名称" clearable />
+          <ElFormItem label="区域名称" required>
+            <ElInput v-model="form.name" placeholder="请输入区域名称" clearable />
           </ElFormItem>
-          <ElFormItem label="上级场地">
+          <ElFormItem label="上级区域">
             <ElSelect
               v-model="form.parentId"
               class="w-100%"
               clearable
               filterable
-              placeholder="请选择上级场地"
+              placeholder="请选择上级区域"
             >
               <ElOption
                 v-for="site in siteOptions.filter((item) => item.id !== recordId)"

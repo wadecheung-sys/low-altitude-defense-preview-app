@@ -10,6 +10,7 @@ import type {
   ListType
 } from './types'
 import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
+import { matchValidUntilRange, normalizeValidUntil } from './validUntilUtils'
 
 const listTypes: ListType[] = ['黑名单', '白名单', '未知']
 const targetTypes = ['多旋翼', '固定翼', '未知', '行业级']
@@ -17,7 +18,12 @@ const models = LAD_TARGET_MODELS.filter((item) => item !== '蜂群目标' && ite
 const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
 const zones = ['核心保护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
 const entryMethods: EntryMethod[] = ['自动录入', '人工录入', '自动+人工校验']
-const validOptions = ['永久', '2026-12-31', '2025-06-30', '2024-12-31']
+const validOptions = [
+  '永久',
+  '2026-12-31 23:59:59',
+  '2025-06-30 18:00:00',
+  '2024-12-31 08:30:00'
+]
 
 function buildSeedList(): BlackWhiteListItem[] {
   return Array.from({ length: 56 }, (_, i) => {
@@ -36,7 +42,7 @@ function buildSeedList(): BlackWhiteListItem[] {
       targetId: `TG-2024-${String((i % 24) + 1).padStart(4, '0')}`,
       listType: listTypes[i % listTypes.length],
       targetType: targetTypes[i % targetTypes.length],
-      validUntil: validOptions[i % validOptions.length],
+      validUntil: normalizeValidUntil(validOptions[i % validOptions.length]),
       discoveredAt: discovered,
       updatedAt: updated,
       duration: `00:${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`,
@@ -70,9 +76,9 @@ function hashSeed(id: string): number {
 function buildTargetDetail(row: BlackWhiteListItem): BlackWhiteTargetDetail {
   const seed = hashSeed(row.id)
   const threatByList: Record<ListType, ThreatLevel> = {
-    黑名单: '高',
-    白名单: '低',
-    未知: seed % 2 === 0 ? '中' : '未知'
+    黑名单: '高危',
+    白名单: '低危',
+    未知: seed % 2 === 0 ? '中危' : '无危'
   }
   const alt = 80 + (seed % 80)
   const pilotLocated = seed % 5 !== 0
@@ -137,6 +143,11 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
   }
   if (params.discoveredAtEnd) {
     rows = rows.filter((r) => r.discoveredAt <= `${params.discoveredAtEnd} 23:59:59`)
+  }
+  if (params.validUntilStart || params.validUntilEnd) {
+    rows = rows.filter((r) =>
+      matchValidUntilRange(r.validUntil, params.validUntilStart, params.validUntilEnd)
+    )
   }
   return rows
 }
@@ -225,6 +236,7 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     allList[idx] = {
       ...allList[idx],
       ...payload,
+      validUntil: normalizeValidUntil(payload.validUntil || '永久'),
       updatedAt: ts
     }
     return allList[idx]
@@ -235,7 +247,8 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     discoveredAt: ts,
     updatedAt: ts,
     duration: '00:00:00',
-    ...payload
+    ...payload,
+    validUntil: normalizeValidUntil(payload.validUntil || '永久')
   } as BlackWhiteListItem
   allList.unshift(row)
   return row

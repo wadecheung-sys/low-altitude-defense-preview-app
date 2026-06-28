@@ -33,12 +33,6 @@ function formatRuleAreaLabel(value?: string[]) {
   return value.map((id) => areaLabelMap.value[id] || id).join('、')
 }
 
-const execNoteDisplay = computed(() => {
-  const text = detail.value?.planRule
-  if (!text || text === '-') return '-'
-  return text.replace(/\\n/g, '\n')
-})
-
 const disposalDetail = computed(() => {
   if (!detail.value) return ''
   return formatDisposalModeDetail(detail.value.disposalMode, detail.value.manualResponseSeconds)
@@ -66,12 +60,8 @@ watch(
 <template>
   <Dialog v-model="visible" :title="UI.dialogDetail" width="860px" max-height="90vh">
     <ElDescriptions v-loading="loading" :column="2" border class="mb-12px">
-      <ElDescriptionsItem :label="UI.planCode">{{ detail?.planCode }}</ElDescriptionsItem>
       <ElDescriptionsItem :label="UI.planName">{{ detail?.planName }}</ElDescriptionsItem>
-      <ElDescriptionsItem :label="UI.planRule" :span="2">
-        <span class="whitespace-pre-line">{{ execNoteDisplay }}</span>
-      </ElDescriptionsItem>
-      <ElDescriptionsItem :label="UI.alarmLevel">{{ detail?.threatLevel }}</ElDescriptionsItem>
+      <ElDescriptionsItem :label="UI.threatLevel">{{ detail?.threatLevel }}</ElDescriptionsItem>
       <ElDescriptionsItem :label="UI.locatedArea">{{
         formatAreaLabel(detail?.areaLevel)
       }}</ElDescriptionsItem>
@@ -104,6 +94,7 @@ watch(
       >{{ UI.triggerRules }}（{{ detail?.triggerRules?.length || 0 }}条）</div
     >
     <ElTable v-loading="loading" :data="detail?.triggerRules || []" border size="small">
+      <ElTableColumn type="index" label="序号" width="65" align="center" />
       <ElTableColumn prop="ruleName" :label="UI.triggerRuleName" min-width="140" />
       <ElTableColumn prop="sortOrder" :label="UI.triggerSortOrder" width="88" align="center" />
       <ElTableColumn :label="UI.locatedArea" min-width="160" show-overflow-tooltip>

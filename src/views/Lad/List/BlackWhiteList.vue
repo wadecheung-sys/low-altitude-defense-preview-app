@@ -1,7 +1,7 @@
 <script setup lang="tsx">
 import { onMounted, reactive, ref, unref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElLink, ElMessage, ElMessageBox, ElTag } from 'element-plus'
+import { ElDivider, ElLink, ElMessage, ElMessageBox, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
@@ -10,12 +10,13 @@ import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import {
   deleteBlackWhiteApi,
-  getBlackWhiteListApi,
-  updateBlackWhiteListTypeApi
+  getBlackWhiteListApi
 } from '@/api/lad/list'
 import type { BlackWhiteListItem, ListType } from '@/api/lad/list/types'
 import BlackWhiteFormDialog from './components/BlackWhiteFormDialog.vue'
+import ValidUntilRangeSearch from './components/ValidUntilRangeSearch.vue'
 import { targetModelOptions } from '../shared/ladOptionConstants'
+import { formatValidUntilDisplay } from '@/api/lad/list/validUntilUtils'
 
 defineOptions({
   name: 'LadBlackWhiteList'
@@ -24,19 +25,20 @@ defineOptions({
 const route = useRoute()
 const { push } = useRouter()
 
+type ListTab = 'all' | '白名单' | '黑名单'
+const queryListType = route.query.listType
+const activeListTab = ref<ListTab>(
+  queryListType === '白名单' || queryListType === '黑名单' ? queryListType : 'all'
+)
+
 const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({
   sn: (route.query.sn as string) || undefined,
-  targetId: (route.query.targetId as string) || undefined
+  targetId: (route.query.targetId as string) || undefined,
+  listType: activeListTab.value === 'all' ? undefined : activeListTab.value
 })
 const formVisible = ref(false)
 const formRow = ref<BlackWhiteListItem>()
-
-const listTypeOptions = [
-  { label: '黑名单', value: '黑名单' },
-  { label: '白名单', value: '白名单' },
-  { label: '未知', value: '未知' }
-]
 
 const targetTypeOptions = [
   { label: '多旋翼', value: '多旋翼' },
@@ -46,15 +48,25 @@ const targetTypeOptions = [
 ]
 
 const setSearchParams = (params: Recordable) => {
-  const range = params.discoveredAtRange as string[] | undefined
+  const range = params.validUntilRange as string[] | undefined
   searchParams.value = {
-    listType: params.listType,
+    listType: activeListTab.value === 'all' ? undefined : activeListTab.value,
     targetId: params.targetId,
     sn: params.sn,
     model: params.model,
     targetType: params.targetType,
-    discoveredAtStart: range?.[0],
-    discoveredAtEnd: range?.[1]
+    validUntilStart: range?.[0] || undefined,
+    validUntilEnd: range?.[1] || undefined
+  }
+  currentPage.value = 1
+  getList()
+}
+
+const onListTabChange = (name: string | number) => {
+  const tab = String(name) as ListTab
+  searchParams.value = {
+    ...unref(searchParams),
+    listType: tab === 'all' ? undefined : tab
   }
   currentPage.value = 1
   getList()
@@ -115,26 +127,6 @@ onMounted(() => {
 })
 
 const delLoading = ref(false)
-const listTypeLoading = ref(false)
-
-const updateSelectedListType = async (listType: '黑名单' | '白名单') => {
-  const elTableExpose = await getElTableExpose()
-  const selected = elTableExpose?.getSelectionRows() as BlackWhiteListItem[] | undefined
-  if (!selected?.length) {
-    ElMessage.warning(`请先勾选要添加到${listType}的记录`)
-    return
-  }
-
-  listTypeLoading.value = true
-  try {
-    await Promise.all(selected.map((row) => updateBlackWhiteListTypeApi({ id: row.id, listType })))
-    ElMessage.success(`已将选中的 ${selected.length} 条记录更新为${listType}`)
-    await getList()
-    elTableExpose?.clearSelection()
-  } finally {
-    listTypeLoading.value = false
-  }
-}
 
 const delData = async (row: BlackWhiteListItem | null) => {
   const elTableExpose = await getElTableExpose()
@@ -183,16 +175,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'listType',
     label: '名单类型',
     minWidth: 96,
-    search: {
-      component: 'Select',
-      colProps: { span: 6 },
-      componentProps: {
-        placeholder: '请选择名单类型',
-        style: { width: '100%' },
-        clearable: true,
-        options: listTypeOptions
-      }
-    },
+    search: { hidden: true },
     table: {
       slots: {
         default: ({ row }: { row: BlackWhiteListItem }) => (
@@ -209,10 +192,8 @@ const crudSchemas = reactive<CrudSchema[]>([
     minWidth: 138,
     search: {
       component: 'Input',
-      colProps: { span: 6 },
       componentProps: {
-        placeholder: '融合目标编号',
-        style: { width: '100%' }
+        placeholder: '融合目标编号'
       }
     },
     table: {
@@ -228,8 +209,8 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'validUntil',
-    label: '有效期至',
-    minWidth: 160,
+    label: '有效时间',
+    minWidth: 180,
     search: { hidden: true },
     table: {
       slots: {
@@ -239,7 +220,7 @@ const crudSchemas = reactive<CrudSchema[]>([
               永久
             </ElTag>
           ) : (
-            <span>{row.validUntil}</span>
+            <span>{formatValidUntilDisplay(row.validUntil)}</span>
           )
       }
     }
@@ -250,13 +231,11 @@ const crudSchemas = reactive<CrudSchema[]>([
     minWidth: 140,
     search: {
       component: 'Select',
-      colProps: { span: 6 },
       componentProps: {
         options: targetModelOptions,
         clearable: true,
         filterable: true,
-        placeholder: '请选择目标型号',
-        style: { width: '100%' }
+        placeholder: '请选择目标型号'
       }
     },
     table: { showOverflowTooltip: true }
@@ -274,10 +253,8 @@ const crudSchemas = reactive<CrudSchema[]>([
     minWidth: 130,
     search: {
       component: 'Input',
-      colProps: { span: 6 },
       componentProps: {
-        placeholder: '请输入识别码',
-        style: { width: '100%' }
+        placeholder: '请输入识别码'
       }
     },
     table: {
@@ -293,38 +270,39 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'discoveredAtRange',
-    label: '发现时间',
-    search: {
-      component: 'DatePicker',
-      colProps: { span: 8 },
-      componentProps: {
-        type: 'daterange',
-        valueFormat: 'YYYY-MM-DD',
-        startPlaceholder: '开始日期',
-        endPlaceholder: '结束日期',
-        style: { width: '100%' }
-      }
-    },
-    table: { hidden: true },
-    form: { hidden: true },
-    detail: { hidden: true }
-  },
-  {
     field: 'targetType',
     label: '目标类型',
     minWidth: 92,
     search: {
       component: 'Select',
-      colProps: { span: 6 },
       componentProps: {
         placeholder: '请选择目标类型',
-        style: { width: '100%' },
         clearable: true,
         options: targetTypeOptions
       }
     },
     table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'validUntilRange',
+    label: '有效时间',
+    search: {
+      formItemProps: {
+        slots: {
+          default: (model: Recordable) => (
+            <ValidUntilRangeSearch
+              modelValue={model.validUntilRange}
+              onUpdate:modelValue={(val) => {
+                model.validUntilRange = val
+              }}
+            />
+          )
+        }
+      }
+    },
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'zoneName',
@@ -393,48 +371,91 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 </script>
 
 <template>
-  <ContentWrap>
-    <Search
-      :schema="allSchemas.searchSchema"
-      :model="{ sn: route.query.sn, targetId: route.query.targetId }"
-      is-col
-      label-width="100px"
-      :expand-rows="2"
-      :expand-default="false"
-      @search="setSearchParams"
-      @reset="setSearchParams"
-    />
+  <div class="black-white-list-page">
+    <ContentWrap class="black-white-list-page__search">
+      <Search
+        :schema="allSchemas.searchSchema"
+        :model="{ sn: route.query.sn, targetId: route.query.targetId }"
+        @search="setSearchParams"
+        @reset="setSearchParams"
+      />
+    </ContentWrap>
 
-    <div class="mb-10px">
-      <BaseButton type="primary" @click="openAdd">新增</BaseButton>
-      <BaseButton
-        type="danger"
-        :loading="listTypeLoading"
-        @click="updateSelectedListType('黑名单')"
-      >
-        添加至黑名单
-      </BaseButton>
-      <BaseButton
-        type="success"
-        :loading="listTypeLoading"
-        @click="updateSelectedListType('白名单')"
-      >
-        添加至白名单
-      </BaseButton>
-      <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
-    </div>
+    <ContentWrap class="black-white-list-page__data">
+      <div class="list-data-section">
+        <div class="list-data-section__title">列表数据</div>
+        <ElDivider class="list-data-section__divider" />
+        <ElTabs
+          v-model="activeListTab"
+          class="list-data-section__tabs"
+          @tab-change="onListTabChange"
+        >
+          <ElTabPane label="全部" name="all" />
+          <ElTabPane label="白名单" name="白名单" />
+          <ElTabPane label="黑名单" name="黑名单" />
+        </ElTabs>
 
-    <Table
-      v-model:pageSize="pageSize"
-      v-model:currentPage="currentPage"
-      :columns="allSchemas.tableColumns"
-      :data="dataList"
-      :loading="loading"
-      :pagination="{ total }"
-      :scrollbar-always-on="true"
-      @register="tableRegister"
-    />
+        <div class="mb-10px">
+          <BaseButton type="primary" @click="openAdd">新增</BaseButton>
+          <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
+        </div>
 
-    <BlackWhiteFormDialog v-model="formVisible" :row="formRow" @success="onFormSuccess" />
-  </ContentWrap>
+        <Table
+          v-model:pageSize="pageSize"
+          v-model:currentPage="currentPage"
+          :columns="allSchemas.tableColumns"
+          :data="dataList"
+          :loading="loading"
+          :pagination="{ total }"
+          :scrollbar-always-on="true"
+          @register="tableRegister"
+        />
+      </div>
+
+      <BlackWhiteFormDialog v-model="formVisible" :row="formRow" @success="onFormSuccess" />
+    </ContentWrap>
+  </div>
 </template>
+
+<style scoped lang="less">
+.black-white-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.list-data-section {
+  &__title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 24px;
+    color: var(--el-text-color-primary);
+  }
+
+  &__divider {
+    margin: 12px 0 0;
+  }
+
+  &__tabs {
+    :deep(.el-tabs__header) {
+      margin: 8px 0 16px;
+    }
+
+    :deep(.el-tabs__nav-wrap::after) {
+      height: 1px;
+      background-color: var(--el-border-color-light);
+    }
+
+    :deep(.el-tabs__item) {
+      height: 40px;
+      padding: 0 20px;
+      font-size: 14px;
+      line-height: 40px;
+    }
+
+    :deep(.el-tabs__active-bar) {
+      height: 2px;
+    }
+  }
+}
+</style>

@@ -71,7 +71,8 @@ const crudSchemas = reactive<CrudSchema[]>([
         placeholder: '请输入设备名称',
         style: searchFieldStyle
       }
-    }
+    },
+    table: { hidden: true }
   },
   {
     field: 'deviceType',
@@ -85,7 +86,8 @@ const crudSchemas = reactive<CrudSchema[]>([
         placeholder: '全部',
         style: searchFieldStyle
       }
-    }
+    },
+    table: { hidden: true }
   },
   {
     field: 'deployLocation',
@@ -98,7 +100,8 @@ const crudSchemas = reactive<CrudSchema[]>([
         placeholder: '请输入部署位置',
         style: searchFieldStyle
       }
-    }
+    },
+    table: { hidden: true }
   },
   {
     field: 'onlineStatus',
@@ -112,7 +115,8 @@ const crudSchemas = reactive<CrudSchema[]>([
         placeholder: '全部',
         style: searchFieldStyle
       }
-    }
+    },
+    table: { hidden: true }
   }
 ])
 
@@ -123,10 +127,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search
       :schema="allSchemas.searchSchema"
-      is-col
-      label-width="100px"
-      :expand-rows="2"
-      :expand-default="false"
       @search="setSearchParams"
       @reset="setSearchParams"
     />

@@ -32,9 +32,9 @@ export function resolveThreatLevelKey(rule: ThreatRule): 'high' | 'mid' | 'low' 
 }
 
 const LEVEL_KEY_TO_LABEL: Record<'high' | 'mid' | 'low', ThreatLevelLabel> = {
-  high: '高',
-  mid: '中',
-  low: '低'
+  high: '高危',
+  mid: '中危',
+  low: '低危'
 }
 
 /** 按规则属性推导威胁等级（未手工指定时的默认值） */

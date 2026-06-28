@@ -19,12 +19,14 @@ import { reactive, ref } from 'vue'
 
 defineOptions({ name: 'LadSystemSoundAlarm' })
 
-type AlarmLevel = string
+type ThreatLevel = '低危' | '中危' | '高危' | '无危'
 type AlarmAudioMode = '无' | '蜂鸣.wav' | '连续蜂鸣.wav' | '汽笛.wav' | '语音警示.wav'
+
+const PROTECTED_LEVELS: ThreatLevel[] = ['低危', '中危', '高危']
 
 interface AlarmAudioRow {
   id: string
-  level: AlarmLevel
+  level: ThreatLevel
   tagColor: string
   audioMode: AlarmAudioMode
   lightBlink: boolean
@@ -33,39 +35,33 @@ interface AlarmAudioRow {
 const rows = ref<AlarmAudioRow[]>([
   {
     id: 'za-low',
-    level: '低',
+    level: '低危',
     tagColor: '#67c23a',
     audioMode: '无',
     lightBlink: true
   },
   {
     id: 'za-middle',
-    level: '中',
+    level: '中危',
     tagColor: '#e6a23c',
     audioMode: '蜂鸣.wav',
     lightBlink: true
   },
   {
     id: 'za-high',
-    level: '高',
+    level: '高危',
     tagColor: '#f56c6c',
     audioMode: '汽笛.wav',
     lightBlink: true
   },
   {
     id: 'za-none',
-    level: '无',
+    level: '无危',
     tagColor: '#909399',
     audioMode: '无',
     lightBlink: false
   }
 ])
-
-const globalForm = reactive({
-  masterSwitch: true,
-  defaultAudioFile: '蜂鸣.wav' as AlarmAudioMode,
-  defaultLightBlink: true
-})
 
 const uploadProps = {
   action: '#',
@@ -84,17 +80,17 @@ const createForm = reactive({
 })
 const editForm = reactive({
   id: '',
-  level: '低' as AlarmLevel,
+  level: '低危' as ThreatLevel,
   tagColor: '#67c23a',
   audioMode: '无' as AlarmAudioMode,
   lightBlink: false
 })
 
-function levelTagType(level: AlarmLevel): 'info' | 'success' | 'warning' | 'danger' | 'primary' {
-  if (level === '无') return 'info'
-  if (level === '低') return 'success'
-  if (level === '中') return 'warning'
-  if (level === '高') return 'danger'
+function levelTagType(level: ThreatLevel): 'info' | 'success' | 'warning' | 'danger' | 'primary' {
+  if (level === '无危') return 'info'
+  if (level === '低危') return 'success'
+  if (level === '中危') return 'warning'
+  if (level === '高危') return 'danger'
   return 'primary'
 }
 
@@ -116,39 +112,39 @@ function applyUploadedAudio(target: { audioMode: AlarmAudioMode }, file: { name?
 function submitCreate() {
   const level = createForm.level.trim()
   if (!level) {
-    ElMessage.warning('请输入告警级别')
+    ElMessage.warning('请输入威胁等级')
     return
   }
   if (rows.value.some((item) => item.level === level)) {
-    ElMessage.warning(`告警级别“${level}”已存在`)
+    ElMessage.warning(`威胁等级“${level}”已存在`)
     return
   }
   rows.value.push({
     id: `za-${Date.now()}`,
-    level,
+    level: level as ThreatLevel,
     tagColor: createForm.tagColor,
     audioMode: createForm.audioMode,
     lightBlink: createForm.lightBlink
   })
   createVisible.value = false
-  ElMessage.success(`已新增“${level}”告警级别`)
+  ElMessage.success(`已新增“${level}”威胁等级`)
 }
 
 async function deleteRows(targets: AlarmAudioRow[] = selectedRows.value) {
   if (!targets.length) {
-    ElMessage.warning('请先勾选需要删除的告警级别')
+    ElMessage.warning('请先勾选需要删除的威胁等级')
     return
   }
-  const linkedRows = targets.filter((item) => ['低', '中', '高'].includes(item.level))
+  const linkedRows = targets.filter((item) => PROTECTED_LEVELS.includes(item.level))
   if (linkedRows.length) {
     ElMessage.error(
-      `删除失败：“${linkedRows.map((item) => item.level).join('、')}”级告警已关联具体数据，请取消当前数据在其他模块的关联状态。`
+      `删除失败：“${linkedRows.map((item) => item.level).join('、')}”已关联具体数据，请取消当前数据在其他模块的关联状态。`
     )
     return
   }
   try {
     await ElMessageBox.confirm(
-      `确认删除选中的告警级别“${targets.map((item) => item.level).join('、')}”吗？`,
+      `确认删除选中的威胁等级“${targets.map((item) => item.level).join('、')}”吗？`,
       '删除确认',
       {
         type: 'warning',
@@ -163,10 +159,6 @@ async function deleteRows(targets: AlarmAudioRow[] = selectedRows.value) {
   rows.value = rows.value.filter((item) => !ids.has(item.id))
   selectedRows.value = []
   ElMessage.success('删除成功')
-}
-
-function save() {
-  ElMessage.success('声光报警配置已保存')
 }
 
 function openEdit(row: AlarmAudioRow) {
@@ -185,41 +177,27 @@ function submitEdit() {
   current.audioMode = editForm.audioMode
   current.lightBlink = editForm.lightBlink
   editVisible.value = false
-  ElMessage.success(`已更新${current.level}级告警配置`)
+  ElMessage.success(`已更新「${current.level}」声光报警配置`)
 }
 
 function testAlarm(row: AlarmAudioRow) {
   ElMessage.info(
-    `已向“${row.level}”级别下发联调指令（音频：${row.audioMode}，灯光闪烁：${row.lightBlink ? '开' : '关'}）`
+    `已向「${row.level}」下发联调指令（音频：${row.audioMode}，灯光闪烁：${row.lightBlink ? '开' : '关'}）`
   )
 }
 </script>
 
 <template>
   <ContentWrap title="声光报警">
-    <ElForm :model="globalForm" inline class="threat-sound-alarm__global">
-      <ElFormItem label="声光总开关">
-        <ElSwitch v-model="globalForm.masterSwitch" />
-      </ElFormItem>
-      <ElFormItem label="默认告警音频">
-        <span class="threat-sound-alarm__plain-value">{{ globalForm.defaultAudioFile }}</span>
-      </ElFormItem>
-      <ElFormItem label="默认灯光闪烁">
-        <ElSwitch v-model="globalForm.defaultLightBlink" active-text="开" inactive-text="关" />
-      </ElFormItem>
-      <ElFormItem>
-        <BaseButton type="primary" @click="save">保存配置</BaseButton>
-      </ElFormItem>
-    </ElForm>
-
     <div class="threat-sound-alarm__toolbar">
-      <BaseButton type="primary" @click="openCreate">新增告警级别</BaseButton>
-      <BaseButton type="danger" @click="deleteRows()">删除</BaseButton>
+      <BaseButton type="primary" @click="openCreate">新增威胁等级</BaseButton>
+      <BaseButton type="danger" @click="deleteRows()">批量删除</BaseButton>
     </div>
 
     <ElTable :data="rows" border stripe @selection-change="selectedRows = $event">
       <ElTableColumn type="selection" width="52" />
-      <ElTableColumn prop="level" label="告警级别" width="120">
+      <ElTableColumn type="index" label="序号" width="65" align="center" />
+      <ElTableColumn prop="level" label="威胁等级" width="120">
         <template #default="{ row }">
           <ElTag :type="levelTagType(row.level)">{{ row.level }}</ElTag>
         </template>
@@ -253,13 +231,13 @@ function testAlarm(row: AlarmAudioRow) {
       </ElTableColumn>
     </ElTable>
 
-    <ElDialog v-model="createVisible" title="新增告警级别" width="420px">
+    <ElDialog v-model="createVisible" title="新增威胁等级" width="420px">
       <ElForm :model="createForm" label-width="88px">
-        <ElFormItem label="告警级别" required>
+        <ElFormItem label="威胁等级" required>
           <ElInput
             v-model="createForm.level"
             maxlength="10"
-            placeholder="请输入告警级别"
+            placeholder="请输入威胁等级"
             clearable
           />
         </ElFormItem>
@@ -293,7 +271,7 @@ function testAlarm(row: AlarmAudioRow) {
 
     <ElDialog v-model="editVisible" title="编辑告警配置" width="420px">
       <ElForm label-width="88px">
-        <ElFormItem label="告警级别">
+        <ElFormItem label="威胁等级">
           <span>{{ editForm.level }}</span>
         </ElFormItem>
         <ElFormItem label="标签颜色">
@@ -327,10 +305,6 @@ function testAlarm(row: AlarmAudioRow) {
 </template>
 
 <style scoped lang="less">
-.threat-sound-alarm__global {
-  margin-bottom: 12px;
-}
-
 .threat-sound-alarm__toolbar {
   display: flex;
   gap: 8px;

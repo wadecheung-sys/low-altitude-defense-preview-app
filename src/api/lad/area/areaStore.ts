@@ -30,7 +30,7 @@ const seed: AreaRegion[] = [
   {
     id: 'ar-10001',
     siteCode: 'L3001',
-    name: '核心防护场地',
+    name: '核心防护区域',
     parentId: 'ar-10002',
     parentSiteCode: 'L2001',
     parentSiteName: '反制处置区',
@@ -201,12 +201,12 @@ export function getAreaRegion(id: string) {
 
 export function saveAreaRegion(body: AreaRegionSavePayload): AreaRegion {
   const siteCode = body.siteCode.trim().toUpperCase()
-  if (!siteCode) throw new Error('请输入场地编号')
+  if (!siteCode) throw new Error('请输入区域编号')
   if (allRegions.some((row) => row.siteCode === siteCode && row.id !== body.id)) {
-    throw new Error('场地编号已存在')
+    throw new Error('区域编号已存在')
   }
   if (body.id && body.parentId && descendantIds(body.id).has(body.parentId)) {
-    throw new Error('上级场地不能选择当前场地或其下级场地')
+    throw new Error('上级区域不能选择当前区域或其下级区域')
   }
 
   const regionType = resolveRegionType(body)
@@ -228,7 +228,7 @@ export function saveAreaRegion(body: AreaRegionSavePayload): AreaRegion {
 
   if (body.id) {
     const index = allRegions.findIndex((row) => row.id === body.id)
-    if (index < 0) throw new Error('场地不存在')
+    if (index < 0) throw new Error('区域不存在')
     allRegions[index] = { ...allRegions[index], ...values, updatedAt: now }
     return cloneRegion(allRegions[index])
   }

@@ -5,7 +5,6 @@ import {
   ElFormItem,
   ElInput,
   ElInputNumber,
-  ElLink,
   ElMessage,
   ElOption,
   ElSelect,
@@ -14,27 +13,18 @@ import {
 import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { getThreatRuleDetailApi, saveThreatRuleApi } from '@/api/lad/threat'
-import { getAreaRegionListApi } from '@/api/lad/area'
 import { getPlanOptionsApi } from '@/api/lad/plan'
 import type {
   RuleCondition,
   RuleConditionLogic,
-  ThreatLevelLabel,
+  ThreatLevelScope,
   ThreatRule
 } from '@/api/lad/threat/types'
-import { dictEntriesToOptions, LAD_DICT_THREAT_LEVEL } from '../../shared/ladDictHelpers'
+import { LAD_DICT_THREAT_LEVEL } from '../../shared/ladDictHelpers'
 import { useLadDictOptions } from '../../shared/useLadDictOptions'
-import {
-  conditionOperatorOptions,
-  conditionPropertyOptions,
-  listTypeOptions,
-  targetModelOptionsWithAll
-} from '../../shared/ladOptionConstants'
-
-type AreaOption = {
-  label: string
-  value: string
-}
+import { buildThreatLevelSelectOptions, threatTargetModelSelectOptions } from '../threatConstants'
+import ThreatConditionEditor from './ThreatConditionEditor.vue'
+import { listTypeOptions } from '../../shared/ladOptionConstants'
 
 const props = defineProps<{
   modelValue: boolean
@@ -58,21 +48,16 @@ const { entries: threatLevelEntries, reload: reloadThreatLevels } = useLadDictOp
   false
 )
 
-const threatLevelOptions = computed(() => dictEntriesToOptions(threatLevelEntries.value))
+const threatLevelOptions = computed(() => buildThreatLevelSelectOptions(threatLevelEntries.value))
 const loading = ref(false)
-const areaOptions = ref<AreaOption[]>([])
 const defaultPlanId = ref('')
-const conditionLogicOptions: { label: string; value: RuleConditionLogic }[] = [
-  { label: '且', value: 'and' },
-  { label: '或', value: 'or' }
-]
 
 const form = ref({
   ruleCode: '',
   ruleName: '',
   targetType: '全部',
-  targetModel: '',
-  threatLevel: '中' as ThreatLevelLabel,
+  targetModel: '全部型号',
+  threatLevel: '中危' as ThreatLevelScope,
   priority: 500,
   enabled: true,
   conditionLogic: 'and' as RuleConditionLogic,
@@ -107,44 +92,8 @@ function conditionValueArray(condition: RuleCondition) {
     .filter(Boolean)
 }
 
-function updateConditionValue(condition: RuleCondition, value: string[]) {
-  condition.value = value.join(',')
-  condition.operator = '='
-}
-
-function onPropertyChange(condition: RuleCondition) {
-  if (isAreaCondition(condition)) {
-    condition.operator = '='
-    condition.value = ''
-    return
-  }
-  if (!conditionOperatorOptions.some((item) => item.value === condition.operator)) {
-    condition.operator = '>'
-  }
-  condition.value = ''
-}
-
-function addCondition() {
-  const last = form.value.conditions[form.value.conditions.length - 1]
-  if (last && !last.nextLogic) last.nextLogic = 'and'
-  form.value.conditions.push(newCondition())
-}
-
-function removeCondition(id: string) {
-  form.value.conditions = form.value.conditions.filter((item) => item.id !== id)
-  const last = form.value.conditions[form.value.conditions.length - 1]
-  if (last) last.nextLogic = undefined
-}
-
 async function loadDefaults() {
-  const [areaRes, planRes] = await Promise.all([
-    getAreaRegionListApi({ pageIndex: 1, pageSize: 200 }),
-    getPlanOptionsApi()
-  ])
-  areaOptions.value = areaRes.data.list.map((item) => ({
-    label: item.name,
-    value: item.id
-  }))
+  const planRes = await getPlanOptionsApi()
   defaultPlanId.value = planRes.data.find((item) => item.enabled)?.id || planRes.data[0]?.id || ''
 }
 
@@ -153,8 +102,8 @@ function resetForm() {
     ruleCode: generateThreatRuleCode(),
     ruleName: '',
     targetType: '全部',
-    targetModel: '',
-    threatLevel: '中',
+    targetModel: '全部型号',
+    threatLevel: '中危',
     priority: 500,
     enabled: true,
     conditionLogic: 'and',
@@ -206,8 +155,8 @@ onMounted(() => {
 })
 
 async function onSave() {
-  if (!form.value.ruleCode.trim() || !form.value.ruleName.trim()) {
-    ElMessage.warning('请填写规则编号与名称')
+  if (!form.value.ruleName.trim()) {
+    ElMessage.warning('请填写规则名称')
     return
   }
   if (!form.value.conditions.length) {
@@ -231,7 +180,7 @@ async function onSave() {
       ruleName: form.value.ruleName.trim(),
       areaRegionType: '全部',
       targetType: form.value.targetType,
-      targetModel: form.value.targetModel.trim() || '未知型号',
+      targetModel: form.value.targetModel.trim() || '全部型号',
       threatLevel: form.value.threatLevel,
       conditionLogic: form.value.conditionLogic,
       conditions: form.value.conditions.map((item, index) => ({
@@ -261,9 +210,6 @@ async function onSave() {
     max-height="85vh"
   >
     <ElForm label-width="100px">
-      <ElFormItem label="规则编号" required>
-        <ElInput v-model="form.ruleCode" disabled />
-      </ElFormItem>
       <ElFormItem label="规则名称" required>
         <ElInput v-model="form.ruleName" clearable />
       </ElFormItem>
@@ -280,7 +226,7 @@ async function onSave() {
       <ElFormItem label="目标型号">
         <ElSelect v-model="form.targetModel" class="w-full" filterable>
           <ElOption
-            v-for="option in targetModelOptionsWithAll"
+            v-for="option in threatTargetModelSelectOptions"
             :key="option.value"
             :label="option.label"
             :value="option.value"
@@ -288,76 +234,11 @@ async function onSave() {
         </ElSelect>
       </ElFormItem>
       <ElFormItem label="目标属性">
-        <div class="w-full">
-          <div class="threat-condition-toolbar">
-            <BaseButton type="primary" link @click="addCondition">+ 新增</BaseButton>
-          </div>
-          <div
-            v-for="(condition, index) in form.conditions"
-            :key="condition.id"
-            class="threat-condition-row"
-          >
-            <ElSelect
-              v-model="condition.property"
-              class="threat-condition-row__property"
-              @change="onPropertyChange(condition)"
-            >
-              <ElOption
-                v-for="option in conditionPropertyOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-
-            <template v-if="isAreaCondition(condition)">
-              <span class="threat-rule-form__operator-label">属于</span>
-              <ElSelect
-                :model-value="conditionValueArray(condition)"
-                multiple
-                collapse-tags
-                collapse-tags-tooltip
-                clearable
-                class="threat-condition-row__area"
-                placeholder="请选择区域"
-                @update:model-value="updateConditionValue(condition, $event)"
-              >
-                <ElOption
-                  v-for="option in areaOptions"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-            </template>
-
-            <template v-else>
-              <ElSelect v-model="condition.operator" class="threat-condition-row__operator">
-                <ElOption
-                  v-for="option in conditionOperatorOptions"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-              <ElInput v-model="condition.value" class="threat-condition-row__value" clearable />
-            </template>
-
-            <ElLink type="danger" @click="removeCondition(condition.id)">删除</ElLink>
-            <ElSelect
-              v-if="index < form.conditions.length - 1"
-              v-model="condition.nextLogic"
-              class="threat-condition-row__logic"
-            >
-              <ElOption
-                v-for="option in conditionLogicOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </div>
-        </div>
+        <ThreatConditionEditor
+          v-model="form.conditions"
+          v-model:condition-logic="form.conditionLogic"
+          mode="rule"
+        />
       </ElFormItem>
       <ElFormItem label="威胁等级" required>
         <ElSelect v-model="form.threatLevel" class="w-full">
@@ -394,46 +275,6 @@ async function onSave() {
 </template>
 
 <style scoped lang="less">
-.threat-condition-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-bottom: 8px;
-}
-
-.threat-condition-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.threat-condition-row__property {
-  width: 140px;
-}
-
-.threat-condition-row__operator {
-  width: 72px;
-}
-
-.threat-condition-row__value {
-  width: 160px;
-}
-
-.threat-condition-row__area {
-  width: 280px;
-}
-
-.threat-condition-row__logic {
-  width: 76px;
-}
-
-.threat-rule-form__operator-label {
-  width: 40px;
-  color: var(--el-text-color-regular);
-  text-align: center;
-}
-
 .threat-rule-form__tip {
   margin-top: 4px;
   font-size: 12px;

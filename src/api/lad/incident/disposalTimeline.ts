@@ -82,7 +82,7 @@ function assessmentRule(row: HistoryEventItem) {
   if (row.listType === '黑名单') return isCore ? '黑名单目标进入重点区域' : '黑名单目标活动'
   if (row.listType === '白名单') return '白名单目标授权通行'
   if (row.uavSn === '未解析') return isCore ? '非合作式目标进入重点区域' : '非合作式目标活动'
-  if (row.threatLevel === '高') return '高威胁目标处置规则'
+  if (row.threatLevel === '高危') return '高威胁目标处置规则'
   return '常规无人机目标评估规则'
 }
 
@@ -110,14 +110,14 @@ function skipReason(row: HistoryEventItem) {
   if (row.handlingResult.includes('自离') || row.handlingResult.includes('自然')) {
     return '目标已自然离开防护区域'
   }
-  if (row.threatLevel === '低') return '威胁等级较低，未命中反制预案'
+  if (row.threatLevel === '低危') return '威胁等级较低，未命中反制预案'
   return '未命中反制预案'
 }
 
 function planName(row: HistoryEventItem) {
   if (row.listType === '黑名单') return '黑名单无人机入侵反制'
   if (row.uavSn === '未解析') return '非合作式无人机入侵反制'
-  if (row.threatLevel === '高') return '高威胁目标联动反制'
+  if (row.threatLevel === '高危') return '高威胁目标联动反制'
   return '常规无人机处置预案'
 }
 

@@ -10,30 +10,36 @@ import ActionButton from './components/ActionButton.vue'
 import { SearchProps } from './types'
 import { FormItemProp } from 'element-plus'
 import { isObject, isEmptyVal } from '@/utils/is'
-
-/** WEB 两行布局：首行 4 个筛选项（span=6），次行左侧续排、右侧查询/重置/展开 */
-const ROW1_COUNT = 4
-const DEFAULT_FIELD_SPAN = 6
-const ACTION_SPAN = 9
+import { resolveSearchExpand } from './searchExpand'
 
 const props = defineProps({
+  // 生成Form的布局结构数组
   schema: {
     type: Array as PropType<FormSchema[]>,
     default: () => []
   },
+  // 是否需要栅格布局
   isCol: propTypes.bool.def(false),
+  // 表单label宽度
   labelWidth: propTypes.oneOfType([String, Number]).def('auto'),
+  // 操作按钮风格位置
   layout: propTypes.string.validate((v: string) => ['inline', 'bottom'].includes(v)).def('inline'),
+  // 底部按钮的对齐方式
   buttonPosition: propTypes.string
     .validate((v: string) => ['left', 'center', 'right'].includes(v))
     .def('center'),
   showSearch: propTypes.bool.def(true),
   showReset: propTypes.bool.def(true),
+  // 是否显示伸缩
   showExpand: propTypes.bool.def(false),
+  // 伸缩的界限字段
   expandField: propTypes.string.def(''),
-  expandRows: propTypes.number.def(0),
-  expandDefault: propTypes.bool.def(true),
+  /** 是否默认展开；筛选项较多且 show-expand 时建议 false（默认收起） */
+  expandDefault: propTypes.bool.def(false),
+  /** 筛选项超过一行时自动启用展开/折叠（默认按 inline 一行约 4 项判定） */
+  autoExpand: propTypes.bool.def(true),
   inline: propTypes.bool.def(true),
+  // 是否去除空值项
   removeNoValueItem: propTypes.bool.def(true),
   model: {
     type: Object as PropType<Recordable>,
@@ -46,220 +52,76 @@ const props = defineProps({
 const emit = defineEmits(['search', 'reset', 'register', 'validate'])
 
 const visible = ref(props.expandDefault)
-const formModel = ref<Recordable>(props.model)
 
-const getFieldSpan = (item: FormSchema) => Number(item.colProps?.span) || DEFAULT_FIELD_SPAN
-
-const normalizeFieldCol = (item: FormSchema): FormSchema => {
-  const span = getFieldSpan(item)
-  return {
-    ...item,
-    hidden: false,
-    colProps: { span, xs: 24, sm: 12, md: span, lg: span, xl: span }
-  }
-}
-
-/** 收起时第二行左侧最多占用的栅格（为右侧操作钮预留 ACTION_SPAN） */
-const getTwoRowCollapseCount = (schema: FormSchema[]) => {
-  const row2Cap = 24 - ACTION_SPAN
-  let count = Math.min(ROW1_COUNT, schema.length)
-  let row2Used = 0
-  for (let i = ROW1_COUNT; i < schema.length; i++) {
-    const span = getFieldSpan(schema[i])
-    if (row2Used + span > row2Cap) break
-    row2Used += span
-    count++
-  }
-  return count
-}
-
-const resolveCollapseIndex = (schema: FormSchema[], expandField: string, expandRows: number) => {
-  if (expandRows === 2 && expandField === '') {
-    return getTwoRowCollapseCount(schema)
-  }
-  if (expandField) {
-    const index = findIndex(schema, (v: FormSchema) => v.field === expandField)
-    return index >= 0 ? index : schema.length
-  }
-  if (expandRows > 0) {
-    const maxSpan = expandRows * 24
-    let used = 0
-    for (let i = 0; i < schema.length; i++) {
-      const span = getFieldSpan(schema[i])
-      if (used + span > maxSpan) return i
-      used += span
-      if (used >= maxSpan) return i + 1
-    }
-  }
-  return schema.length
-}
-
-const createActionField = (
-  offset: number,
-  propsComputed: Recordable,
-  useExpand: boolean,
-  canCollapse: boolean
-): FormSchema => ({
-  field: 'action',
-  colProps: {
-    span: ACTION_SPAN,
-    offset,
-    xs: 24,
-    sm: 24,
-    md: ACTION_SPAN,
-    lg: ACTION_SPAN,
-    xl: ACTION_SPAN
-  } as FormSchema['colProps'],
-  formItemProps: {
-    labelWidth: '0px',
-    style: { marginBottom: '18px' },
-    slots: {
-      default: () => (
-        <div class="search-form__action-btns">
-          <ActionButton
-            showSearch={propsComputed.showSearch}
-            showReset={propsComputed.showReset}
-            showExpand={useExpand && canCollapse}
-            searchLoading={propsComputed.searchLoading}
-            resetLoading={propsComputed.resetLoading}
-            visible={visible.value}
-            onExpand={setVisible}
-            onReset={reset}
-            onSearch={search}
-          />
-        </div>
-      ),
-      label: () => <span>&nbsp;</span>
-    }
-  }
+const searchExpandConfig = computed(() => {
+  const propsComputed = unref(getProps)
+  return resolveSearchExpand({
+    schema: propsComputed.schema,
+    showExpand: propsComputed.showExpand,
+    expandField: propsComputed.expandField,
+    autoExpand: propsComputed.autoExpand
+  })
 })
 
-/** 两行 WEB 布局：查询/重置/展开 与末行筛选项同一行，不单独占一行 */
-const buildTwoRowSearchSchema = (
-  filters: FormSchema[],
-  collapsed: boolean,
-  collapseCount: number,
-  propsComputed: Recordable,
-  useExpand: boolean,
-  canCollapse: boolean
-): FormSchema[] => {
-  const visibleFilters = collapsed ? filters.slice(0, collapseCount) : filters
-  const out: FormSchema[] = []
-
-  visibleFilters.slice(0, ROW1_COUNT).forEach((item) => {
-    out.push(normalizeFieldCol(item))
-  })
-
-  const tailFilters = visibleFilters.slice(ROW1_COUNT)
-  let rowUsed = 0
-  const pending: FormSchema[] = []
-
-  const flushRow = (withAction: boolean) => {
-    pending.forEach((item) => {
-      out.push(normalizeFieldCol(item))
-      rowUsed += getFieldSpan(item)
-    })
-    pending.length = 0
-    if (withAction) {
-      const offset = Math.max(0, 24 - ACTION_SPAN - rowUsed)
-      out.push(createActionField(offset, propsComputed, useExpand, canCollapse))
-    }
-    rowUsed = 0
-  }
-
-  tailFilters.forEach((item, index) => {
-    const span = getFieldSpan(item)
-    const isLast = index === tailFilters.length - 1
-
-    if (rowUsed > 0 && rowUsed + span > 24) {
-      flushRow(false)
-    }
-
-    pending.push(item)
-    rowUsed += span
-
-    if (!isLast) return
-
-    if (rowUsed + ACTION_SPAN <= 24) {
-      flushRow(true)
-      return
-    }
-
-    const last = pending.pop()!
-    rowUsed -= getFieldSpan(last)
-    flushRow(false)
-    pending.push(last)
-    rowUsed = getFieldSpan(last)
-    flushRow(true)
-  })
-
-  if (!tailFilters.length) {
-    out.push(
-      createActionField(Math.max(0, 24 - ACTION_SPAN), propsComputed, useExpand, canCollapse)
-    )
-  }
-
-  return out
-}
+// 表单数据
+const formModel = ref<Recordable>(props.model)
 
 const newSchema = computed(() => {
   const propsComputed = unref(getProps)
-  const filters: FormSchema[] = cloneDeep(propsComputed.schema)
-  const collapseIndex = resolveCollapseIndex(
-    filters,
-    propsComputed.expandField,
-    propsComputed.expandRows
-  )
-  const canCollapse = collapseIndex < filters.length
-  const useExpand = propsComputed.showExpand || (propsComputed.expandRows > 0 && canCollapse)
-  const collapsed = useExpand && canCollapse && !unref(visible)
-  const useTwoRowLayout = propsComputed.isCol && propsComputed.expandRows === 2
-
-  if (propsComputed.layout !== 'inline') {
-    return filters
-  }
-
-  if (useTwoRowLayout) {
-    return buildTwoRowSearchSchema(
-      filters,
-      collapsed,
-      collapseIndex,
-      propsComputed,
-      useExpand,
-      canCollapse
-    )
-  }
-
-  let schema = filters
-  if (useExpand && canCollapse && collapsed) {
-    schema = schema.map((v, i) => {
-      v.hidden = i >= collapseIndex
-      return v
-    })
-  } else if (useExpand && canCollapse) {
-    schema = schema.map((v) => {
-      v.hidden = false
+  const { showExpand, expandField } = unref(searchExpandConfig)
+  let schema: FormSchema[] = cloneDeep(propsComputed.schema)
+  if (showExpand && expandField && !unref(visible)) {
+    const index = findIndex(schema, (v: FormSchema) => v.field === expandField)
+    schema.map((v, i) => {
+      if (i >= index) {
+        v.hidden = true
+      } else {
+        v.hidden = false
+      }
       return v
     })
   }
-
-  const visibleSpan = schema.filter((v) => !v.hidden).reduce((sum, v) => sum + getFieldSpan(v), 0)
-  const tailSpan = visibleSpan % 24
-
-  return schema.concat([
-    createActionField(
-      propsComputed.isCol ? Math.max(0, 24 - ACTION_SPAN - tailSpan) : 0,
-      propsComputed,
-      useExpand,
-      canCollapse
-    )
-  ])
+  if (propsComputed.layout === 'inline') {
+    schema = schema.concat([
+      {
+        field: 'action',
+        formItemProps: {
+          labelWidth: '0px',
+          slots: {
+            default: () => {
+              return (
+                <div>
+                  <ActionButton
+                    showSearch={propsComputed.showSearch}
+                    showReset={propsComputed.showReset}
+                    showExpand={showExpand}
+                    searchLoading={propsComputed.searchLoading}
+                    resetLoading={propsComputed.resetLoading}
+                    visible={visible.value}
+                    onExpand={setVisible}
+                    onReset={reset}
+                    onSearch={search}
+                  />
+                </div>
+              )
+            },
+            label: () => {
+              return <span>&nbsp;</span>
+            }
+          }
+        }
+      }
+    ])
+  }
+  return schema
 })
 
 const { formRegister, formMethods } = useForm()
 const { getElFormExpose, getFormData, getFormExpose } = formMethods
 
+// useSearch传入的props
 const outsideProps = ref<SearchProps>({})
+
 const mergeProps = ref<SearchProps>({})
 
 const getProps = computed(() => {
@@ -268,36 +130,47 @@ const getProps = computed(() => {
   return propsObj
 })
 
+/** 栅格模式下关闭 inline，避免 el-form--inline 的 min-width 把 label 挤出列宽 */
+const formInline = computed(() => (unref(getProps).isCol ? false : unref(getProps).inline))
+
 const setProps = (props: SearchProps = {}) => {
   mergeProps.value = Object.assign(unref(mergeProps), props)
+  // @ts-ignore
   outsideProps.value = props
 }
 
 const schemaRef = ref<FormSchema[]>([])
 
+// 监听表单结构化数组，重新生成formModel
 watch(
   () => unref(newSchema),
   async (schema = []) => {
     formModel.value = initModel(schema, unref(formModel))
     schemaRef.value = schema
   },
-  { immediate: true, deep: true }
+  {
+    immediate: true,
+    deep: true
+  }
 )
 
 const filterModel = async () => {
   const model = await getFormData()
   if (unref(getProps).removeNoValueItem) {
+    // 使用reduce过滤空值，并返回一个新对象
     return Object.keys(model).reduce((prev, next) => {
       const value = model[next]
       if (!isEmptyVal(value)) {
         if (isObject(value)) {
-          if (Object.keys(value).length > 0) prev[next] = value
+          if (Object.keys(value).length > 0) {
+            prev[next] = value
+          }
         } else {
           prev[next] = value
         }
       }
       return prev
-    }, {} as Recordable)
+    }, {})
   }
   return model
 }
@@ -306,7 +179,8 @@ const search = async () => {
   const elFormExpose = await getElFormExpose()
   await elFormExpose?.validate(async (isValid) => {
     if (isValid) {
-      emit('search', await filterModel())
+      const model = await filterModel()
+      emit('search', model)
     }
   })
 }
@@ -314,14 +188,17 @@ const search = async () => {
 const reset = async () => {
   const elFormExpose = await getElFormExpose()
   elFormExpose?.resetFields()
-  emit('reset', await filterModel())
+  const model = await filterModel()
+  emit('reset', model)
 }
 
-const bottomButtonStyle = computed(() => ({
-  textAlign: unref(getProps).buttonPosition as 'left' | 'center' | 'right'
-}))
+const bottomButtonStyle = computed(() => {
+  return {
+    textAlign: unref(getProps).buttonPosition as unknown as 'left' | 'center' | 'right'
+  }
+})
 
-const setVisible = () => {
+const setVisible = async () => {
   visible.value = !unref(visible)
 }
 
@@ -329,11 +206,14 @@ const setSchema = (schemaProps: FormSetProps[]) => {
   const { schema } = unref(getProps)
   for (const v of schema) {
     for (const item of schemaProps) {
-      if (v.field === item.field) set(v, item.path, item.value)
+      if (v.field === item.field) {
+        set(v, item.path, item.value)
+      }
     }
   }
 }
 
+// 对表单赋值
 const setValues = async (data: Recordable = {}) => {
   formModel.value = Object.assign(props.model, unref(formModel), data)
   const formExpose = await getFormExpose()
@@ -342,14 +222,20 @@ const setValues = async (data: Recordable = {}) => {
 
 const delSchema = (field: string) => {
   const { schema } = unref(getProps)
+
   const index = findIndex(schema, (v: FormSchema) => v.field === field)
-  if (index > -1) schema.splice(index, 1)
+  if (index > -1) {
+    schema.splice(index, 1)
+  }
 }
 
 const addSchema = (formSchema: FormSchema, index?: number) => {
   const { schema } = unref(getProps)
-  if (index !== void 0) schema.splice(index, 0, formSchema)
-  else schema.push(formSchema)
+  if (index !== void 0) {
+    schema.splice(index, 0, formSchema)
+    return
+  }
+  schema.push(formSchema)
 }
 
 const defaultExpose = {
@@ -362,7 +248,10 @@ const defaultExpose = {
   getFormData
 }
 
-onMounted(() => emit('register', defaultExpose))
+onMounted(() => {
+  emit('register', defaultExpose)
+})
+
 defineExpose(defaultExpose)
 
 const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) => {
@@ -377,7 +266,7 @@ const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) =
     :is-custom="false"
     :label-width="getProps.labelWidth"
     hide-required-asterisk
-    :inline="getProps.inline"
+    :inline="formInline"
     :is-col="getProps.isCol"
     :schema="schemaRef"
     @register="formRegister"
@@ -389,7 +278,7 @@ const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) =
       <ActionButton
         :show-reset="getProps.showReset"
         :show-search="getProps.showSearch"
-        :show-expand="getProps.showExpand"
+        :show-expand="searchExpandConfig.showExpand"
         :search-loading="getProps.searchLoading"
         :reset-loading="getProps.resetLoading"
         :visible="visible"
@@ -403,19 +292,14 @@ const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) =
 
 <style scoped lang="less">
 .search-form {
-  :deep(.el-form-item:has(.search-form__action-btns)) {
-    .el-form-item__content {
-      justify-content: flex-end;
-    }
+  :deep(.el-form-item__label) {
+    white-space: nowrap;
   }
 
-  :deep(.search-form__action-btns) {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: flex-end;
+  :deep(.el-form-item .el-input),
+  :deep(.el-form-item .el-select),
+  :deep(.el-form-item .el-date-editor) {
     width: 100%;
-    gap: 8px;
   }
 }
 </style>

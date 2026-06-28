@@ -17,7 +17,7 @@ withDefaults(
   <ul class="site-architecture-tree">
     <li v-for="node in nodes" :key="node.id">
       <div class="site-node-card">
-        <div class="site-node-card__head">{{ level }}级场地</div>
+        <div class="site-node-card__head">{{ level }}级区域</div>
         <div class="site-node-card__body">
           <strong>{{ node.label }}</strong>
           <span>{{ node.siteCode }} · {{ regionTypeLabel(node.regionType) }}</span>

@@ -38,6 +38,7 @@ import {
   type PlanAreaCascaderOption
 } from '../planAreaOptions'
 import { allOption } from '../../shared/ladOptionConstants'
+import { THREAT_LEVEL_OPTIONS } from '../../shared/ladDictHelpers'
 
 type GroupOption = { label: string; value: string; groupType: string }
 
@@ -49,11 +50,9 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-const alarmLevelOptions = [
+const threatLevelOptions = [
   { label: allOption.label, value: allOption.value },
-  { label: '低', value: '低' },
-  { label: '中', value: '中' },
-  { label: '高', value: '高' }
+  ...THREAT_LEVEL_OPTIONS.filter((item) => item.value !== '无危')
 ]
 
 const logicOperatorOptions: { label: string; value: PlanConditionOperator }[] = [
@@ -308,8 +307,8 @@ watch(
 )
 
 async function onSave() {
-  if (!form.value.planCode.trim() || !form.value.planName.trim()) {
-    ElMessage.warning('请填写预案编号与名称')
+  if (!form.value.planName.trim()) {
+    ElMessage.warning('请填写预案名称')
     return
   }
   if (!triggerRules.value.length) {
@@ -369,19 +368,8 @@ async function onSave() {
     <ElForm v-loading="detailLoading" label-width="110px">
       <div class="plan-form-section">
         <div class="plan-form-section__title">基本信息</div>
-        <ElFormItem :label="UI.planCode" required>
-          <ElInput v-model="form.planCode" disabled />
-        </ElFormItem>
         <ElFormItem :label="UI.planName" required>
           <ElInput v-model="form.planName" clearable />
-        </ElFormItem>
-        <ElFormItem :label="UI.planRule">
-          <ElInput
-            v-model="form.planRule"
-            type="textarea"
-            :rows="3"
-            :placeholder="UI.planRulePlaceholder"
-          />
         </ElFormItem>
         <ElFormItem :label="UI.disposalMode" required>
           <ElRadioGroup v-model="form.disposalMode">
@@ -416,10 +404,10 @@ async function onSave() {
             UI.manualResponseManualHint
           }}</div>
         </ElFormItem>
-        <ElFormItem :label="UI.alarmLevel">
+        <ElFormItem :label="UI.threatLevel">
           <ElSelect v-model="form.threatLevel" class="w-full">
             <ElOption
-              v-for="option in alarmLevelOptions"
+              v-for="option in threatLevelOptions"
               :key="option.value"
               :label="option.label"
               :value="option.value"

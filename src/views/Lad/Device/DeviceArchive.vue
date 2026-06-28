@@ -322,8 +322,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     <ContentWrap class="archive-main flex-1 ml-20px">
       <Search
         :schema="allSchemas.searchSchema"
-        is-col
-        label-width="88px"
         class="archive-search"
         @search="setSearchParams"
         @reset="setSearchParams"

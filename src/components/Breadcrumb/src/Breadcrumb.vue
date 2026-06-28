@@ -3,8 +3,7 @@ import { ElBreadcrumb, ElBreadcrumbItem, ElIcon } from 'element-plus'
 import { ref, watch, computed, unref, defineComponent, TransitionGroup, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePermissionStore } from '@/store/modules/permission'
-import { filterBreadcrumb } from './helper'
-import { filter, treeToList } from '@/utils/tree'
+import { resolveBreadcrumbTrail, getBreadcrumbLinkPath } from './helper'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import { useI18n } from '@/hooks/web/useI18n'
 import { resolveMenuIcon } from '@/components/Menu/src/menuIconMap'
@@ -31,25 +30,25 @@ export default defineComponent({
 
     const permissionStore = usePermissionStore()
 
-    const menuRouters = computed(() => {
-      const routers = permissionStore.getRouters
-      return filterBreadcrumb(routers)
-    })
-
     const getBreadcrumb = () => {
-      const currentPath = currentRoute.value.matched.slice(-1)[0].path
-      levelList.value = filter<AppRouteRecordRaw>(unref(menuRouters), (node: AppRouteRecordRaw) => {
-        return node.path === currentPath
-      })
+      try {
+        levelList.value = resolveBreadcrumbTrail(
+          currentRoute.value,
+          permissionStore.getRouters || []
+        )
+      } catch (error) {
+        console.error('[Breadcrumb] resolve failed:', error)
+        levelList.value = []
+      }
     }
 
     const renderBreadcrumb = () => {
-      const breadcrumbList = treeToList<AppRouteRecordRaw[]>(unref(levelList))
-      return breadcrumbList.map((v) => {
-        const disabled = !v.redirect || v.redirect === 'noredirect'
+      const breadcrumbList = unref(levelList)
+      return breadcrumbList.map((v, index) => {
         const meta = v.meta
+        const linkPath = getBreadcrumbLinkPath(v, index, breadcrumbList.length)
         return (
-          <ElBreadcrumbItem to={{ path: disabled ? '' : v.path }} key={v.name}>
+          <ElBreadcrumbItem to={{ path: linkPath }} key={`${String(v.name || v.path)}-${index}`}>
             {meta?.icon && breadcrumbIcon.value ? (
               <>
                 {h(

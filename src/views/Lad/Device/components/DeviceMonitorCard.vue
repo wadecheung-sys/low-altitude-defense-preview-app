@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { DeviceMonitorItem } from '@/api/lad/device-monitor/types'
+import { getDeviceInfoDetailApi } from '@/api/lad/device-info'
+import type { DeviceLinkedArchive } from '@/api/lad/device-info/types'
 import { DEVICE_ARCHIVE_PLACEHOLDER } from '../constants'
 import productImage from '@/assets/imgs/counter-uas-device.png'
 import deviceSiteCctv from '@/assets/imgs/device-site-cctv.png'
 import { BaseButton } from '@/components/Button'
 import { Icon } from '@/components/Icon'
-import { ElCard, ElDialog, ElImage, ElPopover, ElTooltip } from 'element-plus'
-import { computed, ref } from 'vue'
+import { ElCard, ElDialog, ElImage, ElPopover, ElTabPane, ElTabs, ElTooltip } from 'element-plus'
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   item: DeviceMonitorItem
@@ -16,7 +19,12 @@ const emit = defineEmits<{
   detail: [DeviceMonitorItem]
 }>()
 
+const { push } = useRouter()
+
 const videoVisible = ref(false)
+const popoverTab = ref<'extend' | 'archive'>('extend')
+const archiveLoading = ref(false)
+const linkedArchiveDetail = ref<DeviceLinkedArchive | null>(null)
 
 const displayImage = computed(() => {
   const image = props.item.imageUrl
@@ -48,13 +56,61 @@ const extendedInfo = computed(() => {
     { label: '固件版本', value: `V2.3.${versionSuffix}` },
     { label: '接入协议', value: accessProtocol.value },
     { label: '通信地址', value: props.item.ipAddress ? `${props.item.ipAddress}:8000` : '—' },
-    { label: '所属场地', value: props.item.deployLocation || '—' },
+    { label: '所属区域', value: props.item.deployLocation || '—' },
     { label: '负责人', value: props.item.personInCharge || '—' },
     { label: '维护状态', value: props.item.onlineStatus === '正常' ? '在保 · 巡检正常' : '待检修' },
     { label: '最后心跳', value: props.item.lastHeartbeat },
     { label: '数据上报周期', value: '5 秒' }
   ]
 })
+
+const linkedArchive = computed(() => linkedArchiveDetail.value ?? props.item.linkedArchive)
+
+const archiveSummary = computed(() => {
+  const arch = linkedArchive.value
+  if (!arch) return []
+  return [
+    { label: '档案名称', value: arch.archiveName },
+    { label: '档案编号', value: arch.archiveNo },
+    { label: '设备类型', value: arch.deviceType },
+    { label: '厂商', value: arch.vendor },
+    { label: '设备型号', value: arch.deviceModel },
+    { label: '档案摘要', value: props.item.archiveInfo || '—' }
+  ]
+})
+
+async function loadArchiveDetail() {
+  archiveLoading.value = true
+  try {
+    const res = await getDeviceInfoDetailApi(props.item.id)
+    linkedArchiveDetail.value = res.data.linkedArchive
+  } catch {
+    linkedArchiveDetail.value = props.item.linkedArchive
+  } finally {
+    archiveLoading.value = false
+  }
+}
+
+async function onPopoverShow() {
+  if (!linkedArchiveDetail.value) {
+    await loadArchiveDetail()
+  }
+}
+
+function onPopoverHide() {
+  linkedArchiveDetail.value = null
+}
+
+watch(
+  () => props.item.id,
+  () => {
+    linkedArchiveDetail.value = null
+  }
+)
+
+function goDeviceInfo() {
+  push(`/lad/device/info/detail/${props.item.id}`)
+}
 </script>
 
 <template>
@@ -104,7 +160,7 @@ const extendedInfo = computed(() => {
             ><dt>设备型号：</dt><dd>{{ item.deviceModel }}</dd></div
           >
           <div
-            ><dt>场地：</dt><dd>{{ item.deployLocation || '—' }}</dd></div
+            ><dt>区域：</dt><dd>{{ item.deployLocation || '—' }}</dd></div
           >
           <div
             ><dt>IP：</dt><dd>{{ item.ipAddress || '—' }}</dd></div
@@ -115,8 +171,10 @@ const extendedInfo = computed(() => {
       <ElPopover
         placement="top-end"
         trigger="click"
-        :width="420"
+        :width="460"
         popper-class="device-monitor-popper"
+        @show="onPopoverShow"
+        @hide="onPopoverHide"
       >
         <template #reference>
           <button
@@ -133,13 +191,61 @@ const extendedInfo = computed(() => {
             <span>{{ item.deviceName }}</span>
             <BaseButton link type="primary" @click="emit('detail', item)">查看详情</BaseButton>
           </div>
-          <div class="device-monitor-detail-popover__section-title">扩展信息</div>
-          <div class="device-monitor-detail-popover__grid">
-            <div v-for="info in extendedInfo" :key="info.label">
-              <span>{{ info.label }}</span>
-              <strong :title="String(info.value)">{{ info.value }}</strong>
-            </div>
-          </div>
+
+          <ElTabs v-model="popoverTab" class="device-monitor-detail-popover__tabs">
+            <ElTabPane label="扩展信息" name="extend">
+              <div class="device-monitor-detail-popover__grid">
+                <div v-for="info in extendedInfo" :key="info.label">
+                  <span>{{ info.label }}</span>
+                  <strong :title="String(info.value)">{{ info.value }}</strong>
+                </div>
+              </div>
+            </ElTabPane>
+            <ElTabPane label="档案指标" name="archive">
+              <div v-loading="archiveLoading" class="device-monitor-detail-popover__archive-pane">
+                <template v-if="linkedArchive">
+                  <p class="device-monitor-detail-popover__archive-tip">
+                    以下指标来自设备信息页关联的基础档案「{{ linkedArchive.archiveName }}」
+                  </p>
+                  <div class="device-monitor-detail-popover__grid">
+                    <div v-for="info in archiveSummary" :key="info.label">
+                      <span>{{ info.label }}</span>
+                      <strong :title="String(info.value)">{{ info.value }}</strong>
+                    </div>
+                  </div>
+                  <div
+                    v-if="linkedArchive.indicators.length"
+                    class="device-monitor-detail-popover__indicators"
+                  >
+                    <div class="device-monitor-detail-popover__indicators-head">
+                      <span>指标项</span>
+                      <span>单位</span>
+                      <span>指标值</span>
+                    </div>
+                    <div class="device-monitor-detail-popover__indicators-body">
+                      <div
+                        v-for="row in linkedArchive.indicators"
+                        :key="row.id"
+                        class="device-monitor-detail-popover__indicator-row"
+                      >
+                        <span :title="row.item">{{ row.item }}</span>
+                        <span>{{ row.unit || '—' }}</span>
+                        <strong :title="row.value || '—'">{{ row.value || '—' }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <p v-else-if="!archiveLoading" class="device-monitor-detail-popover__empty">
+                  未关联基础档案，暂无档案指标。请在
+                  <BaseButton link type="primary" @click="goDeviceInfo">设备信息</BaseButton>
+                  页面绑定档案后查看。
+                </p>
+                <div v-if="linkedArchive" class="device-monitor-detail-popover__archive-foot">
+                  <BaseButton link type="primary" @click="goDeviceInfo">查看设备信息</BaseButton>
+                </div>
+              </div>
+            </ElTabPane>
+          </ElTabs>
         </div>
       </ElPopover>
     </div>
@@ -340,11 +446,46 @@ const extendedInfo = computed(() => {
     font-weight: 600;
   }
 
-  &__section-title {
-    margin: 11px 0 7px;
-    color: var(--el-text-color-primary);
+  &__tabs {
+    margin-top: 4px;
+
+    :deep(.el-tabs__header) {
+      margin-bottom: 10px;
+    }
+
+    :deep(.el-tabs__item) {
+      height: 32px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+  }
+
+  &__archive-pane {
+    min-height: 80px;
+  }
+
+  &__archive-tip {
+    margin: 0 0 8px;
+    color: var(--el-text-color-secondary);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  &__empty {
+    margin: 8px 0 0;
+    padding: 12px 10px;
+    border-radius: 5px;
+    background: #f5f7f9;
+    color: var(--el-text-color-secondary);
     font-size: 12px;
-    font-weight: 600;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  &__archive-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
   }
 
   &__grid {
@@ -372,6 +513,49 @@ const extendedInfo = computed(() => {
     strong {
       color: var(--el-text-color-regular);
       font-size: 11px;
+      font-weight: 500;
+    }
+  }
+
+  &__indicators {
+    margin-top: 10px;
+    overflow: hidden;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 5px;
+  }
+
+  &__indicators-head,
+  &__indicator-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) 56px minmax(0, 1fr);
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  &__indicators-head {
+    background: #eef2f5;
+    color: var(--el-text-color-secondary);
+    font-weight: 600;
+  }
+
+  &__indicators-body {
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  &__indicator-row {
+    border-top: 1px solid var(--el-border-color-extra-light);
+
+    span,
+    strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    strong {
+      color: var(--el-text-color-regular);
       font-weight: 500;
     }
   }

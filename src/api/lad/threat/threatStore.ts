@@ -5,6 +5,11 @@ import { resolvePlanTriggerRule } from '../plan/planTrigger'
 import { listAreaRegions } from '../area/areaStore'
 import { coerceThreatLevelLabel } from './threatLevelUtils'
 import {
+  isMonitorCatchAllRule,
+  monitorCatchAllNote,
+  THREAT_MONITOR_RULE_ID
+} from './threatFallback'
+import {
   deriveThreatLevel,
   effectiveRulePriority,
   isSwarmRule,
@@ -19,6 +24,7 @@ import type {
   ThreatAssessResult,
   ThreatAreaScope,
   ThreatLevelLabel,
+  ThreatLevelScope,
   ThreatRule,
   ThreatRuleListResult,
   ThreatRuleQuery,
@@ -127,6 +133,7 @@ function buildConditionText(c: RuleCondition) {
 }
 
 function buildSummary(conditions: RuleCondition[], logic: RuleConditionLogic = 'and') {
+  if (!conditions.length) return '无（任意场景）'
   const normalized = normalizeConditionList(conditions, logic)
   return normalized
     .map((c, index) => {
@@ -235,7 +242,8 @@ function ruleMatches(rule: ThreatRule, input: ThreatSimulateInput): boolean {
 function normalizeThreatLevel(
   level: string | undefined,
   rule: ThreatRuleSavePayload
-): ThreatLevelLabel {
+): ThreatLevelScope {
+  if (level?.trim() === '全部') return '全部'
   const coerced = coerceThreatLevelLabel(level) as ThreatLevelLabel | undefined
   if (coerced && coerced !== '\u65e0') return coerced
   if (coerced === '\u65e0' && !rule.enabled) return '\u65e0'
@@ -250,13 +258,8 @@ function normalizePriority(value: unknown) {
 
 function normalizeThreatTargetModel(row: ThreatRule & Record<string, unknown>) {
   const value = String(row.targetModel || '').trim()
-  if (value) return value
-  if (
-    String(row.ruleCode || '').startsWith('SWARM') ||
-    row.conditions?.some((item) => item.property === 'swarmCount')
-  ) {
-    return '蜂群目标'
-  }
+  if (value && value !== '蜂群目标') return value
+  if (value === '蜂群目标') return '全部型号'
   const numericId = Number(String(row.id || '').match(/\d+/)?.[0])
   if (Number.isFinite(numericId) && numericId > 0) {
     return threatTargetModelFallbacks[(numericId - 1) % threatTargetModelFallbacks.length]
@@ -276,16 +279,23 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
   let areaRegionType =
     (row.areaRegionType as ThreatAreaScope) || areaMap[legacyArea || ''] || 'warning'
   if (!row.areaRegionType && legacyArea === '\u5168\u90e8') areaRegionType = '\u5168\u90e8'
-  let threatLevel = coerceThreatLevelLabel(row.threatLevel as string | undefined) as
-    | ThreatLevelLabel
-    | undefined
-  const enabled = Boolean(row.enabled)
-  if (!threatLevel || (threatLevel === '\u65e0' && enabled)) {
-    threatLevel = deriveThreatLevel({
-      enabled,
-      priority: row.priority as number,
-      targetType: row.targetType as string
-    })
+  let threatLevel: ThreatLevelScope
+  if ((row.threatLevel as string) === '全部') {
+    threatLevel = '全部'
+  } else {
+    const coerced = coerceThreatLevelLabel(row.threatLevel as string | undefined) as
+      | ThreatLevelLabel
+      | undefined
+    const enabled = Boolean(row.enabled)
+    if (!coerced || (coerced === '\u65e0' && enabled)) {
+      threatLevel = deriveThreatLevel({
+        enabled,
+        priority: row.priority as number,
+        targetType: row.targetType as string
+      })
+    } else {
+      threatLevel = coerced
+    }
   }
   const { areaLevel: _a, scenario: _s, ...rest } = row
   void _a
@@ -318,7 +328,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-001',
     ruleName: '保护区-自动驱离',
     areaRegionType: 'warning',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '未知',
     targetModel: 'DJI Mavic 3',
     areaName: '保护区',
@@ -338,7 +348,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-002',
     ruleName: '核心区-黑名单高级告警',
     areaRegionType: 'nuclear',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '黑名单',
     targetModel: 'DJI Matrice 300 RTK',
     areaName: '核心保护区',
@@ -358,7 +368,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-003',
     ruleName: '缓冲区-跟踪联动',
     areaRegionType: 'alert',
-    threatLevel: '中',
+    threatLevel: '中危',
     targetType: '全部',
     targetModel: '未知型号',
     areaName: '缓冲区',
@@ -392,7 +402,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-006',
     ruleName: '核心区-雷达联动告警',
     areaRegionType: 'nuclear',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '黑名单',
     targetModel: 'Autel EVO II',
     areaName: '核心保护区',
@@ -409,7 +419,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-007',
     ruleName: '试飞区-告警提示',
     areaRegionType: 'testflight',
-    threatLevel: '低',
+    threatLevel: '低危',
     targetType: '全部',
     targetModel: 'DJI Mini 4 Pro',
     areaName: '试飞区',
@@ -426,7 +436,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-008',
     ruleName: '边界区-全向干扰',
     areaRegionType: 'alert',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '全部',
     targetModel: '未知型号',
     areaName: '边界缓冲区',
@@ -443,7 +453,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-009',
     ruleName: '光电监测上报',
     areaRegionType: 'warning',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '未知',
     targetModel: 'DJI Air 3',
     areaName: '保护区',
@@ -460,7 +470,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-010',
     ruleName: '导航诱骗驱离',
     areaRegionType: 'nuclear',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '黑名单',
     targetModel: 'DJI Mavic 3T',
     areaName: '核心保护区',
@@ -477,7 +487,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-011',
     ruleName: '网络断链迫降',
     areaRegionType: 'alert',
-    threatLevel: '中',
+    threatLevel: '中危',
     targetType: '全部',
     targetModel: '未知型号',
     areaName: '缓冲区',
@@ -494,7 +504,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-012',
     ruleName: '雷达跟踪备注',
     areaRegionType: 'warning',
-    threatLevel: '低',
+    threatLevel: '低危',
     targetType: '未知',
     targetModel: 'DJI Phantom 4 RTK',
     areaName: '保护区',
@@ -511,9 +521,9 @@ const seed: ThreatRule[] = [
     ruleCode: 'SWARM-001',
     ruleName: '蜂群入侵-复合反制',
     areaRegionType: 'nuclear',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '未知',
-    targetModel: '蜂群目标',
+    targetModel: '全部型号',
     areaName: '核心保护区',
     conditions: [
       { id: 'c15', property: 'swarmCount', operator: '>=', value: '3' },
@@ -531,9 +541,9 @@ const seed: ThreatRule[] = [
     ruleCode: 'SWARM-002',
     ruleName: '蜂群入侵-高功率微波',
     areaRegionType: 'alert',
-    threatLevel: '高',
+    threatLevel: '高危',
     targetType: '未知',
-    targetModel: '蜂群目标',
+    targetModel: '全部型号',
     areaName: '缓冲区',
     conditions: [{ id: 'c17', property: 'swarmCount', operator: '>=', value: '5' }],
     priority: 940,
@@ -542,10 +552,27 @@ const seed: ThreatRule[] = [
     enabled: true,
     updatedAt: '2026-05-20 16:05:00',
     updatedBy: '安全保密员'
+  }),
+  buildSeedRow({
+    id: THREAT_MONITOR_RULE_ID,
+    ruleCode: 'MONITOR-001',
+    ruleName: '无人机设备监测',
+    areaRegionType: '全部',
+    threatLevel: '无',
+    targetType: '全部',
+    targetModel: '全部型号',
+    areaName: '全部',
+    conditions: [],
+    priority: 1,
+    planId: 'plan-015',
+    planName: '无人机设备监测',
+    enabled: true,
+    updatedAt: '2026-05-20 16:30:00',
+    updatedBy: '系统管理员'
   })
 ]
 
-export const THREAT_STORE_VERSION = 10
+export const THREAT_STORE_VERSION = 13
 
 const seedThreatLevelById = Object.fromEntries(seed.map((s) => [s.id, s.threatLevel])) as Record<
   string,
@@ -750,26 +777,40 @@ export function toggleThreatRuleEnabled(id: string, enabled: boolean) {
 }
 
 export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult {
+  const normalizedTargetType =
+    input.targetType && input.targetType !== '全部' ? input.targetType : undefined
+  const inferredSwarmType =
+    input.swarmMode && (input.swarmCount ?? 0) >= 3 ? SWARM_TARGET_TYPE : undefined
   const simInput: ThreatSimulateInput = {
     ...input,
-    targetType: input.targetType || ((input.swarmCount ?? 0) >= 3 ? SWARM_TARGET_TYPE : undefined)
+    targetType: normalizedTargetType || inferredSwarmType,
+    targetModel:
+      input.targetModel && input.targetModel !== '全部型号' && input.targetModel !== '全部'
+        ? input.targetModel
+        : undefined
   }
+
+  let matched: ThreatRule | undefined
   const enabled = allRules
     .filter((r) => r.enabled)
     .sort((a, b) => effectiveRulePriority(b, simInput) - effectiveRulePriority(a, simInput))
-  const matched = enabled.find((r) => ruleMatches(r, simInput))
+  matched = enabled.find((r) => ruleMatches(r, simInput))
+  if (!matched) {
+    matched = allRules.find((r) => r.id === THREAT_MONITOR_RULE_ID && r.enabled)
+  }
+
   if (!matched) {
     return {
       matched: false,
-      message:
-        '\u672a\u5339\u914d\u5230\u542f\u7528\u89c4\u5219\uff0c\u4e0d\u89e6\u53d1\u9884\u6848'
+      message: '未匹配到启用规则，不触发预案'
     }
   }
+
   const plan = getPlan(matched.planId)
   if (!plan?.enabled) {
     return {
       matched: false,
-      message: '\u5339\u914d\u89c4\u5219\u4f46\u5173\u8054\u9884\u6848\u5df2\u505f\u7528'
+      message: '匹配规则但关联预案已停用'
     }
   }
   const triggerRule = resolvePlanTriggerRule(plan, {
@@ -782,16 +823,17 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
   if (!triggerRule) {
     return {
       matched: false,
-      message:
-        '\u5339\u914d\u89c4\u5219\u4f46\u9884\u6848\u65e0\u53ef\u7528\u89e6\u53d1\u7b56\u7565'
+      message: '匹配规则但预案无可用触发策略'
     }
   }
   const fnLabel = functionLabel(triggerRule.deviceType, triggerRule.deviceFunction)
+  const isMonitorCatchAll = isMonitorCatchAllRule(matched)
   const swarmNote =
-    isSwarmRule(matched) || isSwarmSimulateInput(simInput)
+    !isMonitorCatchAll && (isSwarmRule(matched) || isSwarmSimulateInput(simInput))
       ? swarmEscalationNote(triggerRule.deviceAction)
       : undefined
-  const swarmPrefix = isSwarmSimulateInput(simInput) ? '\u3010\u8702\u7fa4\u5347\u7ea7\u3011' : ''
+  const monitorNote = isMonitorCatchAll ? monitorCatchAllNote() : undefined
+  const prefix = isSwarmSimulateInput(simInput) && !isMonitorCatchAll ? '【蜂群升级】' : ''
   const conditionScene = [
     simInput.temperature !== undefined ? `温度${simInput.temperature}` : '',
     simInput.humidity !== undefined ? `湿度${simInput.humidity}` : '',
@@ -802,17 +844,27 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
     .join(' / ')
   const scene = conditionScene ? `（${conditionScene}→ 规则「${triggerRule.ruleName}」）` : ''
   const disposalNote = formatDisposalExecNote(plan)
+  const outcomeSummary = isMonitorCatchAll
+    ? `系统将启动「${plan.planName}」：${triggerRule.deviceGroupName}执行「${triggerRule.deviceAction}」，持续跟踪目标并上报，不自动升级打击。`
+    : `系统将触发「${plan.planName}」，由${triggerRule.deviceGroupName}执行「${triggerRule.deviceAction}」（${fnLabel}）。`
   return {
     matched: true,
     rule: { ...matched },
+    ruleName: matched.ruleName,
+    threatLevel: matched.threatLevel,
     planId: plan.id,
     planCode: plan.planCode,
     planName: plan.planName,
     planDeviceAction: triggerRule.deviceAction,
     planDeviceType: triggerRule.deviceType,
     planDeviceFunction: fnLabel,
+    disposalModeLabel: plan.disposalModeLabel,
+    triggerStrategyName: triggerRule.ruleName,
+    outcomeSummary,
     swarmNote,
-    message: `${swarmPrefix}\u5339\u914d\u89c4\u5219\u300c${matched.ruleName}\u300d\uff0c\u5c06\u89e6\u53d1\u9884\u6848\u300c${plan.planName}\u300d\uff08${plan.planCode}\uff09${scene}\u2192 ${triggerRule.deviceType} / ${fnLabel}\uff1b${disposalNote}`
+    isMonitorCatchAll,
+    monitorNote,
+    message: `${prefix}匹配规则「${matched.ruleName}」，将触发预案「${plan.planName}」（${plan.planCode}）${scene}→ ${triggerRule.deviceType} / ${fnLabel}；${disposalNote}`
   }
 }
 
@@ -828,7 +880,10 @@ export function assessThreatRule(id: string): ThreatAssessResult {
     : '-'
   const swarmNote = isSwarmRule(rule) ? swarmEscalationNote(triggerRule?.deviceAction) : undefined
   const swarmSummary = isSwarmRule(rule)
-    ? '\u8702\u7fa4\u7ef4\u5ea6\uff1a\u591a\u673a\u5165\u4fb5\u65f6\u9ed8\u8ba4\u63d0\u5347\u5a01\u80f1\uff0c\u9a71\u79bb\u7ea7\u9884\u6848\u53ef\u5347\u7ea7\u4e3a\u6fc0\u5149/\u9ad8\u529f\u7387\u5fae\u6ce2\u3002'
+    ? '蜂群维度：多机入侵时默认提升威胁等级，驱离级预案可升级为激光/高功率微波。'
+    : ''
+  const monitorSummary = isMonitorCatchAllRule(rule)
+    ? '兜底监测：未命中更高优先级规则时，默认启动无人机设备监测。'
     : ''
   return {
     rule,
@@ -838,8 +893,8 @@ export function assessThreatRule(id: string): ThreatAssessResult {
     planDeviceAction: triggerRule?.deviceAction,
     planDeviceType: triggerRule?.deviceType,
     planDeviceFunction: fnLabel,
-    alarmLevel: levelKey === 'high' ? '\u4e00\u7ea7\u544a\u8b66' : '\u4e8c\u7ea7\u9884\u8b66',
-    summary: `${swarmSummary}\u89c4\u5219\u5a01\u80f1\u7b49\u7ea7\u300c${rule.threatLevel}\u300d\uff1b\u540d\u5355\u7c7b\u578b\u300c${rule.targetType}\u300d\uff1b\u76ee\u6807\u578b\u53f7\u300c${rule.targetModel}\u300d\uff1b\u89e6\u53d1\u6761\u4ef6\uff1a${rule.conditionSummary}`,
+    alarmLevel: levelKey === 'high' ? '一级告警' : '二级预警',
+    summary: `${monitorSummary}${swarmSummary}规则威胁等级「${rule.threatLevel}」；名单类型「${rule.targetType}」；目标型号「${rule.targetModel}」；触发条件：${rule.conditionSummary}`,
     swarmNote,
     triggerNote:
       plan && triggerRule

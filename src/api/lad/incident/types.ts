@@ -1,4 +1,6 @@
-export type ThreatLevel = '高' | '中' | '低' | '未知'
+import type { ThreatLevelLabel } from '../threat/threatLevelUtils'
+
+export type ThreatLevel = ThreatLevelLabel
 
 export type HandlingStatus = '待处置' | '处置中' | '已处置' | '已结束'
 
@@ -44,8 +46,7 @@ export interface HistoryEventQuery {
   trajectoryFeature?: string
   detectionDevice?: string
   countermeasureDevice?: string
-  handlingResult?: string
-  pilotLocated?: '已定位' | '未定位'
+  listType?: HistoryEventItem['listType']
   discoveredAtStart?: string
   discoveredAtEnd?: string
   zoneName?: string

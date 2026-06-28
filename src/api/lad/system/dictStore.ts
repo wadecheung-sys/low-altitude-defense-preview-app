@@ -124,7 +124,7 @@ const dictEntriesSeed: DictEntryItem[] = [
   {
     id: 'de-008',
     dictTypeId: 'dt-003',
-    label: '高',
+    label: '高危',
     value: 'high',
     sort: 1,
     updatedAt: '2026-05-19 09:00:00'
@@ -132,7 +132,7 @@ const dictEntriesSeed: DictEntryItem[] = [
   {
     id: 'de-009',
     dictTypeId: 'dt-003',
-    label: '中',
+    label: '中危',
     value: 'medium',
     sort: 2,
     updatedAt: '2026-05-19 09:00:00'
@@ -140,7 +140,7 @@ const dictEntriesSeed: DictEntryItem[] = [
   {
     id: 'de-010',
     dictTypeId: 'dt-003',
-    label: '低',
+    label: '低危',
     value: 'low',
     sort: 3,
     updatedAt: '2026-05-19 09:00:00'
@@ -148,7 +148,7 @@ const dictEntriesSeed: DictEntryItem[] = [
   {
     id: 'de-011',
     dictTypeId: 'dt-003',
-    label: '无',
+    label: '无危',
     value: 'none',
     sort: 4,
     updatedAt: '2026-05-21 10:00:00'

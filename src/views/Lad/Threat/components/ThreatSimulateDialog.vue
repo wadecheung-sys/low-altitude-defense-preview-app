@@ -5,10 +5,17 @@ import { BaseButton } from '@/components/Button'
 import { simulateThreatApi } from '@/api/lad/threat'
 import type { ThreatSimulateResult } from '@/api/lad/threat/types'
 import { UI } from '../threatConstants'
-import { dictEntriesToOptions, LAD_DICT_AREA_REGION_TYPE } from '../../shared/ladDictHelpers'
-import { useLadDictOptions } from '../../shared/useLadDictOptions'
-import { listTypeOptions, targetModelOptions } from '../../shared/ladOptionConstants'
-import { ElAlert, ElForm, ElFormItem, ElInputNumber, ElOption, ElSelect } from 'element-plus'
+import {
+  createDefaultGeneralSimulateForm,
+  generalFormToSimulateInput,
+  type ThreatSimulateGeneralFormState
+} from '../simulateFormUtils'
+import ThreatSimulateGeneralForm from './ThreatSimulateGeneralForm.vue'
+import ThreatSimulateParamForm, {
+  type ThreatSimulateFormState
+} from './ThreatSimulateParamForm.vue'
+import ThreatSimulateResultPanel from './ThreatSimulateResultPanel.vue'
+import { ElTabPane, ElTabs } from 'element-plus'
 
 const props = defineProps<{
   modelValue: boolean
@@ -23,137 +30,123 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val)
 })
 
-const { entries: areaTypeEntries } = useLadDictOptions(LAD_DICT_AREA_REGION_TYPE)
+const simulateTab = ref<'general' | 'swarm'>('general')
+const generalLoading = ref(false)
+const swarmLoading = ref(false)
+const generalResult = ref<ThreatSimulateResult>()
+const swarmResult = ref<ThreatSimulateResult>()
 
-const areaRegionTypeOptions = computed(() =>
-  dictEntriesToOptions(areaTypeEntries.value).filter((o) => o.value !== '全部')
-)
-
-const loading = ref(false)
-const result = ref<ThreatSimulateResult>()
-
-const colon = '：'
-
-const L = {
-  speed: '速度 (m/s)',
-  stay: '逗留 (min)',
-  intrusion: '入侵次数',
-  swarmCount: '蜂群机数',
-  targetType: '名单类型',
-  targetModel: '目标型号',
-  areaRegionType: '区域类型',
-  temperature: '温度',
-  humidity: '湿度',
-  windPower: '风力',
-  rainfall: '雨量',
-  run: '开始模拟'
+function createSwarmForm(): ThreatSimulateFormState {
+  return {
+    speed: 4,
+    stayMinutes: 5,
+    intrusionCount: 1,
+    targetType: '未知',
+    targetModel: '全部型号',
+    areaRegionType: 'nuclear',
+    temperature: 28,
+    humidity: 50,
+    windPower: 2,
+    rainfall: 0,
+    swarmCount: 4
+  }
 }
 
-const simulateTargetTypeOptions = listTypeOptions.filter((o) => o.value !== '全部')
+const generalForm = ref<ThreatSimulateGeneralFormState>(createDefaultGeneralSimulateForm())
+const swarmForm = ref(createSwarmForm())
 
-const form = ref({
-  speed: 6,
-  stayMinutes: 12,
-  intrusionCount: 1,
-  swarmCount: 4,
-  targetType: simulateTargetTypeOptions[0]?.value || '未知',
-  targetModel: 'DJI Mavic 3',
-  areaRegionType: 'warning',
-  temperature: 30,
-  humidity: 60,
-  windPower: 3,
-  rainfall: 0
-})
+function toSwarmPayload(form: ThreatSimulateFormState) {
+  return {
+    speed: form.speed,
+    stayMinutes: form.stayMinutes,
+    intrusionCount: form.intrusionCount,
+    targetType: form.targetType === '全部' ? undefined : form.targetType,
+    targetModel:
+      form.targetModel === '全部型号' || form.targetModel === '全部' ? undefined : form.targetModel,
+    areaRegionType: form.areaRegionType,
+    temperature: form.temperature,
+    humidity: form.humidity,
+    windPower: form.windPower,
+    rainfall: form.rainfall,
+    swarmCount: form.swarmCount,
+    swarmMode: true as const
+  }
+}
 
-async function onRun() {
-  loading.value = true
-  result.value = undefined
+async function onRunGeneral() {
+  generalLoading.value = true
+  generalResult.value = undefined
   try {
-    const res = await simulateThreatApi({ ...form.value })
-    result.value = res.data
+    const res = await simulateThreatApi(generalFormToSimulateInput(generalForm.value))
+    generalResult.value = res.data
   } finally {
-    loading.value = false
+    generalLoading.value = false
+  }
+}
+
+async function onRunSwarm() {
+  swarmLoading.value = true
+  swarmResult.value = undefined
+  try {
+    const res = await simulateThreatApi(toSwarmPayload(swarmForm.value))
+    swarmResult.value = res.data
+  } finally {
+    swarmLoading.value = false
   }
 }
 </script>
 
 <template>
-  <Dialog v-model="visible" :title="UI.dialogSimulate" width="560px" max-height="85vh">
-    <ElForm label-width="108px">
-      <ElFormItem :label="L.targetType">
-        <ElSelect v-model="form.targetType" class="w-full">
-          <ElOption
-            v-for="opt in simulateTargetTypeOptions"
-            :key="opt.value"
-            :label="opt.label"
-            :value="opt.value"
-          />
-        </ElSelect>
-      </ElFormItem>
-      <ElFormItem :label="L.targetModel">
-        <ElSelect v-model="form.targetModel" class="w-full" filterable>
-          <ElOption
-            v-for="opt in targetModelOptions"
-            :key="opt.value"
-            :label="opt.label"
-            :value="opt.value"
-          />
-        </ElSelect>
-      </ElFormItem>
-      <ElFormItem :label="L.swarmCount">
-        <ElInputNumber v-model="form.swarmCount" :min="1" :max="99" class="w-full" />
-      </ElFormItem>
-      <ElFormItem :label="L.speed">
-        <ElInputNumber v-model="form.speed" :min="0" :max="200" class="w-full" />
-      </ElFormItem>
-      <ElFormItem :label="L.stay">
-        <ElInputNumber v-model="form.stayMinutes" :min="0" :max="999" class="w-full" />
-      </ElFormItem>
-      <ElFormItem :label="L.intrusion">
-        <ElInputNumber v-model="form.intrusionCount" :min="0" :max="99" class="w-full" />
-      </ElFormItem>
-      <ElFormItem :label="L.areaRegionType">
-        <ElSelect v-model="form.areaRegionType" class="w-full">
-          <ElOption
-            v-for="opt in areaRegionTypeOptions"
-            :key="opt.value"
-            :label="opt.label"
-            :value="opt.value"
-          />
-        </ElSelect>
-      </ElFormItem>
-      <ElFormItem :label="L.temperature">
-        <ElInputNumber v-model="form.temperature" :min="-50" :max="80" class="w-full" />
-      </ElFormItem>
-      <ElFormItem :label="L.humidity">
-        <ElInputNumber v-model="form.humidity" :min="0" :max="100" class="w-full" />
-      </ElFormItem>
-      <ElFormItem :label="L.windPower">
-        <ElInputNumber v-model="form.windPower" :min="0" :max="20" class="w-full" />
-      </ElFormItem>
-      <ElFormItem :label="L.rainfall">
-        <ElInputNumber v-model="form.rainfall" :min="0" :max="999" class="w-full" />
-      </ElFormItem>
-    </ElForm>
-    <ElAlert
-      v-if="result"
-      class="mt-12px"
-      :type="result.matched ? 'success' : 'warning'"
-      :title="result.message"
-      :closable="false"
-      show-icon
-    >
-      <p v-if="result.matched" class="text-13px mb-4px">
-        {{ UI.triggerPlan }}{{ colon }}{{ result.planName }}（{{ result.planCode }}）
-      </p>
-      <p v-if="result.matched && result.planDeviceType" class="text-13px">
-        {{ UI.detailDeviceType }}{{ colon }}{{ result.planDeviceType }} /
-        {{ result.planDeviceFunction }}
-      </p>
-    </ElAlert>
+  <Dialog v-model="visible" :title="UI.dialogSimulate" width="760px" max-height="85vh">
+    <ElTabs v-model="simulateTab" class="threat-simulate-tabs">
+      <ElTabPane :label="UI.simulateTabGeneral" name="general">
+        <p class="threat-simulate-tabs__hint">{{ UI.simulateGeneralPresetHint }}</p>
+        <ThreatSimulateGeneralForm v-model="generalForm" />
+        <ThreatSimulateResultPanel :result="generalResult" class="mt-12px" />
+
+        <div class="threat-simulate-tabs__actions">
+          <BaseButton type="primary" :loading="generalLoading" @click="onRunGeneral">
+            {{ UI.simulateRun }}
+          </BaseButton>
+        </div>
+      </ElTabPane>
+
+      <ElTabPane :label="UI.simulateTabSwarm" name="swarm">
+        <p class="threat-simulate-tabs__hint">{{ UI.simulateSwarmPresetHint }}</p>
+        <ThreatSimulateParamForm v-model="swarmForm" show-swarm-count />
+        <ThreatSimulateResultPanel :result="swarmResult" class="mt-12px" />
+
+        <div class="threat-simulate-tabs__actions">
+          <BaseButton type="primary" :loading="swarmLoading" @click="onRunSwarm">
+            {{ UI.simulateRun }}
+          </BaseButton>
+        </div>
+      </ElTabPane>
+    </ElTabs>
+
     <template #footer>
       <BaseButton @click="visible = false">{{ UI.btnCancel }}</BaseButton>
-      <BaseButton type="primary" :loading="loading" @click="onRun">{{ L.run }}</BaseButton>
     </template>
   </Dialog>
 </template>
+
+<style scoped lang="less">
+.threat-simulate-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 14px;
+  }
+
+  &__hint {
+    margin: 0 0 12px;
+    color: var(--el-text-color-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+}
+</style>

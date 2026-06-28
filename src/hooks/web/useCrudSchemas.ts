@@ -83,7 +83,6 @@ const filterSearchSchema = (crudSchema: CrudSchema[]): FormSchema[] => {
     if (schemaItem.search?.hidden === true) {
       continue
     }
-    // 判断是否隐藏
     const searchSchemaItem = {
       component: schemaItem?.search?.component || 'Input',
       ...schemaItem.search,

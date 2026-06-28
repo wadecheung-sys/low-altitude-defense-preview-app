@@ -60,7 +60,7 @@ type SeedInput = Omit<
   triggerRules: PlanTriggerRule[]
 }
 
-export const PLAN_STORE_VERSION = 17
+export const PLAN_STORE_VERSION = 19
 export const PLAN_DEFAULT_PRIORITY = 500
 
 function normalizePriority(value: unknown) {
@@ -78,7 +78,7 @@ const seed: SeedInput[] = [
       '1. 启动干扰设备并切至驱离模式\n2. 单次工作时长不超过30秒\n3. 无效果则停止并通知值班复核',
     disposalMode: 'auto',
     manualResponseSeconds: 20,
-    threatLevel: '高',
+    threatLevel: '高危',
     areaLevel: '全部',
     priority: 70,
     enabled: true,
@@ -117,7 +117,7 @@ const seed: SeedInput[] = [
       '1. 值班员在线确认后下发迫降指令\n2. 执行期间持续光电监测\n3. 目标离开核心区后自动结束',
     disposalMode: 'manual',
     manualResponseSeconds: 0,
-    threatLevel: '高',
+    threatLevel: '高危',
     areaLevel: '全部',
     priority: 85,
     enabled: true,
@@ -144,7 +144,7 @@ const seed: SeedInput[] = [
     planRule: '1. 启动光电设备进入跟踪模式\n2. 同步上报目标轨迹至指挥平台\n3. 目标消失后自动停止',
     disposalMode: 'auto',
     manualResponseSeconds: 10,
-    threatLevel: '中',
+    threatLevel: '中危',
     areaLevel: '全部',
     priority: 40,
     enabled: true,
@@ -199,7 +199,7 @@ const seed: SeedInput[] = [
       '1. 启动边界雷达监测并记录航迹\n2. 不下发驱离，仅供值班判断\n3. 异常轨迹自动标注并推送告警预案',
     disposalMode: 'auto',
     manualResponseSeconds: 15,
-    threatLevel: '中',
+    threatLevel: '中危',
     areaLevel: '全部',
     priority: 45,
     enabled: true,
@@ -226,7 +226,7 @@ const seed: SeedInput[] = [
     planRule: '1. 仅平台弹窗与声光提示\n2. 不启动干扰\n3. 记录操作员与时间',
     disposalMode: 'manual',
     manualResponseSeconds: 0,
-    threatLevel: '低',
+    threatLevel: '低危',
     areaLevel: '全部',
     priority: 20,
     enabled: true,
@@ -253,7 +253,7 @@ const seed: SeedInput[] = [
     planRule: '1. 全向干扰模式最长60秒\n2. 监测周边设备状态\n3. 异常自动停止并告警',
     disposalMode: 'auto',
     manualResponseSeconds: 15,
-    threatLevel: '高',
+    threatLevel: '高危',
     areaLevel: '全部',
     priority: 65,
     enabled: true,
@@ -280,7 +280,7 @@ const seed: SeedInput[] = [
     planRule: '1. 连续监测上报至指挥平台\n2. 不自动升级处置\n3. 目标离开后停止',
     disposalMode: 'auto',
     manualResponseSeconds: 5,
-    threatLevel: '低',
+    threatLevel: '低危',
     areaLevel: '全部',
     priority: 35,
     enabled: true,
@@ -307,7 +307,7 @@ const seed: SeedInput[] = [
     planRule: '1. 导航诱骗模式不超过45秒\n2. 执行中禁止切换频段\n3. 结束后生成备注',
     disposalMode: 'auto',
     manualResponseSeconds: 10,
-    threatLevel: '中',
+    threatLevel: '中危',
     areaLevel: '全部',
     priority: 60,
     enabled: true,
@@ -334,7 +334,7 @@ const seed: SeedInput[] = [
     planRule: '1. 断链持续至目标离开\n2. 需二级审批后执行\n3. 失败自动回退告警预案',
     disposalMode: 'manual',
     manualResponseSeconds: 0,
-    threatLevel: '高',
+    threatLevel: '高危',
     areaLevel: '全部',
     priority: 75,
     enabled: false,
@@ -361,7 +361,7 @@ const seed: SeedInput[] = [
     planRule: '1. 记录航迹与速度曲线\n2. 不联动打击\n3. 异常轨迹标注传值班',
     disposalMode: 'auto',
     manualResponseSeconds: 5,
-    threatLevel: '低',
+    threatLevel: '低危',
     areaLevel: '全部',
     priority: 25,
     enabled: true,
@@ -389,7 +389,7 @@ const seed: SeedInput[] = [
       '1. 检测蜂群≥3架后自动升级威慑\n2. 大雾天切换微波，其余场景激光打击\n3. 驱离失败时不回退驱离预案',
     disposalMode: 'manual',
     manualResponseSeconds: 0,
-    threatLevel: '高',
+    threatLevel: '高危',
     areaLevel: '全部',
     priority: 90,
     enabled: true,
@@ -427,7 +427,7 @@ const seed: SeedInput[] = [
     planRule: '1. 对入侵蜂群实施区域微波\n2. 需指挥员二级授权\n3. 打击后全向监测备注',
     disposalMode: 'manual',
     manualResponseSeconds: 0,
-    threatLevel: '高',
+    threatLevel: '高危',
     areaLevel: '全部',
     priority: 95,
     enabled: true,
@@ -443,6 +443,34 @@ const seed: SeedInput[] = [
         deviceGroupType: '反制组',
         deviceFunction: 'hpm_suppression',
         deviceAction: '高功率微波压制',
+        enabled: true
+      }
+    ]
+  },
+  {
+    id: 'plan-015',
+    planCode: 'contingency-015',
+    planName: '无人机设备监测',
+    planRule:
+      '1. 发现无人机目标后启动全流程监测\n2. 雷达/光电/无线电多源融合跟踪并上报\n3. 不自动升级打击，供值班员后续研判',
+    disposalMode: 'auto',
+    manualResponseSeconds: 0,
+    threatLevel: '无',
+    areaLevel: '全部',
+    priority: 1,
+    enabled: true,
+    updatedAt: '2026-05-20 16:30:00',
+    updatedBy: '系统管理员',
+    triggerRules: [
+      {
+        id: 'ptr-plan-015-1',
+        ruleName: '默认无人机监测',
+        weatherFactor: '全部',
+        deviceGroupId: 'dg-1001',
+        deviceGroupName: '北区探测协同组',
+        deviceGroupType: '探测组',
+        deviceFunction: 'fusion_monitor_report',
+        deviceAction: '融合上报',
         enabled: true
       }
     ]

@@ -26,6 +26,7 @@ const authLogPage = () => import('@/views/Lad/Auth/AuthLog.vue')
 const threatRuleListPage = () => import('@/views/Lad/Threat/ThreatRuleList.vue')
 const threatSoundAlarmPage = () => import('@/views/Lad/Threat/ThreatSoundAlarm.vue')
 const planStrategyListPage = () => import('@/views/Lad/Plan/PlanStrategyList.vue')
+const messageCenterListPage = () => import('@/views/Lad/Message/MessageCenterList.vue')
 
 function ladMeta(pageKey: string, extra: Partial<RouteMeta> = {}): RouteMeta {
   const base = getLadPageMeta(pageKey)
@@ -369,6 +370,27 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         component: planStrategyListPage,
         meta: ladMeta('plan-strategy', {
           title: '预案策略配置'
+        })
+      }
+    ]
+  },
+  {
+    path: '/lad/message',
+    component: Layout,
+    redirect: '/lad/message/index',
+    name: 'LadMessage',
+    meta: {
+      title: '消息中心',
+      icon: 'vi-ant-design:mail-outlined',
+      reqModule: '7-消息'
+    },
+    children: [
+      {
+        path: 'index',
+        name: 'LadMessageIndex',
+        component: messageCenterListPage,
+        meta: ladMeta('message-center', {
+          title: '消息中心'
         })
       }
     ]

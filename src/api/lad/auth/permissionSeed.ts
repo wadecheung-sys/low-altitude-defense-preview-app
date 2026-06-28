@@ -311,12 +311,42 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         ]
       },
       {
+        id: 'pm-message',
+        parentId: 'pm-root',
+        name: '消息中心',
+        permCode: 'lad:message',
+        nodeType: 'menu',
+        path: '/lad/message/index',
+        sort: 7,
+        status: 'enabled',
+        children: [
+          {
+            id: 'pm-message-view',
+            parentId: 'pm-message',
+            name: '查看',
+            permCode: 'lad:message:view',
+            nodeType: 'button',
+            sort: 1,
+            status: 'enabled'
+          },
+          {
+            id: 'pm-message-delete',
+            parentId: 'pm-message',
+            name: '删除',
+            permCode: 'lad:message:delete',
+            nodeType: 'button',
+            sort: 2,
+            status: 'enabled'
+          }
+        ]
+      },
+      {
         id: 'pm-system',
         parentId: 'pm-root',
         name: '系统管理',
         permCode: 'lad:system',
         nodeType: 'directory',
-        sort: 7,
+        sort: 8,
         status: 'enabled',
         children: [
           {
@@ -411,7 +441,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         name: '权限管理',
         permCode: 'lad:auth',
         nodeType: 'directory',
-        sort: 8,
+        sort: 9,
         status: 'enabled',
         children: [
           {
@@ -516,7 +546,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         permCode: 'lad:integration',
         nodeType: 'menu',
         path: '/lad/integration/index',
-        sort: 9,
+        sort: 10,
         status: 'enabled',
         children: [
           {

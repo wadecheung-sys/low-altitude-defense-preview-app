@@ -4,6 +4,7 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveBlackWhiteApi } from '@/api/lad/list'
 import type { BlackWhiteListItem, EntryMethod, ListType } from '@/api/lad/list/types'
+import { normalizeValidUntil } from '@/api/lad/list/validUntilUtils'
 import { targetModelOptions } from '../../shared/ladOptionConstants'
 import {
   ElDatePicker,
@@ -115,7 +116,8 @@ watch(
         listType: props.row.listType,
         targetId: props.row.targetId,
         targetType: props.row.targetType,
-        validUntil: props.row.validUntil === '永久' ? '' : props.row.validUntil,
+        validUntil:
+          props.row.validUntil === '永久' ? '' : normalizeValidUntil(props.row.validUntil),
         model: props.row.model || '其他',
         frequencyBands: parseFrequencyBands(props.row.frequency),
         sn: props.row.sn,
@@ -152,7 +154,7 @@ const onSubmit = async () => {
       listType: form.value.listType,
       targetId: form.value.targetId,
       targetType: form.value.targetType,
-      validUntil: form.value.validUntil || '永久',
+      validUntil: normalizeValidUntil(form.value.validUntil || '永久'),
       model: form.value.model,
       frequency,
       sn: form.value.sn.trim(),
@@ -230,7 +232,7 @@ const onSubmit = async () => {
           <BaseButton type="primary" link @click="addFrequencyBand">+ 新增频段</BaseButton>
         </div>
       </ElFormItem>
-      <ElFormItem label="有效期至">
+      <ElFormItem label="有效时间">
         <ElDatePicker
           v-model="form.validUntil"
           type="datetime"

@@ -114,6 +114,12 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'createdAt',
     label: '操作时间',
+    search: { hidden: true },
+    table: { width: 170 }
+  },
+  {
+    field: 'createdAtRange',
+    label: '操作时间',
     search: {
       component: 'DatePicker',
       componentProps: {
@@ -123,7 +129,9 @@ const crudSchemas = reactive<CrudSchema[]>([
         endPlaceholder: '结束'
       }
     },
-    table: { width: 170 }
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'actionCol',

@@ -15,7 +15,7 @@ export interface BlackWhiteListItem {
   targetId: string
   listType: ListType
   targetType: string
-  /** 永久 或 YYYY-MM-DD */
+  /** 永久 或 YYYY-MM-DD HH:mm:ss */
   validUntil: string
   discoveredAt: string
   updatedAt: string
@@ -42,6 +42,8 @@ export interface BlackWhiteListQuery {
   entryMethod?: EntryMethod
   discoveredAtStart?: string
   discoveredAtEnd?: string
+  validUntilStart?: string
+  validUntilEnd?: string
 }
 
 export interface BlackWhiteListResult {

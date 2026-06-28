@@ -76,20 +76,6 @@ const currentHeading = computed(() => {
   const angle = (Math.atan2(deltaX, -deltaY) * 180) / Math.PI
   return Math.round((angle + 360) % 360)
 })
-const currentStatus = computed(() => {
-  if (props.detail.handlingStatus === '已结束') return '已结束'
-  if (props.detail.handlingStatus === '已处置')
-    return progress.value >= 92 ? '处置完成' : '持续跟踪'
-  if (props.detail.handlingStatus === '处置中')
-    return progress.value >= 52 ? '处置执行中' : '持续跟踪'
-  return '监视待处置'
-})
-const currentRecordTime = computed(() => {
-  const markers = props.detail.markers
-  if (!markers.length) return props.detail.discoveredAt
-  const matched = [...markers].reverse().find((item) => progress.value >= item.progress)
-  return matched?.time || props.detail.discoveredAt
-})
 
 const pathD = computed(() => {
   const pts = props.detail.trajectory
@@ -247,14 +233,11 @@ defineExpose({ play, pause, togglePlay })
         </g>
       </svg>
       <div class="trajectory-replay__coords">
-        <span>当前：E {{ currentLng }} N {{ currentLat }}</span>
+        <span>经度 E {{ currentLng }}</span>
+        <span>纬度 N {{ currentLat }}</span>
         <span>高度 {{ currentSample.altitude }}m</span>
         <span>速度 {{ currentSpeed }}m/s</span>
-        <span>航向 {{ currentHeading }}°</span>
-        <span>状态 {{ currentStatus }}</span>
-        <span>进度 {{ progress.toFixed(0) }}%</span>
-        <span>时间 {{ currentRecordTime }}</span>
-        <span>来源 {{ detail.dataSource }}</span>
+        <span>方位角 {{ currentHeading }}°</span>
       </div>
     </div>
 

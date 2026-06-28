@@ -107,6 +107,12 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     reqModule: '7',
     phaseNote: '预案策略配置列表。'
   },
+  'message-center': {
+    pageKey: 'message-center',
+    pageType: 'list',
+    reqModule: '7-消息',
+    phaseNote: '系统消息中心列表。'
+  },
   'system-params': {
     pageKey: 'system-params',
     pageType: 'list',

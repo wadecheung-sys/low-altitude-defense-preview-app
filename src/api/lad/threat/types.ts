@@ -1,8 +1,9 @@
 import type { AreaRegionType } from '@/api/lad/area/types'
+import type { ThreatLevelLabel, ThreatLevelScope } from './threatLevelUtils'
+
+export type { ThreatLevelLabel, ThreatLevelScope } from './threatLevelUtils'
 
 export type ThreatAreaScope = AreaRegionType | '全部'
-
-export type ThreatLevelLabel = '高' | '中' | '低' | '无'
 
 export type RuleConditionProperty =
   | 'speed'
@@ -31,7 +32,7 @@ export interface ThreatRule {
   areaRegionType: ThreatAreaScope
   targetType: string
   targetModel: string
-  threatLevel: ThreatLevelLabel
+  threatLevel: ThreatLevelScope
   areaName: string
   conditionLogic: RuleConditionLogic
   conditions: RuleCondition[]
@@ -70,7 +71,7 @@ export interface ThreatRuleSavePayload {
   areaRegionType: ThreatAreaScope
   targetType: string
   targetModel?: string
-  threatLevel: ThreatLevelLabel
+  threatLevel: ThreatLevelScope
   areaName?: string
   conditionLogic: RuleConditionLogic
   conditions: RuleCondition[]
@@ -92,19 +93,28 @@ export interface ThreatSimulateInput {
   humidity?: number
   windPower?: number
   rainfall?: number
+  /** 蜂群模式模拟时置为 true */
+  swarmMode?: boolean
 }
 
 export interface ThreatSimulateResult {
   matched: boolean
   rule?: ThreatRule
+  ruleName?: string
+  threatLevel?: string
   planId?: string
   planCode?: string
   planName?: string
   planDeviceAction?: string
   planDeviceType?: string
   planDeviceFunction?: string
+  disposalModeLabel?: string
+  triggerStrategyName?: string
+  outcomeSummary?: string
   message: string
   swarmNote?: string
+  isMonitorCatchAll?: boolean
+  monitorNote?: string
 }
 
 export interface ThreatAssessResult {

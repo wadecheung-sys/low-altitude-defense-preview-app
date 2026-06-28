@@ -10,9 +10,10 @@ export interface SearchProps {
   showReset?: boolean
   showExpand?: boolean
   expandField?: string
-  /** WEB 端超过该行数的筛选项时自动折叠（与 is-col 联用）；0 表示仅按 expandField */
-  expandRows?: number
+  /** 是否默认展开筛选项；false = 默认收起（本项目列表页约定） */
   expandDefault?: boolean
+  /** 超过一行（默认 >4 个筛选项）时自动启用展开/折叠 */
+  autoExpand?: boolean
   inline?: boolean
   removeNoValueItem?: boolean
   model?: Recordable

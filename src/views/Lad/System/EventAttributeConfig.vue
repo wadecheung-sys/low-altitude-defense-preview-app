@@ -5,13 +5,10 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElInputNumber,
   ElMessage,
   ElMessageBox,
   ElOption,
-  ElSelect,
-  ElSwitch,
-  ElTag
+  ElSelect
 } from 'element-plus'
 import { BaseButton } from '@/components/Button'
 import { ContentWrap } from '@/components/ContentWrap'
@@ -33,37 +30,33 @@ const ownershipOptions = [
   { label: '设备故障', value: '设备故障' }
 ] satisfies Array<{ label: string; value: EventOwnership }>
 
-const alarmEnabledOptions = [
-  { label: '全部', value: '' },
-  { label: '是', value: 'true' },
-  { label: '否', value: 'false' }
-]
-
-const alarmLevelOptions = [
-  { label: '提示', value: '提示' },
-  { label: '重要', value: '重要' },
-  { label: '紧急', value: '紧急' }
-] satisfies Array<{ label: string; value: EventAlarmLevel }>
-
 const eventTypeMap: Record<EventOwnership, string[]> = {
   无人机入侵: ['黑飞无人机入侵', '黑名单无人机入侵', '无人机入侵'],
   设备故障: ['离线', '故障', '数据中断', '供电异常']
 }
 
 const searchParams = ref<Recordable>({})
+const selectedIds = ref<string[]>([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增事件属性')
+
+const preservedFields = ref<{
+  priority: number
+  remark?: string
+  alarmEnabled: boolean
+  alarmLevel: EventAlarmLevel
+}>({
+  priority: 300,
+  alarmEnabled: true,
+  alarmLevel: '紧急'
+})
 
 const form = reactive({
   id: '',
   eventId: '',
   eventName: '',
   eventOwnership: '无人机入侵' as EventOwnership,
-  eventType: '黑飞无人机入侵',
-  alarmEnabled: true,
-  alarmLevel: '紧急' as EventAlarmLevel,
-  priority: 300,
-  remark: ''
+  eventType: '黑飞无人机入侵'
 })
 
 const currentTypeOptions = computed(() =>
@@ -83,18 +76,18 @@ function resetForm() {
   form.eventName = ''
   form.eventOwnership = '无人机入侵'
   form.eventType = eventTypeMap['无人机入侵'][0]
-  form.alarmEnabled = true
-  form.alarmLevel = '紧急'
-  form.priority = 300
-  form.remark = ''
+  preservedFields.value = {
+    priority: 300,
+    remark: undefined,
+    alarmEnabled: true,
+    alarmLevel: '紧急'
+  }
 }
 
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
     keyword: params.keyword,
-    eventOwnership: params.eventOwnership as EventOwnership | undefined,
-    alarmEnabled:
-      params.alarmEnabled === 'true' ? true : params.alarmEnabled === 'false' ? false : undefined
+    eventOwnership: params.eventOwnership as EventOwnership | undefined
   }
   currentPage.value = 1
   getList()
@@ -127,13 +120,39 @@ function openEdit(row: EventAttributeItem) {
   form.eventName = row.eventName
   form.eventOwnership = row.eventOwnership
   form.eventType = row.eventType
-  form.alarmEnabled = row.alarmEnabled
-  form.alarmLevel = row.alarmLevel
-  form.priority = row.priority
-  form.remark = row.remark || ''
+  preservedFields.value = {
+    priority: row.priority,
+    remark: row.remark,
+    alarmEnabled: row.alarmEnabled,
+    alarmLevel: row.alarmLevel
+  }
   syncEventType()
   dialogTitle.value = '编辑事件属性'
   dialogVisible.value = true
+}
+
+function onSelectionChange(rows: EventAttributeItem[]) {
+  selectedIds.value = rows.map((row) => row.id)
+}
+
+async function batchRemove() {
+  if (!selectedIds.value.length) {
+    ElMessage.warning('请先勾选需要删除的事件属性')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确认删除选中的 ${selectedIds.value.length} 条事件属性吗？`,
+      '批量删除',
+      { type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  await Promise.all(selectedIds.value.map((id) => deleteEventAttributeApi(id)))
+  selectedIds.value = []
+  ElMessage.success('删除成功')
+  getList()
 }
 
 async function removeRow(row: EventAttributeItem) {
@@ -169,10 +188,10 @@ async function saveRow() {
     eventName: form.eventName,
     eventOwnership: form.eventOwnership,
     eventType: form.eventType,
-    alarmEnabled: form.alarmEnabled,
-    alarmLevel: form.alarmLevel,
-    priority: form.priority,
-    remark: form.remark
+    alarmEnabled: preservedFields.value.alarmEnabled,
+    alarmLevel: preservedFields.value.alarmLevel,
+    priority: preservedFields.value.priority,
+    remark: preservedFields.value.remark
   })
   dialogVisible.value = false
   ElMessage.success(form.id ? '事件属性已更新' : '事件属性已创建')
@@ -180,6 +199,12 @@ async function saveRow() {
 }
 
 const crudSchemas = reactive<CrudSchema[]>([
+  {
+    field: 'selection',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: { type: 'selection' }
+  },
   {
     field: 'index',
     label: '序号',
@@ -215,29 +240,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { minWidth: 120 }
   },
   {
-    field: 'alarmEnabled',
-    label: '是否报警',
-    search: {
-      component: 'Select',
-      componentProps: {
-        options: alarmEnabledOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: { width: '100%' }
-      }
-    },
-    table: {
-      width: 100,
-      slots: {
-        default: ({ row }: { row: EventAttributeItem }) => (
-          <ElTag type={row.alarmEnabled ? 'danger' : 'info'}>
-            {row.alarmEnabled ? '是' : '否'}
-          </ElTag>
-        )
-      }
-    }
-  },
-  {
     field: 'eventId',
     label: '事件ID',
     search: { hidden: true },
@@ -254,39 +256,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '事件类型',
     search: { hidden: true },
     table: { minWidth: 140, showOverflowTooltip: true }
-  },
-  {
-    field: 'alarmLevel',
-    label: '报警等级',
-    search: { hidden: true },
-    table: {
-      width: 110,
-      slots: {
-        default: ({ row }: { row: EventAttributeItem }) => {
-          const type =
-            row.alarmLevel === '紧急' ? 'danger' : row.alarmLevel === '重要' ? 'warning' : 'info'
-          return <ElTag type={type}>{row.alarmLevel}</ElTag>
-        }
-      }
-    }
-  },
-  {
-    field: 'priority',
-    label: '优先级',
-    search: { hidden: true },
-    table: { width: 100 }
-  },
-  {
-    field: 'remark',
-    label: '说明',
-    search: { hidden: true },
-    table: { minWidth: 260, showOverflowTooltip: true }
-  },
-  {
-    field: 'updatedAt',
-    label: '更新时间',
-    search: { hidden: true },
-    table: { width: 170 }
   },
   {
     field: 'action',
@@ -320,6 +289,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
     <div class="mb-10px">
       <BaseButton type="primary" @click="openCreate">新增</BaseButton>
+      <BaseButton type="danger" class="ml-8px" @click="batchRemove">批量删除</BaseButton>
     </div>
 
     <Table
@@ -330,6 +300,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       :loading="loading"
       :pagination="{ total }"
       @register="tableRegister"
+      @selection-change="onSelectionChange"
     />
 
     <ElDialog v-model="dialogVisible" :title="dialogTitle" width="760px" destroy-on-close>
@@ -362,32 +333,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
               />
             </ElSelect>
           </ElFormItem>
-
-          <ElFormItem label="是否报警">
-            <ElSwitch v-model="form.alarmEnabled" />
-          </ElFormItem>
-          <ElFormItem label="报警等级">
-            <ElSelect v-model="form.alarmLevel" class="w-100%">
-              <ElOption
-                v-for="option in alarmLevelOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-
-          <ElFormItem label="优先级">
-            <ElInputNumber v-model="form.priority" class="w-100%" :min="1" :max="999" />
-          </ElFormItem>
-          <ElFormItem label="说明" class="event-attr-form__remark">
-            <ElInput
-              v-model="form.remark"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入事件属性说明"
-            />
-          </ElFormItem>
         </div>
       </ElForm>
       <template #footer>
@@ -403,9 +348,5 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;
-}
-
-.event-attr-form__remark {
-  grid-column: 1 / -1;
 }
 </style>

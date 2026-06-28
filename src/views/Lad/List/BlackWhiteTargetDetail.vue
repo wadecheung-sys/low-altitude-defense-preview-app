@@ -1,6 +1,7 @@
 <script setup lang="tsx">
 import { getBlackWhiteDetailApi, updateBlackWhiteListTypeApi } from '@/api/lad/list'
 import type { BlackWhiteTargetDetail, ListType } from '@/api/lad/list/types'
+import { formatValidUntilDisplay } from '@/api/lad/list/validUntilUtils'
 import { deleteHistoryEventApi, getHistoryEventListApi } from '@/api/lad/incident'
 import type { HandlingStatus, HistoryEventItem, ThreatLevel } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
@@ -328,7 +329,7 @@ watch(
               <ElDescriptionsItem label="频段信息">{{ detail.frequency }}</ElDescriptionsItem>
               <ElDescriptionsItem label="录入方式">{{ detail.entryMethod }}</ElDescriptionsItem>
 
-              <ElDescriptionsItem label="有效期至">
+              <ElDescriptionsItem label="有效时间">
                 <ElTag
                   v-if="detail.validUntil === '永久'"
                   type="success"
@@ -337,7 +338,7 @@ watch(
                 >
                   永久
                 </ElTag>
-                <span v-else>{{ detail.validUntil }}</span>
+                <span v-else>{{ formatValidUntilDisplay(detail.validUntil) }}</span>
               </ElDescriptionsItem>
               <ElDescriptionsItem label="首次发现时间">
                 {{ detail.discoveredAt }}
