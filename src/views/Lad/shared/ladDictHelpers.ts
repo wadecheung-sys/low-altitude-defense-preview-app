@@ -1,4 +1,5 @@
 import type { AreaRegionType } from '@/api/lad/area/types'
+import type { ManualConfirmStatus, VerificationMethod } from '@/api/lad/incident/types'
 import type { DictEntryItem } from '@/api/lad/system/types'
 import { regionTypeLabel } from '../Area/areaConstants'
 
@@ -78,4 +79,27 @@ export function listTypeTagType(type?: string): 'danger' | 'success' | 'info' {
   if (type === '黑名单') return 'danger'
   if (type === '白名单') return 'success'
   return 'info'
+}
+
+export const VERIFICATION_METHOD_OPTIONS: Array<{ label: VerificationMethod; value: VerificationMethod }> =
+  [
+    { label: '自动识别', value: '自动识别' },
+    { label: '人工核查', value: '人工核查' }
+  ]
+
+export function verificationMethodOf(status?: ManualConfirmStatus): VerificationMethod {
+  return status?.startsWith('人工-') ? '人工核查' : '自动识别'
+}
+
+export function verificationMethodTagType(
+  method: VerificationMethod
+): 'primary' | 'info' {
+  return method === '人工核查' ? 'primary' : 'info'
+}
+
+/** 反制设备展示：仅保留设备名称，去掉 (自动)/(人工)/(待命) 等后缀 */
+export function countermeasureDeviceDisplay(value?: string): string {
+  const text = String(value ?? '').trim()
+  if (!text || text === '--') return text || '--'
+  return text.replace(/\s*\([^)]*\)\s*$/u, '').trim() || text
 }

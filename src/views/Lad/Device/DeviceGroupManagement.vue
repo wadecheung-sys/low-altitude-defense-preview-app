@@ -40,6 +40,7 @@ const searchParams = ref<Recordable>({})
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增设备组')
 const deviceOptions = ref<DeviceInfoItem[]>([])
+const togglingId = ref<string | null>(null)
 
 const form = reactive({
   id: '',
@@ -149,6 +150,25 @@ async function saveGroup() {
   getList()
 }
 
+async function onToggle(row: DeviceGroupItem, enabled: boolean) {
+  togglingId.value = row.id
+  try {
+    await saveDeviceGroupApi({
+      id: row.id,
+      groupName: row.groupName,
+      groupType: row.groupType,
+      description: row.description,
+      memberIds: [...row.memberIds],
+      enabled
+    })
+    row.enabled = enabled
+  } catch {
+    getList()
+  } finally {
+    togglingId.value = null
+  }
+}
+
 function memberNames(row: DeviceGroupItem) {
   return row.memberIds.map((id) => memberNameMap.value.get(id) || id).join('、')
 }
@@ -216,7 +236,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'enabled',
     label: '状态',
-    width: '96px',
+    width: '88px',
     fixed: 'right',
     search: {
       component: 'Select',
@@ -231,9 +251,14 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       slots: {
         default: ({ row }: { row: DeviceGroupItem }) => (
-          <BaseButton type={row.enabled ? 'success' : 'info'} size="small">
-            {row.enabled ? '启用' : '停用'}
-          </BaseButton>
+          <ElSwitch
+            modelValue={row.enabled}
+            inline-prompt
+            active-text="ON"
+            inactive-text="OFF"
+            loading={togglingId.value === row.id}
+            onChange={(value: boolean) => onToggle(row, value)}
+          />
         )
       }
     }

@@ -1,5 +1,11 @@
 import type { HistoryEventItem, HandlingStatus } from './types'
 
+function countermeasureDeviceDisplay(value?: string): string {
+  const text = String(value ?? '').trim()
+  if (!text || text === '--') return text || '--'
+  return text.replace(/\s*\([^)]*\)\s*$/u, '').trim() || text
+}
+
 export type DisposalTimelineNodeStatus = 'done' | 'current' | 'pending' | 'skipped'
 
 export type DisposalTimelineStageKey = 'discover' | 'threat' | 'assess' | 'dispose' | 'result'
@@ -269,11 +275,11 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
       detail:
         disposeNodeStatus === 'skipped'
           ? '该阶段作为未触发节点展示，用于解释事件未联动反制设备的原因。'
-          : `联动设备：${row.countermeasureDevice}`,
+          : `联动设备：${countermeasureDeviceDisplay(row.countermeasureDevice)}`,
       details: [
         { label: '策略名称', value: disposeNodeStatus === 'skipped' ? '--' : planName(row) },
         { label: '触发条件', value: disposeNodeStatus === 'skipped' ? skipReason(row) : ruleName },
-        { label: '联动设备', value: row.countermeasureDevice },
+        { label: '联动设备', value: countermeasureDeviceDisplay(row.countermeasureDevice) },
         { label: '执行动作', value: disposeNodeStatus === 'skipped' ? '未执行' : actionName(row) }
       ],
       tags: disposalTags(row, disposeNodeStatus)

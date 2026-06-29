@@ -23,18 +23,23 @@ import {
   getHistoryEventListApi,
   updateHistoryEventListTypeApi
 } from '@/api/lad/incident'
-import type {
-  HandlingStatus,
-  HistoryEventItem,
-  ManualConfirmStatus
-} from '@/api/lad/incident/types'
+import type { HandlingStatus, HistoryEventItem } from '@/api/lad/incident/types'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
+import {
+  exportHistoryEvents,
+  fetchHistoryEventsForExport,
+  type HistoryEventExportFormat,
+  type HistoryEventExportRange
+} from './historyEventExport'
 import { targetModelOptions } from '../shared/ladOptionConstants'
 import {
   THREAT_LEVEL_OPTIONS,
-  listTypeTagType,
+  VERIFICATION_METHOD_OPTIONS,
+  countermeasureDeviceDisplay,
   threatLevelDisplay,
-  threatLevelTagType
+  threatLevelTagType,
+  verificationMethodOf,
+  verificationMethodTagType
 } from '../shared/ladDictHelpers'
 
 const historyListTypeOptions = [
@@ -54,10 +59,9 @@ const searchParams = ref<Recordable>({})
 const confirmVisible = ref(false)
 const confirmRow = ref<HistoryEventItem>()
 const exportVisible = ref(false)
-type ExportRange = 'all' | 'query' | 'selected'
-type ExportFormat = 'excel' | 'word'
-const exportRange = ref<ExportRange>('query')
-const exportFormat = ref<ExportFormat>('excel')
+const exportRange = ref<HistoryEventExportRange>('query')
+const exportFormat = ref<HistoryEventExportFormat>('excel')
+const exportLoading = ref(false)
 const delLoading = ref(false)
 const listLoading = ref(false)
 
@@ -70,7 +74,7 @@ const setSearchParams = (params: Recordable) => {
     targetId: params.targetId,
     threatLevel: params.threatLevel,
     handlingStatus: params.handlingStatus,
-    manualConfirmStatus: params.manualConfirmStatus,
+    verificationMethod: params.verificationMethod,
     detectionDevice: params.detectionDevice,
     countermeasureDevice: params.countermeasureDevice,
     discoveredAtStart: range?.[0],
@@ -87,19 +91,11 @@ const handlingStatusOptions = [
   { label: '已结束', value: '已结束' }
 ]
 
-const manualConfirmOptions = [
-  { label: '人工核查-真实入侵', value: '人工-真实入侵' },
-  { label: '人工核查-躁扰告警', value: '人工-躁扰告警' },
-  { label: '真实入侵', value: '真实入侵' },
-  { label: '躁扰告警', value: '躁扰告警' }
-]
-
 const countermeasureOptions = [
-  { label: '干扰-01 (自动)', value: '干扰-01 (自动)' },
+  { label: '干扰-01', value: '干扰-01' },
   { label: '--', value: '--' },
   { label: '诱骗-02', value: '诱骗-02' },
-  { label: '干扰-01 (人工)', value: '干扰-01 (人工)' },
-  { label: '激光-01 (待命)', value: '激光-01 (待命)' }
+  { label: '激光-01', value: '激光-01' }
 ]
 
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
@@ -144,18 +140,6 @@ const statusTagType = (status: HandlingStatus) => {
   return map[status]
 }
 
-const confirmTagType = (status: ManualConfirmStatus) => {
-  const map: Record<ManualConfirmStatus, 'danger' | 'success' | 'warning' | 'info'> = {
-    '人工-真实入侵': 'danger',
-    '人工-躁扰告警': 'warning',
-    真实入侵: 'danger',
-    躁扰告警: 'info'
-  }
-  return map[status]
-}
-
-const formatConfirmStatus = (status: ManualConfirmStatus) => status.replace(/^人工-/, '人工核查-')
-
 const goDetail = (row: HistoryEventItem) => {
   push(`/lad/incident/target/${row.id}`)
 }
@@ -186,30 +170,44 @@ const openExportDialog = async () => {
 const exportReport = async () => {
   const elTableExpose = await getElTableExpose()
   const selected = (elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined) ?? []
-  let count = 0
   let rangeLabel = ''
 
   if (exportRange.value === 'selected') {
-    count = selected.length
     rangeLabel = '所选数据'
-    if (!count) {
+    if (!selected.length) {
       ElMessage.warning('请先勾选要导出的记录')
       return
     }
   } else if (exportRange.value === 'query') {
-    count = unref(total)
     rangeLabel = '查询结果'
+    if (!unref(total)) {
+      ElMessage.warning('当前查询结果为空，无法导出')
+      return
+    }
   } else {
-    const res = await getHistoryEventListApi({ pageIndex: 1, pageSize: 1 })
-    count = res.data.total
     rangeLabel = '所有数据'
   }
 
-  const formatLabel = exportFormat.value === 'word' ? 'Word' : 'Excel'
-  ElMessage.success(
-    `已生成历史事件 ${formatLabel} 报表（${rangeLabel}，${count} 条，演示，未写入文件）`
-  )
-  exportVisible.value = false
+  exportLoading.value = true
+  try {
+    const rows = await fetchHistoryEventsForExport(
+      exportRange.value,
+      unref(searchParams),
+      selected
+    )
+    if (!rows.length) {
+      ElMessage.warning('没有可导出的历史事件记录')
+      return
+    }
+    await exportHistoryEvents(exportFormat.value, rows, rangeLabel)
+    const formatLabel = exportFormat.value === 'word' ? 'Word' : 'Excel'
+    ElMessage.success(`历史事件 ${formatLabel} 报表已导出（${rangeLabel}，${rows.length} 条）`)
+    exportVisible.value = false
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '导出失败，请稍后重试')
+  } finally {
+    exportLoading.value = false
+  }
 }
 
 const addList = async (listType: '黑名单' | '白名单') => {
@@ -333,17 +331,18 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'handledAt',
-    label: '处置时间',
+    field: 'discoveredAt',
+    label: '发现时间',
     minWidth: 168,
     search: { hidden: true },
     table: { showOverflowTooltip: true }
   },
   {
-    field: 'discoveredAt',
-    label: '发现时间',
+    field: 'handledAt',
+    label: '处置时间',
     minWidth: 168,
-    search: { hidden: true }
+    search: { hidden: true },
+    table: { showOverflowTooltip: true }
   },
   {
     field: 'pilotLocation',
@@ -442,26 +441,37 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'manualConfirmStatus',
-    label: '威胁识别',
-    minWidth: 128,
+    field: 'verificationMethod',
+    label: '验证方式',
     search: {
       component: 'Select',
       colProps: { span: 6 },
       componentProps: {
-        placeholder: '请选择威胁识别',
+        placeholder: '请选择验证方式',
         style: { width: '100%' },
         clearable: true,
-        options: manualConfirmOptions
+        options: VERIFICATION_METHOD_OPTIONS
       }
     },
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
+  },
+  {
+    field: 'manualConfirmStatus',
+    label: '验证方式',
+    minWidth: 108,
+    search: { hidden: true },
     table: {
       slots: {
-        default: ({ row }: { row: HistoryEventItem }) => (
-          <ElTag type={confirmTagType(row.manualConfirmStatus)}>
-            {formatConfirmStatus(row.manualConfirmStatus)}
-          </ElTag>
-        )
+        default: ({ row }: { row: HistoryEventItem }) => {
+          const method = verificationMethodOf(row.manualConfirmStatus)
+          return (
+            <ElTag type={verificationMethodTagType(method)} effect="light">
+              {method}
+            </ElTag>
+          )
+        }
       }
     }
   },
@@ -495,7 +505,13 @@ const crudSchemas = reactive<CrudSchema[]>([
         options: countermeasureOptions
       }
     },
-    table: { showOverflowTooltip: true }
+    table: {
+      showOverflowTooltip: true,
+      slots: {
+        default: ({ row }: { row: HistoryEventItem }) =>
+          countermeasureDeviceDisplay(row.countermeasureDevice)
+      }
+    }
   },
   {
     field: 'handlingStatus',
@@ -623,7 +639,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
       <template #footer>
         <BaseButton @click="exportVisible = false">取消</BaseButton>
-        <BaseButton type="primary" @click="exportReport">确定导出</BaseButton>
+        <BaseButton type="primary" :loading="exportLoading" @click="exportReport">确定导出</BaseButton>
       </template>
     </Dialog>
   </ContentWrap>

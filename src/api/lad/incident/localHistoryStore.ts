@@ -20,7 +20,7 @@ const handlingResults = ['驱离成功', '迫降成功', '激光打击成功', '
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
 const zones = ['核心防护区A区', '缓冲区B区', '管制空域C区', '公共区域']
 const dataSources = ['雷达+无线电融合', '雷达单源', '无线电侦测', '光电跟踪', '多源融合节点']
-const countermeasures = ['干扰-01 (自动)', '--', '诱骗-02', '干扰-01 (人工)', '激光-01 (待命)']
+const countermeasures = ['干扰-01', '--', '诱骗-02', '干扰-01', '激光-01']
 
 const TARGET_COUNT = 24
 const LIST_TYPE_STORAGE_KEY = 'lad-history-event-list-types'
@@ -165,15 +165,15 @@ function applyConfirm(
     if (threatLevel === '低危') {
       row.handlingStatus = '处置中'
       row.handlingResult = '自动监控中'
-      row.countermeasureDevice = '光电-01 (自动)'
+      row.countermeasureDevice = '光电-01'
     } else if (threatLevel === '中危') {
       row.handlingStatus = '已处置'
       row.handlingResult = '驱离成功'
-      row.countermeasureDevice = '干扰-01 (自动)'
+      row.countermeasureDevice = '干扰-01'
     } else if (threatLevel === '高危') {
       row.handlingStatus = '已处置'
       row.handlingResult = '激光打击成功'
-      row.countermeasureDevice = '激光-01 (自动)'
+      row.countermeasureDevice = '激光-01'
     } else {
       row.handlingStatus = '待处置'
       row.handlingResult = '待执行'
@@ -280,6 +280,11 @@ function filterList(params: HistoryEventQuery): HistoryEventItem[] {
   }
   if (params.manualConfirmStatus) {
     rows = rows.filter((row) => row.manualConfirmStatus === params.manualConfirmStatus)
+  }
+  if (params.verificationMethod === '人工核查') {
+    rows = rows.filter((row) => row.manualConfirmStatus.startsWith('人工-'))
+  } else if (params.verificationMethod === '自动识别') {
+    rows = rows.filter((row) => !row.manualConfirmStatus.startsWith('人工-'))
   }
   if (params.trajectoryFeature) {
     rows = rows.filter((row) => row.trajectoryFeature === params.trajectoryFeature)

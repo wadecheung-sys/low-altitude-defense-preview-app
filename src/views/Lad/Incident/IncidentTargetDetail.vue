@@ -11,7 +11,7 @@ import type {
 } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
-import { listTypeTagType, threatLevelDisplay, threatLevelTagType } from '../shared/ladDictHelpers'
+import { listTypeTagType, threatLevelDisplay, threatLevelTagType, verificationMethodOf, countermeasureDeviceDisplay } from '../shared/ladDictHelpers'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import DisposalTimelinePanel from './components/DisposalTimelinePanel.vue'
 import TrajectoryReplay from './components/TrajectoryReplay.vue'
@@ -130,12 +130,8 @@ const viewDetail = computed<HistoryEventDetail | null>(() => {
     frequencyInfo: normalizeText(detail.value.frequencyInfo),
     targetType: normalizeText(detail.value.targetType),
     detectionDevice: normalizeText(detail.value.detectionDevice),
-    countermeasureDevice: normalizeText(detail.value.countermeasureDevice),
+    countermeasureDevice: countermeasureDeviceDisplay(normalizeText(detail.value.countermeasureDevice)),
     disposalDetail: normalizeText(detail.value.disposalDetail),
-    manualConfirmStatus: normalizeText(detail.value.manualConfirmStatus).replace(
-      /^人工-/,
-      '人工核查-'
-    ),
     remark: normalizeText(detail.value.remark),
     disposalTimeline: normalizedTimeline(detail.value.disposalTimeline)
   }
@@ -237,15 +233,14 @@ onMounted(async () => {
             <ElDescriptionsItem label="处置时间">
               {{ viewDetail.handledAt === '--' ? '--' : viewDetail.handledAt }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="持续时长">{{ viewDetail.duration }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="威胁等级">
               <ElTag :type="threatTagType(viewDetail.threatLevel)" effect="dark" round>
                 {{ threatLevelDisplay(viewDetail.threatLevel) }}
               </ElTag>
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="威胁识别">
-              {{ viewDetail.manualConfirmStatus }}
+            <ElDescriptionsItem label="验证方式">
+              {{ verificationMethodOf(viewDetail.manualConfirmStatus) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="名单类型">
               <ElTag :type="listTypeTagType(viewDetail.listType)" size="small" effect="light">

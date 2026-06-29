@@ -8,6 +8,8 @@ export type ManualConfirmResult = '真实入侵' | '躁扰告警'
 
 export type ManualConfirmStatus = ManualConfirmResult | `人工-${ManualConfirmResult}`
 
+export type VerificationMethod = '自动识别' | '人工核查'
+
 export interface HistoryEventItem {
   id: string
   targetId: string
@@ -43,6 +45,7 @@ export interface HistoryEventQuery {
   threatLevel?: ThreatLevel
   handlingStatus?: HandlingStatus
   manualConfirmStatus?: ManualConfirmStatus
+  verificationMethod?: VerificationMethod
   trajectoryFeature?: string
   detectionDevice?: string
   countermeasureDevice?: string

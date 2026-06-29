@@ -113,6 +113,10 @@ const onSubmit = async () => {
       </section>
 
       <ElForm label-position="top" class="decision-form">
+        <ElFormItem label="验证方式">
+          <div class="verification-method-hint">提交后验证方式将更新为：人工核查</div>
+        </ElFormItem>
+
         <ElFormItem label="核查结论" required>
           <ElRadioGroup v-model="result" class="conclusion-group">
             <ElRadio label="真实入侵">真实入侵</ElRadio>
@@ -328,6 +332,17 @@ const onSubmit = async () => {
 
 .decision-form {
   padding-top: 4px;
+}
+
+.verification-method-hint {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-regular);
+  font-size: 14px;
+  line-height: 22px;
 }
 
 .conclusion-group {
