@@ -25,9 +25,14 @@ const isDark = computed({
   },
   set(val: boolean) {
     appStore.setIsDark(val)
-    const color = getCssVar('--el-bg-color')
-    appStore.setMenuTheme(color)
-    appStore.setHeaderTheme(color)
+    if (val) {
+      const color = getCssVar('--el-bg-color')
+      appStore.setMenuTheme(color)
+      appStore.setHeaderTheme(color)
+    } else {
+      appStore.setMenuTheme('#001529')
+      appStore.setHeaderTheme('#fff')
+    }
     emit('change', val)
   }
 })

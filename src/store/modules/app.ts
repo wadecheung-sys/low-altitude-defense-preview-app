@@ -7,6 +7,10 @@ import { useCssVar } from '@vueuse/core'
 import { unref } from 'vue'
 import { useDark } from '@vueuse/core'
 
+/** 浅色模式下经典布局：深色侧栏 + 白色顶栏 */
+const CLASSIC_LIGHT_MENU_BG = '#001529'
+const CLASSIC_LIGHT_HEADER_BG = '#fff'
+
 interface AppState {
   breadcrumb: boolean
   breadcrumbIcon: boolean
@@ -330,6 +334,16 @@ export const useAppStore = defineStore('app', {
       isDark.value = this.getIsDark
       const newTitle = import.meta.env.VITE_APP_TITLE
       newTitle !== this.getTitle && this.setTitle(newTitle)
+
+      // 浅色模式保持深色侧栏，避免主题切换或持久化把菜单刷成白色
+      if (!this.getIsDark) {
+        if (!colorIsDark(this.theme.leftMenuBgColor)) {
+          this.setMenuTheme(CLASSIC_LIGHT_MENU_BG)
+        }
+        if (colorIsDark(this.theme.topHeaderBgColor)) {
+          this.setHeaderTheme(CLASSIC_LIGHT_HEADER_BG)
+        }
+      }
     }
   },
   persist: {
