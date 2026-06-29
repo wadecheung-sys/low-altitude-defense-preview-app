@@ -175,10 +175,18 @@ function buildSeed(): MessageCenterItem[] {
 
 let allMessages: MessageCenterItem[] = buildSeed()
 
+function messageDescriptionText(item: MessageCenterItem): string {
+  return item.descriptionSegments.map((segment) => segment.text).join('')
+}
+
 function filterMessages(query: MessageCenterQuery): MessageCenterItem[] {
   let rows = [...allMessages]
   if (query.eventName && query.eventName !== '全部') {
     rows = rows.filter((item) => item.eventName === query.eventName)
+  }
+  if (query.description?.trim()) {
+    const keyword = query.description.trim().toLowerCase()
+    rows = rows.filter((item) => messageDescriptionText(item).toLowerCase().includes(keyword))
   }
   if (query.occurredAtStart) {
     rows = rows.filter((item) => item.occurredAt >= query.occurredAtStart!)

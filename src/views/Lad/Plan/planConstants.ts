@@ -1,5 +1,4 @@
 export const PLAN_SEARCH_COL = { span: 6 } as const
-export const PLAN_SEARCH_DATE_COL = { span: 6 } as const
 
 export const UI = {
   planName: '预案名称',
@@ -12,6 +11,7 @@ export const UI = {
   manualResponseHint: '自动处置专用：触发后进入人工核查窗口；填 0 表示不等待，立即执行。',
   manualResponseManualHint: '人工值守模式下不启用等待窗口，所有动作均需人工核查后下发。',
   planPriority: '优先级',
+  weatherElements: '天气要素',
   temperature: '温度',
   humidity: '湿度',
   windPower: '风力',
@@ -24,9 +24,11 @@ export const UI = {
   triggerRuleName: '规则名称',
   triggerSortOrder: '排序',
   triggerRuleAdd: '新增规则',
-  triggerRuleHint: '按温度、湿度、风力、雨量配置对应的执行设备组与反制动作，用于切换有效处置动作。',
+  triggerRuleHint: '按天气要素配置对应的执行设备组与反制动作，支持多条条件及「或/且」组合。',
   triggerRuleEmpty: '请至少添加一条触发策略规则',
   primaryRule: '主触发规则',
+  triggerRuleCount: '触发策略条数',
+  triggerRuleDesc: '策略描述',
   updatedBy: '更新人',
   updatedAt: '更新时间',
   enabled: '状态',

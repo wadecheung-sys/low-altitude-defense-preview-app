@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { onMounted, reactive, ref, unref } from 'vue'
+import { reactive, ref, unref } from 'vue'
 import { ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
@@ -8,12 +8,10 @@ import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { deletePlanApi, getPlanListApi, togglePlanEnabledApi } from '@/api/lad/plan'
-import { getAreaRegionListApi } from '@/api/lad/area'
 import type { PlanStrategy } from '@/api/lad/plan/types'
 import PlanFormDialog from './components/PlanFormDialog.vue'
 import PlanDetailDialog from './components/PlanDetailDialog.vue'
-import { createPlanAreaLabelMap, formatPlanAreaLabel } from './planAreaOptions'
-import { PLAN_SEARCH_COL, PLAN_SEARCH_DATE_COL, UI } from './planConstants'
+import { PLAN_SEARCH_COL, UI } from './planConstants'
 import { allOption } from '../shared/ladOptionConstants'
 
 defineOptions({ name: 'LadPlanStrategyList' })
@@ -25,7 +23,6 @@ const formRow = ref<PlanStrategy>()
 const detailVisible = ref(false)
 const detailId = ref<string>()
 const togglingId = ref<string | null>(null)
-const areaLabelMap = ref<Record<string, string>>({})
 
 const disposalFilterOptions = [
   allOption,
@@ -33,34 +30,23 @@ const disposalFilterOptions = [
   { label: UI.disposalModeManual, value: 'manual' }
 ]
 
-function formatAreaLabel(value?: string) {
-  return formatPlanAreaLabel(value, areaLabelMap.value)
+function triggerRuleCount(row: PlanStrategy) {
+  return row.triggerRuleCount ?? row.triggerRules?.length ?? 0
 }
 
-function primaryRule(row: PlanStrategy) {
-  const enabled = (row.triggerRules || []).filter((item) => item.enabled)
-  return (enabled.length ? enabled : row.triggerRules || [])[0]
-}
-
-function primaryRuleLabel(row: PlanStrategy) {
-  const rule = primaryRule(row)
-  if (!rule) return '-'
-  return `${rule.ruleName} / ${rule.deviceGroupName}`
-}
-
-async function loadAreas() {
-  const res = await getAreaRegionListApi({ pageIndex: 1, pageSize: 200 })
-  areaLabelMap.value = createPlanAreaLabelMap(res.data.list)
+function triggerRuleDesc(row: PlanStrategy) {
+  const names = [...(row.triggerRules || [])]
+    .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0))
+    .map((item) => item.ruleName?.trim())
+    .filter(Boolean)
+  return names.length ? names.join('、') : '-'
 }
 
 const setSearchParams = (params: Recordable) => {
-  const range = params.updatedAtRange as string[] | undefined
   const mode = params.disposalMode as string | undefined
   searchParams.value = {
     planName: params.planName,
-    disposalMode: !mode || mode === '全部' ? undefined : mode,
-    updatedAtStart: range?.[0],
-    updatedAtEnd: range?.[1]
+    disposalMode: !mode || mode === '全部' ? undefined : mode
   }
   currentPage.value = 1
   getList()
@@ -147,10 +133,6 @@ const { tableRegister, tableState, tableMethods } = useTable({
 const { loading, dataList, total, currentPage, pageSize } = tableState
 const { getList } = tableMethods
 
-onMounted(() => {
-  loadAreas()
-})
-
 const crudSchemas = reactive<CrudSchema[]>([
   { field: 'selection', search: { hidden: true }, table: { type: 'selection' } },
   { field: 'index', label: '序号', type: 'index', search: { hidden: true } },
@@ -163,42 +145,6 @@ const crudSchemas = reactive<CrudSchema[]>([
       componentProps: { clearable: true, placeholder: '请输入预案名称', style: { width: '100%' } }
     },
     table: { minWidth: 160, showOverflowTooltip: true }
-  },
-  {
-    field: 'threatLevel',
-    label: UI.threatLevel,
-    search: { hidden: true },
-    table: { width: 100, align: 'center' }
-  },
-  {
-    field: 'areaLevel',
-    label: UI.locatedArea,
-    search: { hidden: true },
-    table: {
-      minWidth: 140,
-      showOverflowTooltip: true,
-      slots: { default: ({ row }: { row: PlanStrategy }) => formatAreaLabel(row.areaLevel) }
-    }
-  },
-  {
-    field: 'triggerRuleName',
-    label: UI.primaryRule,
-    search: { hidden: true },
-    table: {
-      minWidth: 180,
-      showOverflowTooltip: true,
-      slots: { default: ({ row }: { row: PlanStrategy }) => primaryRuleLabel(row) }
-    }
-  },
-  {
-    field: 'priority',
-    label: UI.planPriority,
-    search: { hidden: true },
-    table: {
-      width: 90,
-      align: 'center',
-      slots: { default: ({ row }: { row: PlanStrategy }) => row.priority ?? '-' }
-    }
   },
   {
     field: 'disposalMode',
@@ -236,11 +182,48 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
+    field: 'threatLevel',
+    label: UI.threatLevel,
+    search: { hidden: true },
+    table: { width: 100, align: 'center' }
+  },
+  {
+    field: 'priority',
+    label: UI.planPriority,
+    search: { hidden: true },
+    table: {
+      width: 90,
+      align: 'center',
+      slots: { default: ({ row }: { row: PlanStrategy }) => row.priority ?? '-' }
+    }
+  },
+  {
+    field: 'triggerRuleCount',
+    label: UI.triggerRuleCount,
+    search: { hidden: true },
+    table: {
+      width: 120,
+      align: 'center',
+      slots: { default: ({ row }: { row: PlanStrategy }) => triggerRuleCount(row) }
+    }
+  },
+  {
+    field: 'triggerRuleDesc',
+    label: UI.triggerRuleDesc,
+    search: { hidden: true },
+    table: {
+      minWidth: 220,
+      showOverflowTooltip: true,
+      slots: { default: ({ row }: { row: PlanStrategy }) => triggerRuleDesc(row) }
+    }
+  },
+  {
     field: 'enabled',
     label: UI.enabled,
     search: { hidden: true },
     table: {
       width: 88,
+      fixed: 'right',
       slots: {
         default: ({ row }: { row: PlanStrategy }) => (
           <ElSwitch
@@ -254,34 +237,6 @@ const crudSchemas = reactive<CrudSchema[]>([
         )
       }
     }
-  },
-  {
-    field: 'updatedAt',
-    label: UI.updatedAt,
-    search: { hidden: true },
-    table: { width: 168, showOverflowTooltip: true }
-  },
-  {
-    field: 'updatedBy',
-    label: UI.updatedBy,
-    search: { hidden: true },
-    table: { hidden: true }
-  },
-  {
-    field: 'updatedAtRange',
-    label: UI.updatedAt,
-    search: {
-      component: 'DatePicker',
-      colProps: PLAN_SEARCH_DATE_COL,
-      componentProps: {
-        type: 'datetimerange',
-        valueFormat: 'YYYY-MM-DD HH:mm:ss',
-        startPlaceholder: '开始日期',
-        endPlaceholder: '结束日期',
-        style: { width: '100%' }
-      }
-    },
-    table: { hidden: true }
   },
   {
     field: 'action',

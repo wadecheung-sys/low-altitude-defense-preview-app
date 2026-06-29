@@ -1,4 +1,10 @@
 import { resolveDeviceFunction } from './planDeviceCatalog'
+import {
+  formatPlanWeatherConditions,
+  getWeatherContextValue,
+  normalizePlanWeatherConditions,
+  resolveRuleWeatherConditions
+} from './planWeatherConditions'
 import type { PlanConditionOperator, PlanStrategy, PlanTriggerRule } from './types'
 
 export interface PlanTriggerContext {
@@ -38,14 +44,39 @@ function matchesArea(rule: PlanTriggerRule, areaLevel?: string) {
   return selected.includes(areaLevel)
 }
 
-function matchesRule(rule: PlanTriggerRule, ctx: PlanTriggerContext) {
-  return (
-    matchesArea(rule, ctx.areaLevel) &&
-    compareValue(ctx.temperature, rule.temperatureOperator, rule.temperatureValue) &&
-    compareValue(ctx.humidity, rule.humidityOperator, rule.humidityValue) &&
-    compareValue(ctx.windPower, rule.windPowerOperator, rule.windPowerValue) &&
-    compareValue(ctx.rainfall, rule.rainfallOperator, rule.rainfallValue)
+function matchesWeather(rule: PlanTriggerRule, ctx: PlanTriggerContext) {
+  const conditions = resolveRuleWeatherConditions(rule)
+  if (!conditions.length) return true
+
+  const weatherCtx = {
+    temperature: ctx.temperature,
+    humidity: ctx.humidity,
+    windPower: ctx.windPower,
+    rainfall: ctx.rainfall
+  }
+
+  let matched = compareValue(
+    getWeatherContextValue(conditions[0].property, weatherCtx),
+    conditions[0].operator,
+    conditions[0].value
   )
+
+  for (let index = 0; index < conditions.length - 1; index += 1) {
+    const next = conditions[index + 1]
+    const nextMatched = compareValue(
+      getWeatherContextValue(next.property, weatherCtx),
+      next.operator,
+      next.value
+    )
+    const logic = conditions[index].nextLogic || rule.weatherConditionLogic || 'and'
+    matched = logic === 'or' ? matched || nextMatched : matched && nextMatched
+  }
+
+  return matched
+}
+
+function matchesRule(rule: PlanTriggerRule, ctx: PlanTriggerContext) {
+  return matchesArea(rule, ctx.areaLevel) && matchesWeather(rule, ctx)
 }
 
 export function resolvePlanTriggerRule(
@@ -61,22 +92,8 @@ export function resolvePlanTriggerRule(
   return rules[0]
 }
 
-function formatNumericCondition(
-  label: string,
-  operator?: PlanConditionOperator | '',
-  value?: number | null
-) {
-  if (!operator || value === undefined || value === null) return `${label}:全部`
-  return `${label}:${operator === '!=' ? '≠' : operator}${value}`
-}
-
 export function formatTriggerCondition(rule: PlanTriggerRule): string {
-  return [
-    formatNumericCondition('温度', rule.temperatureOperator, rule.temperatureValue),
-    formatNumericCondition('湿度', rule.humidityOperator, rule.humidityValue),
-    formatNumericCondition('风力', rule.windPowerOperator, rule.windPowerValue),
-    formatNumericCondition('雨量', rule.rainfallOperator, rule.rainfallValue)
-  ].join(' ')
+  return formatPlanWeatherConditions(rule)
 }
 
 export function formatTriggerRuleBrief(rule: PlanTriggerRule): string {
@@ -98,11 +115,13 @@ export function normalizeTriggerRule(rule: PlanTriggerRule): PlanTriggerRule {
   if (!fn) {
     throw new Error(`规则“${rule.ruleName}”的反制动作与设备组类型不匹配`)
   }
+  const weather = normalizePlanWeatherConditions(rule)
   return {
     ...rule,
     ruleName: rule.ruleName.trim(),
     sortOrder: Number(rule.sortOrder) || 1,
     areaLevel: Array.isArray(rule.areaLevel) ? rule.areaLevel.filter(Boolean) : [],
+    ...weather,
     temperatureOperator: rule.temperatureOperator || '',
     temperatureValue: toFiniteNumber(rule.temperatureValue),
     humidityOperator: rule.humidityOperator || '',

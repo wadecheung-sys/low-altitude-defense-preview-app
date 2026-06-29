@@ -25,11 +25,15 @@ import {
   planDisposalModeOptions
 } from '@/api/lad/plan/planDisposal'
 import type {
-  PlanConditionOperator,
   PlanDisposalMode,
   PlanStrategy,
   PlanTriggerRule
 } from '@/api/lad/plan/types'
+import {
+  createPlanWeatherCondition,
+  normalizePlanWeatherConditions,
+  weatherConditionsComplete
+} from '@/api/lad/plan/planWeatherConditions'
 import { UI } from '../planConstants'
 import { listFunctionsByDeviceGroupType, resolveDeviceFunction } from '../planDeviceConstants'
 import {
@@ -39,6 +43,7 @@ import {
 } from '../planAreaOptions'
 import { allOption } from '../../shared/ladOptionConstants'
 import { THREAT_LEVEL_OPTIONS } from '../../shared/ladDictHelpers'
+import PlanWeatherConditionEditor from './PlanWeatherConditionEditor.vue'
 
 type GroupOption = { label: string; value: string; groupType: string }
 
@@ -53,13 +58,6 @@ const visible = computed({
 const threatLevelOptions = [
   { label: allOption.label, value: allOption.value },
   ...THREAT_LEVEL_OPTIONS.filter((item) => item.value !== '无危')
-]
-
-const logicOperatorOptions: { label: string; value: PlanConditionOperator }[] = [
-  { label: '>', value: '>' },
-  { label: '<', value: '<' },
-  { label: '=', value: '=' },
-  { label: '≠', value: '!=' }
 ]
 
 const isEdit = computed(() => !!props.row?.id)
@@ -135,15 +133,9 @@ function createEmptyRule(): PlanTriggerRule {
     id: `ptr-temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     ruleName: '',
     sortOrder: getNextSortOrder(),
+    weatherConditionLogic: 'and',
+    weatherConditions: [createPlanWeatherCondition()],
     areaLevel: [],
-    temperatureOperator: '',
-    temperatureValue: null,
-    humidityOperator: '',
-    humidityValue: null,
-    windPowerOperator: '',
-    windPowerValue: null,
-    rainfallOperator: '',
-    rainfallValue: null,
     deviceGroupId: group?.value || '',
     deviceGroupName: group?.label || '',
     deviceGroupType: group?.groupType || '',
@@ -171,26 +163,23 @@ function normalizeRule(rule: Partial<PlanTriggerRule>): PlanTriggerRule {
   const group = groupById(rule.deviceGroupId || base.deviceGroupId)
   const groupType = rule.deviceGroupType || group?.groupType || base.deviceGroupType
   const fn = resolveDeviceFunction(groupType, rule.deviceFunction || base.deviceFunction)
+  const weather = normalizePlanWeatherConditions(rule)
+  if (!weather.weatherConditions?.length) {
+    weather.weatherConditions = [createPlanWeatherCondition()]
+  }
   return {
     ...base,
     ...rule,
+    ...weather,
     sortOrder: Number(rule.sortOrder) || base.sortOrder,
     areaLevel: normalizeRuleAreaLevel(rule.areaLevel || base.areaLevel),
-    temperatureOperator: rule.temperatureOperator || '',
-    temperatureValue: rule.temperatureValue ?? null,
-    humidityOperator: rule.humidityOperator || '',
-    humidityValue: rule.humidityValue ?? null,
-    windPowerOperator: rule.windPowerOperator || '',
-    windPowerValue: rule.windPowerValue ?? null,
-    rainfallOperator: rule.rainfallOperator || '',
-    rainfallValue: rule.rainfallValue ?? null,
-    weatherFactor: undefined,
     deviceGroupId: group?.value || rule.deviceGroupId || '',
     deviceGroupName: group?.label || rule.deviceGroupName || '',
     deviceGroupType: groupType,
     deviceFunction: fn?.value || '',
     deviceAction: fn?.deviceAction || '',
-    ruleName: rule.ruleName || ''
+    ruleName: rule.ruleName || '',
+    weatherFactor: undefined
   }
 }
 
@@ -228,19 +217,8 @@ function collectPlanAreaLevel() {
   return [...new Set(values.filter(Boolean))]
 }
 
-function conditionComplete(operator?: string, value?: number | null) {
-  const hasOperator = !!operator
-  const hasValue = value !== undefined && value !== null
-  return hasOperator === hasValue
-}
-
-function ruleConditionComplete(rule: PlanTriggerRule) {
-  return (
-    conditionComplete(rule.temperatureOperator, rule.temperatureValue) &&
-    conditionComplete(rule.humidityOperator, rule.humidityValue) &&
-    conditionComplete(rule.windPowerOperator, rule.windPowerValue) &&
-    conditionComplete(rule.rainfallOperator, rule.rainfallValue)
-  )
+function ruleWeatherComplete(rule: PlanTriggerRule) {
+  return weatherConditionsComplete(rule.weatherConditions)
 }
 
 function fillFormFromPlan(plan: PlanStrategy) {
@@ -324,8 +302,8 @@ async function onSave() {
       ElMessage.warning('请为每条触发策略选择执行设备组与反制动作')
       return
     }
-    if (!ruleConditionComplete(rule)) {
-      ElMessage.warning('温度、湿度、风力、雨量条件需同时填写逻辑符号和数值')
+    if (!ruleWeatherComplete(rule)) {
+      ElMessage.warning('请完善天气要素条件')
       return
     }
   }
@@ -347,7 +325,21 @@ async function onSave() {
       priority: Number.isFinite(Number(form.value.priority))
         ? Number(form.value.priority)
         : PLAN_DEFAULT_PRIORITY,
-      triggerRules: triggerRules.value.map((item) => ({ ...item }))
+      triggerRules: triggerRules.value.map((item) => {
+        const weather = normalizePlanWeatherConditions(item)
+        const conditions = weather.weatherConditions ?? []
+        return {
+          ...item,
+          ...weather,
+          weatherConditions: conditions.map((condition, index) => ({
+            ...condition,
+            nextLogic:
+              index < conditions.length - 1
+                ? condition.nextLogic || weather.weatherConditionLogic || 'and'
+                : undefined
+          }))
+        }
+      })
     })
     ElMessage.success(UI.saveOk)
     emit('success')
@@ -500,101 +492,13 @@ async function onSave() {
                     @change="(values: string[]) => onRuleAreaLevelChange(rule, values)"
                   />
                 </div>
-                <div class="trigger-rule-form__item">
-                  <label>{{ UI.temperature }}</label>
-                  <div class="condition-editor">
-                    <ElSelect
-                      v-model="rule.temperatureOperator"
-                      clearable
-                      class="condition-editor__operator"
-                    >
-                      <ElOption
-                        v-for="option in logicOperatorOptions"
-                        :key="option.value"
-                        :label="option.label"
-                        :value="option.value"
-                      />
-                    </ElSelect>
-                    <ElInputNumber
-                      v-model="rule.temperatureValue"
-                      :step="1"
-                      controls-position="right"
-                      class="condition-editor__value"
-                    />
-                  </div>
-                </div>
-                <div class="trigger-rule-form__item">
-                  <label>{{ UI.humidity }}</label>
-                  <div class="condition-editor">
-                    <ElSelect
-                      v-model="rule.humidityOperator"
-                      clearable
-                      class="condition-editor__operator"
-                    >
-                      <ElOption
-                        v-for="option in logicOperatorOptions"
-                        :key="option.value"
-                        :label="option.label"
-                        :value="option.value"
-                      />
-                    </ElSelect>
-                    <ElInputNumber
-                      v-model="rule.humidityValue"
-                      :min="0"
-                      :max="100"
-                      :step="1"
-                      controls-position="right"
-                      class="condition-editor__value"
-                    />
-                  </div>
-                </div>
-                <div class="trigger-rule-form__item">
-                  <label>{{ UI.windPower }}</label>
-                  <div class="condition-editor">
-                    <ElSelect
-                      v-model="rule.windPowerOperator"
-                      clearable
-                      class="condition-editor__operator"
-                    >
-                      <ElOption
-                        v-for="option in logicOperatorOptions"
-                        :key="option.value"
-                        :label="option.label"
-                        :value="option.value"
-                      />
-                    </ElSelect>
-                    <ElInputNumber
-                      v-model="rule.windPowerValue"
-                      :min="0"
-                      :step="1"
-                      controls-position="right"
-                      class="condition-editor__value"
-                    />
-                  </div>
-                </div>
-                <div class="trigger-rule-form__item">
-                  <label>{{ UI.rainfall }}</label>
-                  <div class="condition-editor">
-                    <ElSelect
-                      v-model="rule.rainfallOperator"
-                      clearable
-                      class="condition-editor__operator"
-                    >
-                      <ElOption
-                        v-for="option in logicOperatorOptions"
-                        :key="option.value"
-                        :label="option.label"
-                        :value="option.value"
-                      />
-                    </ElSelect>
-                    <ElInputNumber
-                      v-model="rule.rainfallValue"
-                      :min="0"
-                      :step="1"
-                      controls-position="right"
-                      class="condition-editor__value"
-                    />
-                  </div>
+                <div class="trigger-rule-form__item trigger-rule-form__item--wide">
+                  <label>{{ UI.weatherElements }}</label>
+                  <PlanWeatherConditionEditor
+                    v-if="rule.weatherConditions"
+                    v-model="rule.weatherConditions"
+                    v-model:condition-logic="rule.weatherConditionLogic"
+                  />
                 </div>
                 <div class="trigger-rule-form__item">
                   <label>{{ UI.deviceGroup }}</label>
@@ -710,17 +614,6 @@ async function onSave() {
   color: var(--el-text-color-regular);
 }
 
-.condition-editor {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  gap: 8px;
-}
-
-.condition-editor__operator,
-.condition-editor__value {
-  width: 100%;
-}
-
 @media (max-width: 768px) {
   .trigger-rule-form__header {
     align-items: flex-start;
@@ -729,10 +622,6 @@ async function onSave() {
 
   .trigger-rule-form__grid {
     grid-template-columns: 1fr;
-  }
-
-  .condition-editor {
-    grid-template-columns: 80px minmax(0, 1fr);
   }
 }
 </style>

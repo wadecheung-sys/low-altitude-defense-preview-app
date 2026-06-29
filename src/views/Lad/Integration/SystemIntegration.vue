@@ -133,7 +133,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'dataUpdatedAtRange',
-    label: UI.searchTimeRange,
+    label: UI.colDataUpdatedAt,
     search: {
       component: 'DatePicker',
       componentProps: {

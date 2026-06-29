@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { LAD_BACKEND_HOME_PATH } from '@/constants/lad'
+import {
+  LAD_BACKEND_HOME_PATH,
+  LAD_MESSAGE_CENTER_PATH
+} from '@/constants/lad'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -9,6 +12,17 @@ const PROTOTYPE_WIDTH = 1920
 const PROTOTYPE_HEIGHT = 1080
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/index.html`
 const BACKEND_ENTRY_RESET_DELAY = 240
+
+const DRONE_ICON_IDS = ['u203', 'u204', 'u205'] as const
+const DRONE_DETAIL_IDS = ['u217', 'u210', 'u207', 'u215'] as const
+const DRONE_ICON_DETAIL_MAP: Record<(typeof DRONE_ICON_IDS)[number], (typeof DRONE_DETAIL_IDS)[number]> =
+  {
+    u203: 'u217',
+    u204: 'u210',
+    u205: 'u207'
+  }
+
+type Cleanup = () => void
 
 const router = useRouter()
 
@@ -22,7 +36,7 @@ const stageScale = ref(1)
 let bindRetryTimer: number | undefined
 let resetEntryTimer: number | undefined
 let backendWarmupPromise: Promise<unknown> | undefined
-let cleanupPrototypeButton: (() => void) | undefined
+let cleanupPrototypeBindings: Cleanup | undefined
 
 const viewportStyle = computed(() => ({
   width: `${PROTOTYPE_WIDTH * stageScale.value}px`,
@@ -36,7 +50,10 @@ const stageStyle = computed(() => ({
 }))
 
 const warmBackendPage = () => {
-  backendWarmupPromise ??= import('@/views/Lad/Incident/HistoryEvent.vue')
+  backendWarmupPromise ??= Promise.all([
+    import('@/views/Lad/Incident/HistoryEvent.vue'),
+    import('@/views/Lad/Message/MessageCenterList.vue')
+  ])
   return backendWarmupPromise
 }
 
@@ -82,7 +99,7 @@ const syncPrototypeButtonState = () => {
   button.style.opacity = isEnteringBackend.value ? '0.82' : '1'
 }
 
-const enterBackend = async () => {
+const navigateFromScreen = async (path: string) => {
   if (isEnteringBackend.value) return
 
   isEnteringBackend.value = true
@@ -90,7 +107,7 @@ const enterBackend = async () => {
   void warmBackendPage()
 
   try {
-    await router.push(LAD_BACKEND_HOME_PATH)
+    await router.push(path)
   } finally {
     window.clearTimeout(resetEntryTimer)
     resetEntryTimer = window.setTimeout(() => {
@@ -100,48 +117,137 @@ const enterBackend = async () => {
   }
 }
 
-const bindPrototypeButton = () => {
-  cleanupPrototypeButton?.()
-  cleanupPrototypeButton = undefined
-  frameBindingReady.value = false
+const enterBackend = () => navigateFromScreen(LAD_BACKEND_HOME_PATH)
 
-  const doc = iframeRef.value?.contentDocument
-  const button = doc?.getElementById('u9') as HTMLElement | null
-  if (!doc || !button) return false
+function setElementSelected(doc: Document, id: string, selected: boolean) {
+  const element = doc.getElementById(id)
+  if (!element) return
 
-  const text = button.querySelector('.text') as HTMLElement | null
+  element.classList.toggle('selected', selected)
+  doc.getElementById(`${id}_div`)?.classList.toggle('selected', selected)
+}
+
+function showDetailPanel(doc: Document, panelId: string) {
+  for (const id of DRONE_DETAIL_IDS) {
+    const panel = doc.getElementById(id)
+    if (!panel) continue
+
+    const visible = id === panelId
+    panel.style.display = visible ? '' : 'none'
+    panel.style.visibility = visible ? 'visible' : 'hidden'
+    panel.classList.toggle('ax_default_hidden', !visible)
+    setElementSelected(doc, id, visible)
+  }
+}
+
+function selectDroneIcon(doc: Document, iconId: (typeof DRONE_ICON_IDS)[number]) {
+  for (const id of DRONE_ICON_IDS) {
+    setElementSelected(doc, id, id === iconId)
+  }
+  showDetailPanel(doc, DRONE_ICON_DETAIL_MAP[iconId])
+}
+
+function bindClickableElement(
+  doc: Document,
+  elementId: string,
+  onClick: () => void,
+  options?: { role?: string; ariaLabel?: string; cursor?: string }
+) {
+  const element = doc.getElementById(elementId) as HTMLElement | null
+  if (!element) return undefined
+
+  element.style.cursor = options?.cursor ?? 'pointer'
+  if (options?.role) element.setAttribute('role', options.role)
+  if (options?.ariaLabel) element.setAttribute('aria-label', options.ariaLabel)
 
   const handleClick = (event: Event) => {
     event.preventDefault()
     event.stopPropagation()
     event.stopImmediatePropagation()
-    void enterBackend()
+    onClick()
   }
 
-  const handleKeydown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    event.preventDefault()
-    handleClick(event)
+  element.addEventListener('click', handleClick, true)
+  return () => element.removeEventListener('click', handleClick, true)
+}
+
+function bindPrototypeInteractions() {
+  cleanupPrototypeBindings?.()
+  cleanupPrototypeBindings = undefined
+  frameBindingReady.value = false
+
+  const doc = iframeRef.value?.contentDocument
+  if (!doc) return false
+
+  const cleanups: Cleanup[] = []
+
+  const backendButton = doc.getElementById('u9') as HTMLElement | null
+  if (backendButton) {
+    const text = backendButton.querySelector('.text') as HTMLElement | null
+    const handleClick = (event: Event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      void enterBackend()
+    }
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      handleClick(event)
+    }
+    const handleWarmup = () => {
+      void warmBackendPage()
+    }
+
+    backendButton.tabIndex = 0
+    backendButton.setAttribute('role', 'button')
+    backendButton.setAttribute('aria-label', '进入控制台')
+
+    backendButton.addEventListener('click', handleClick, true)
+    backendButton.addEventListener('keydown', handleKeydown, true)
+    backendButton.addEventListener('mouseenter', handleWarmup, { passive: true })
+    text?.addEventListener('mouseenter', handleWarmup, { passive: true })
+
+    cleanups.push(() => {
+      backendButton.removeEventListener('click', handleClick, true)
+      backendButton.removeEventListener('keydown', handleKeydown, true)
+      backendButton.removeEventListener('mouseenter', handleWarmup)
+      text?.removeEventListener('mouseenter', handleWarmup)
+    })
   }
 
-  const handleWarmup = () => {
-    void warmBackendPage()
+  const historyLinkCleanup = bindClickableElement(
+    doc,
+    'u106',
+    () => {
+      void navigateFromScreen(LAD_BACKEND_HOME_PATH)
+    },
+    { role: 'link', ariaLabel: '历史事件' }
+  )
+  if (historyLinkCleanup) cleanups.push(historyLinkCleanup)
+
+  const messageLinkCleanup = bindClickableElement(
+    doc,
+    'u234',
+    () => {
+      void navigateFromScreen(LAD_MESSAGE_CENTER_PATH)
+    },
+    { role: 'link', ariaLabel: '消息中心' }
+  )
+  if (messageLinkCleanup) cleanups.push(messageLinkCleanup)
+
+  for (const iconId of DRONE_ICON_IDS) {
+    const cleanup = bindClickableElement(doc, iconId, () => selectDroneIcon(doc, iconId), {
+      role: 'button',
+      ariaLabel: '选择无人机目标'
+    })
+    if (cleanup) cleanups.push(cleanup)
   }
 
-  button.tabIndex = 0
-  button.setAttribute('role', 'button')
-  button.setAttribute('aria-label', '进入控制台')
+  if (!cleanups.length) return false
 
-  button.addEventListener('click', handleClick, true)
-  button.addEventListener('keydown', handleKeydown, true)
-  button.addEventListener('mouseenter', handleWarmup, { passive: true })
-  text?.addEventListener('mouseenter', handleWarmup, { passive: true })
-
-  cleanupPrototypeButton = () => {
-    button.removeEventListener('click', handleClick, true)
-    button.removeEventListener('keydown', handleKeydown, true)
-    button.removeEventListener('mouseenter', handleWarmup)
-    text?.removeEventListener('mouseenter', handleWarmup)
+  cleanupPrototypeBindings = () => {
+    cleanups.forEach((cleanup) => cleanup())
   }
 
   frameBindingReady.value = true
@@ -152,11 +258,11 @@ const bindPrototypeButton = () => {
 const schedulePrototypeBinding = () => {
   window.clearTimeout(bindRetryTimer)
   bindRetryTimer = window.setTimeout(() => {
-    if (bindPrototypeButton()) return
+    if (bindPrototypeInteractions()) return
 
     bindRetryTimer = window.setTimeout(() => {
       void nextTick(() => {
-        bindPrototypeButton()
+        bindPrototypeInteractions()
       })
     }, 160)
   }, 0)
@@ -178,8 +284,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  cleanupPrototypeButton?.()
-  cleanupPrototypeButton = undefined
+  cleanupPrototypeBindings?.()
+  cleanupPrototypeBindings = undefined
   window.clearTimeout(bindRetryTimer)
   window.clearTimeout(resetEntryTimer)
   window.removeEventListener('resize', updateStageScale)

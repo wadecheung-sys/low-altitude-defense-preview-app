@@ -13,6 +13,8 @@ const props = defineProps({
   maxHeight: propTypes.oneOfType([String, Number]).def('400px')
 })
 
+const hasFooter = computed(() => !!slots.footer)
+
 const getBindValue = computed(() => {
   const delArr: string[] = ['fullscreen', 'title', 'maxHeight']
   const attrs = useAttrs()
@@ -31,36 +33,50 @@ const toggleFull = () => {
   isFullscreen.value = !unref(isFullscreen)
 }
 
-const dialogHeight = ref(isNumber(props.maxHeight) ? `${props.maxHeight}px` : props.maxHeight)
+const dialogMaxHeight = ref('400px')
+
+/** 视口内滚动区上限（扣除标题、底部按钮、内外边距） */
+function buildViewportCap(withFooter: boolean) {
+  const footer = withFooter ? 63 : 0
+  // 48 视口留白 + 54 标题 + 30 body 内边距 + 32 dialog 内边距 + footer + 2 边框
+  return `calc(100vh - ${48 + 54 + 30 + 32 + footer + 2}px)`
+}
+
+function resolveMaxHeight(raw: string | number, withFooter: boolean) {
+  const cap = buildViewportCap(withFooter)
+  const rawStr = isNumber(raw) ? `${raw}px` : String(raw)
+
+  if (!rawStr || rawStr === 'auto') {
+    return cap
+  }
+
+  return `min(${rawStr}, ${cap})`
+}
+
+function syncDialogMaxHeight() {
+  if (isFullscreen.value) {
+    const windowHeight = document.documentElement.offsetHeight
+    dialogMaxHeight.value = `${windowHeight - 55 - 60 - (hasFooter.value ? 63 : 0)}px`
+    return
+  }
+  dialogMaxHeight.value = resolveMaxHeight(props.maxHeight, hasFooter.value)
+}
 
 watch(
-  () => isFullscreen.value,
-  async (val: boolean) => {
+  () => [isFullscreen.value, hasFooter.value] as const,
+  async () => {
     await nextTick()
-    if (val) {
-      const windowHeight = document.documentElement.offsetHeight
-      dialogHeight.value = `${windowHeight - 55 - 60 - (slots.footer ? 63 : 0)}px`
-    } else {
-      dialogHeight.value = isNumber(props.maxHeight) ? `${props.maxHeight}px` : props.maxHeight
-    }
+    syncDialogMaxHeight()
   },
-  {
-    immediate: true
-  }
+  { immediate: true }
 )
 
 watch(
   () => props.maxHeight,
-  (val) => {
-    dialogHeight.value = isNumber(val) ? `${val}px` : val
+  () => {
+    syncDialogMaxHeight()
   }
 )
-
-const dialogStyle = computed(() => {
-  return {
-    height: unref(dialogHeight)
-  }
-})
 </script>
 
 <template>
@@ -103,11 +119,14 @@ const dialogStyle = computed(() => {
       </div>
     </template>
 
-    <ElScrollbar :style="dialogStyle">
-      <slot></slot>
+    <!-- 使用 max-height prop（非 style height），内容少时不撑满，超出时可滚动 -->
+    <ElScrollbar :max-height="dialogMaxHeight">
+      <div class="app-dialog__scroll-content">
+        <slot></slot>
+      </div>
     </ElScrollbar>
 
-    <template v-if="slots.footer" #footer>
+    <template v-if="hasFooter" #footer>
       <slot name="footer"></slot>
     </template>
   </ElDialog>
@@ -118,28 +137,42 @@ const dialogStyle = computed(() => {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
 }
 
 .@{elNamespace}-dialog {
   margin: 0 !important;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
   &__header {
     height: 54px;
     padding: 0;
     margin-right: 0 !important;
     border-bottom: 1px solid var(--el-border-color);
+    flex-shrink: 0;
   }
 
   &__body {
     padding: 15px !important;
+    flex-shrink: 0;
+    overflow: hidden;
   }
 
   &__footer {
     border-top: 1px solid var(--el-border-color);
+    flex-shrink: 0;
   }
 
   &__headerbtn {
     top: 0;
   }
+}
+
+.app-dialog__scroll-content {
+  padding-bottom: 12px;
 }
 </style>

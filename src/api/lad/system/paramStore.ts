@@ -67,16 +67,22 @@ const allParams: SystemParam[] = seed.map((row) => ({ ...row }))
 
 function filterParams(params: SystemParamQuery): SystemParam[] {
   let rows = [...allParams]
-  if (params.keyword?.trim()) {
-    const keyword = params.keyword.trim().toLowerCase()
-    rows = rows.filter(
-      (row) =>
-        row.paramName.toLowerCase().includes(keyword) ||
-        String(row.paramValue).toLowerCase().includes(keyword)
-    )
+  if (params.paramName?.trim()) {
+    const keyword = params.paramName.trim().toLowerCase()
+    rows = rows.filter((row) => row.paramName.toLowerCase().includes(keyword))
   }
-  if (params.group) {
-    rows = rows.filter((row) => row.group === params.group)
+  if (params.valueType) {
+    rows = rows.filter((row) => row.valueType === params.valueType)
+  }
+  if (params.remark?.trim()) {
+    const keyword = params.remark.trim().toLowerCase()
+    rows = rows.filter((row) => (row.remark || '').toLowerCase().includes(keyword))
+  }
+  if (params.updatedAtStart) {
+    rows = rows.filter((row) => row.updatedAt >= params.updatedAtStart!)
+  }
+  if (params.updatedAtEnd) {
+    rows = rows.filter((row) => row.updatedAt <= params.updatedAtEnd!)
   }
   return rows
 }
@@ -93,13 +99,34 @@ export function querySystemParamList(params: SystemParamQuery): SystemParamListR
 }
 
 export function saveSystemParam(body: SystemParamSavePayload): SystemParam {
-  const idx = allParams.findIndex((row) => row.id === body.id)
-  if (idx < 0) throw new Error('参数不存在')
-  const row = {
-    ...allParams[idx],
+  if (body.id) {
+    const idx = allParams.findIndex((row) => row.id === body.id)
+    if (idx < 0) throw new Error('参数不存在')
+    const row = {
+      ...allParams[idx],
+      paramValue: body.paramValue,
+      updatedAt: formatNow()
+    }
+    allParams[idx] = row
+    return { ...row }
+  }
+
+  const paramKey = body.paramKey?.trim()
+  const paramName = body.paramName?.trim()
+  if (!paramKey || !paramName) throw new Error('请填写参数键与参数名称')
+  if (allParams.some((row) => row.paramKey === paramKey)) throw new Error('参数键已存在')
+
+  const valueType = body.valueType || 'string'
+  const row: SystemParam = {
+    id: `sp-${Date.now()}`,
+    paramKey,
+    paramName,
+    group: '系统',
+    valueType,
     paramValue: body.paramValue,
+    remark: body.remark?.trim() || undefined,
     updatedAt: formatNow()
   }
-  allParams[idx] = row
+  allParams.unshift(row)
   return { ...row }
 }

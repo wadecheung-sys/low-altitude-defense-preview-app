@@ -27,7 +27,7 @@ export default [
     url: '/mock/lad/system/params/save',
     method: 'post',
     timeout,
-    response: ({ body }: { body: { id: string; paramValue: string | number | boolean } }) => {
+    response: ({ body }: { body: Parameters<typeof saveSystemParam>[0] }) => {
       try {
         return { code: SUCCESS_CODE, data: saveSystemParam(body) }
       } catch (e) {

@@ -22,6 +22,7 @@ export interface MessageCenterQuery {
   pageIndex?: number
   pageSize?: number
   eventName?: string
+  description?: string
   occurredAtStart?: string
   occurredAtEnd?: string
 }

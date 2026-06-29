@@ -16,9 +16,11 @@ export interface SystemParam {
 export interface SystemParamQuery {
   pageIndex?: number
   pageSize?: number
-  keyword?: string
-  group?: ParamGroup
+  paramName?: string
   valueType?: ParamValueType
+  remark?: string
+  updatedAtStart?: string
+  updatedAtEnd?: string
 }
 
 export interface SystemParamListResult {
@@ -27,8 +29,12 @@ export interface SystemParamListResult {
 }
 
 export interface SystemParamSavePayload {
-  id: string
+  id?: string
+  paramKey?: string
+  paramName?: string
+  valueType?: ParamValueType
   paramValue: string | number | boolean
+  remark?: string
 }
 
 export type EventOwnership = '无人机入侵' | '设备故障'

@@ -25,6 +25,7 @@ const setSearchParams = (params: Recordable) => {
   const range = params.occurredAtRange as string[] | undefined
   searchParams.value = {
     eventName: !params.eventName || params.eventName === '全部' ? undefined : params.eventName,
+    description: params.description?.trim() || undefined,
     occurredAtStart: range?.[0],
     occurredAtEnd: range?.[1]
   }
@@ -131,7 +132,15 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'description',
     label: '描述',
-    search: { hidden: true },
+    search: {
+      component: 'Input',
+      colProps: MESSAGE_SEARCH_COL,
+      componentProps: {
+        clearable: true,
+        placeholder: '请输入描述关键词',
+        style: { width: '100%' }
+      }
+    },
     table: {
       minWidth: 420,
       showOverflowTooltip: true,

@@ -4,11 +4,25 @@ export type PlanDisposalMode = 'auto' | 'manual'
 
 export type PlanConditionOperator = '>' | '<' | '=' | '!='
 
+export type PlanWeatherConditionProperty = 'temperature' | 'humidity' | 'windPower' | 'rainfall'
+
+export type PlanWeatherConditionLogic = 'and' | 'or'
+
+export interface PlanWeatherCondition {
+  id: string
+  property: PlanWeatherConditionProperty
+  operator: PlanConditionOperator
+  value: string
+  nextLogic?: PlanWeatherConditionLogic
+}
+
 export interface PlanTriggerRule {
   id: string
   ruleName: string
   sortOrder?: number
   weatherFactor?: string
+  weatherConditionLogic?: PlanWeatherConditionLogic
+  weatherConditions?: PlanWeatherCondition[]
   areaLevel?: string[]
   temperatureOperator?: PlanConditionOperator | ''
   temperatureValue?: number | null
