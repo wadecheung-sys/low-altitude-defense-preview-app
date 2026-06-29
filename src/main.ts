@@ -36,8 +36,12 @@ import App from './App.vue'
 
 import './permission'
 
+import { setupIconifyOffline } from '@/plugins/iconifyOffline'
+
 // 创建实例
 const setupAll = async () => {
+  setupIconifyOffline()
+
   const app = createApp(App)
 
   await setupI18n(app)
