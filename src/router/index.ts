@@ -136,7 +136,7 @@ export const constantRouterMap: AppRouteRecordRaw[] = [
 export const asyncRouterMap: AppRouteRecordRaw[] = ladAsyncRouterMap
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   strict: true,
   routes: constantRouterMap as RouteRecordRaw[],
   scrollBehavior: () => ({ left: 0, top: 0 })

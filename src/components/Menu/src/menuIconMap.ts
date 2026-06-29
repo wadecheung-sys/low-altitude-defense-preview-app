@@ -7,6 +7,7 @@ import {
   Document,
   Location,
   Menu as MenuIcon,
+  Message,
   Setting,
   SetUp,
   UserFilled
@@ -21,8 +22,9 @@ const MENU_ICON_MAP: Record<string, Component> = {
   'vi-ant-design:environment-outlined': Location,
   'vi-ant-design:alert-outlined': Bell,
   'vi-ant-design:deployment-unit-outlined': SetUp,
+  'vi-ant-design:mail-outlined': Message,
   'vi-ant-design:setting-outlined': Setting,
-  'vi-eos-icons:role-binding': UserFilled
+  'vi-ant-design:user-outlined': UserFilled
 }
 
 export function resolveMenuIcon(icon?: string): Component {

@@ -472,7 +472,7 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
     name: 'LadAuth',
     meta: {
       title: '权限管理',
-      icon: 'vi-eos-icons:role-binding',
+      icon: 'vi-ant-design:user-outlined',
       alwaysShow: true,
       reqModule: '9'
     },

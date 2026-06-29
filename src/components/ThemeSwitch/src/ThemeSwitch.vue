@@ -12,9 +12,9 @@ const emit = defineEmits(['change'])
 
 const prefixCls = getPrefixCls('theme-switch')
 
-const Sun = useIcon({ icon: 'vi-emojione-monotone:sun', color: '#fde047' })
+const Sun = useIcon({ icon: 'vi-ep:sunny', color: '#fde047' })
 
-const CrescentMoon = useIcon({ icon: 'vi-emojione-monotone:crescent-moon', color: '#fde047' })
+const CrescentMoon = useIcon({ icon: 'vi-ep:moon', color: '#fde047' })
 
 const appStore = useAppStore()
 

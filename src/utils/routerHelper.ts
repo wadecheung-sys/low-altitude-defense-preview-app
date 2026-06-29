@@ -164,7 +164,7 @@ const isMultipleRoute = (route: AppRouteRecordRaw) => {
 const promoteRouteLevel = (route: AppRouteRecordRaw) => {
   let router: Router | null = createRouter({
     routes: [route as RouteRecordRaw],
-    history: createWebHashHistory()
+    history: createWebHashHistory(import.meta.env.BASE_URL)
   })
 
   const routes = router.getRoutes()

@@ -52,7 +52,10 @@ const { getPrefixCls } = useDesign()
 
 const prefixCls = getPrefixCls('icon-picker')
 
-const icons = [epIcons, antIcons, tIcons]
+const icons =
+  import.meta.env.VITE_USE_ONLINE_ICON === 'true'
+    ? [epIcons, antIcons, tIcons]
+    : [epIcons, antIcons]
 
 const iconName = ref(icons[0].prefix)
 

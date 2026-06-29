@@ -20,10 +20,11 @@ const props = defineProps({
   hoverColor: propTypes.string
 })
 
-const isLocal = computed(() => props.icon.startsWith('svg-icon:'))
+const isLocal = computed(() => props.icon?.startsWith('svg-icon:') ?? false)
 
 const symbolId = computed(() => {
-  return unref(isLocal) ? `#icon-${props.icon.split('svg-icon:')[1]}` : props.icon
+  const icon = props.icon ?? ''
+  return unref(isLocal) ? `#icon-${icon.split('svg-icon:')[1]}` : icon
 })
 
 const getIconifyStyle = computed(() => {
@@ -37,7 +38,8 @@ const getIconifyStyle = computed(() => {
 })
 
 const getIconName = computed(() => {
-  return props.icon.startsWith(ICON_PREFIX) ? props.icon.replace(ICON_PREFIX, '') : props.icon
+  const icon = props.icon ?? ''
+  return icon.startsWith(ICON_PREFIX) ? icon.replace(ICON_PREFIX, '') : icon
 })
 </script>
 
@@ -47,7 +49,7 @@ const getIconName = computed(() => {
       <use :xlink:href="symbolId" />
     </svg>
 
-    <template v-else>
+    <template v-else-if="getIconName">
       <IconifyIcon :icon="getIconName" :style="getIconifyStyle" />
     </template>
   </ElIcon>

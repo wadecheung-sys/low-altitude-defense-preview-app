@@ -222,12 +222,12 @@ defineExpose({
           </ElTooltip>
           <ElTooltip content="水平翻转" placement="bottom">
             <BaseButton size="small" type="primary" @click="scale('scaleX')"
-              ><Icon icon="vi-vaadin:arrows-long-h"
+              ><Icon icon="vi-ant-design:column-width-outlined"
             /></BaseButton>
           </ElTooltip>
           <ElTooltip content="垂直翻转" placement="bottom">
             <BaseButton size="small" type="primary" @click="scale('scaleY')"
-              ><Icon icon="vi-vaadin:arrows-long-v"
+              ><Icon icon="vi-ant-design:column-height-outlined"
             /></BaseButton>
           </ElTooltip>
           <ElTooltip content="放大" placement="bottom">

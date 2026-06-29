@@ -101,9 +101,7 @@ watch(
           <Icon
             v-if="fullscreen"
             class="cursor-pointer is-hover !h-54px mr-10px"
-            :icon="
-              isFullscreen ? 'vi-radix-icons:exit-full-screen' : 'vi-radix-icons:enter-full-screen'
-            "
+            :icon="isFullscreen ? 'vi-zmdi:fullscreen-exit' : 'vi-zmdi:fullscreen'"
             color="var(--el-color-info)"
             hover-color="var(--el-color-primary)"
             @click="toggleFull"

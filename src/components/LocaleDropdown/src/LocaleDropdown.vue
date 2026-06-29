@@ -36,7 +36,7 @@ const setLang = (lang: LocaleType) => {
   <ElDropdown :class="prefixCls" trigger="click" @command="setLang">
     <Icon
       :size="18"
-      icon="vi-ion:language-sharp"
+      icon="vi-ant-design:global-outlined"
       class="cursor-pointer !p-0"
       :class="$attrs.class"
       :color="color"
