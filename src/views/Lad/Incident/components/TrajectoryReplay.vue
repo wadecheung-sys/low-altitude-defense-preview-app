@@ -3,6 +3,10 @@ import type { HistoryEventDetail, TrajectoryPoint } from '@/api/lad/incident/typ
 import { BaseButton } from '@/components/Button'
 import { ElOption, ElSelect, ElSlider } from 'element-plus'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import {
+  getTrajectorySnapshotAtProgress,
+  sampleTrajectoryAtProgress
+} from '../trajectoryListRows'
 
 const props = defineProps<{
   detail: HistoryEventDetail
@@ -25,57 +29,14 @@ const toPx = (p: { x: number; y: number }) => ({
 })
 
 function sampleAt(pct: number): TrajectoryPoint {
-  const pts = props.detail.trajectory
-  if (!pts.length) {
-    return { progress: pct, x: 0.5, y: 0.5, altitude: 0 }
-  }
-  if (pct <= pts[0].progress) return { ...pts[0], progress: pct }
-  for (let i = 1; i < pts.length; i++) {
-    if (pct <= pts[i].progress) {
-      const a = pts[i - 1]
-      const b = pts[i]
-      const ratio = (pct - a.progress) / (b.progress - a.progress || 1)
-      return {
-        progress: pct,
-        x: a.x + (b.x - a.x) * ratio,
-        y: a.y + (b.y - a.y) * ratio,
-        altitude: Math.round(a.altitude + (b.altitude - a.altitude) * ratio)
-      }
-    }
-  }
-  return { ...pts[pts.length - 1], progress: pct }
+  return sampleTrajectoryAtProgress(props.detail.trajectory, pct)
 }
 
 const currentSample = computed(() => sampleAt(progress.value))
-const currentIndex = computed(() => {
-  const pts = props.detail.trajectory
-  if (!pts.length) return 0
-  return Math.max(
-    0,
-    pts.findIndex((item) => item.progress >= progress.value)
-  )
-})
 
-const previousSample = computed(() => {
-  const pts = props.detail.trajectory
-  if (!pts.length) return currentSample.value
-  return pts[Math.max(0, currentIndex.value - 1)] || currentSample.value
-})
-
-const currentLng = computed(() => (113.39 + currentSample.value.x * 0.05).toFixed(4))
-const currentLat = computed(() => (23.09 + currentSample.value.y * 0.04).toFixed(4))
-const currentSpeed = computed(() => {
-  const deltaX = currentSample.value.x - previousSample.value.x
-  const deltaY = currentSample.value.y - previousSample.value.y
-  const distanceFactor = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-  return Math.max(2, Math.round(8 + distanceFactor * 180 + progress.value * 0.04))
-})
-const currentHeading = computed(() => {
-  const deltaX = currentSample.value.x - previousSample.value.x
-  const deltaY = currentSample.value.y - previousSample.value.y
-  const angle = (Math.atan2(deltaX, -deltaY) * 180) / Math.PI
-  return Math.round((angle + 360) % 360)
-})
+const trajectorySnapshot = computed(
+  () => getTrajectorySnapshotAtProgress(props.detail, progress.value)
+)
 
 const pathD = computed(() => {
   const pts = props.detail.trajectory
@@ -232,32 +193,21 @@ defineExpose({ play, pause, togglePlay })
           <text x="20" y="24" text-anchor="middle" fill="#ede9fe" font-size="10">无人机</text>
         </g>
       </svg>
-      <div class="trajectory-replay__coords">
-        <span>经度 E {{ currentLng }}</span>
-        <span>纬度 N {{ currentLat }}</span>
-        <span>高度 {{ currentSample.altitude }}m</span>
-        <span>速度 {{ currentSpeed }}m/s</span>
-        <span>方位角 {{ currentHeading }}°</span>
+      <div v-if="trajectorySnapshot" class="trajectory-replay__coords">
+        <span>目标ID {{ trajectorySnapshot.targetId }}</span>
+        <span>时间 {{ trajectorySnapshot.time }}</span>
+        <span>高度 {{ trajectorySnapshot.altitude }}m</span>
+        <span>经度 E {{ trajectorySnapshot.longitude }}</span>
+        <span>纬度 N {{ trajectorySnapshot.latitude }}</span>
+        <span>距离 {{ trajectorySnapshot.distance }}m</span>
+        <span>速度 {{ trajectorySnapshot.speed }}m/s</span>
+        <span>方位角 {{ trajectorySnapshot.azimuth }}°</span>
+        <span>俯仰角 {{ trajectorySnapshot.pitch }}°</span>
       </div>
     </div>
 
     <div class="trajectory-replay__controls">
-      <div class="trajectory-replay__times">
-        <span>{{ detail.discoveredAt }}</span>
-        <span>{{ detail.endedAt }}</span>
-      </div>
       <div class="trajectory-replay__slider-wrap">
-        <div class="trajectory-replay__markers">
-          <span
-            v-for="m in detail.markers"
-            :key="m.key"
-            class="trajectory-replay__marker"
-            :style="{ left: `${m.progress}%` }"
-          >
-            <i class="trajectory-replay__marker-tick"></i>
-            <span class="trajectory-replay__marker-label">{{ m.label }}</span>
-          </span>
-        </div>
         <ElSlider
           v-model="progress"
           class="trajectory-replay__slider"
@@ -302,16 +252,17 @@ defineExpose({ play, pause, togglePlay })
   &__coords {
     position: absolute;
     left: 12px;
-    bottom: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 12px;
+    top: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px 14px;
     max-width: calc(100% - 24px);
-    padding: 4px 10px;
+    padding: 8px 12px;
     font-size: 12px;
+    line-height: 1.4;
     color: #e2e8f0;
-    background: rgba(15, 23, 42, 0.75);
-    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.82);
+    border-radius: 6px;
   }
 
   &__controls {
@@ -321,51 +272,9 @@ defineExpose({ play, pause, togglePlay })
     border-radius: 8px;
   }
 
-  &__times {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-    margin-bottom: 8px;
-  }
-
   &__slider-wrap {
-    position: relative;
     padding: 0 8px;
     margin-bottom: 4px;
-  }
-
-  &__markers {
-    position: relative;
-    height: 32px;
-    margin-bottom: 2px;
-  }
-
-  &__marker {
-    position: absolute;
-    top: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transform: translateX(-50%);
-    pointer-events: none;
-  }
-
-  &__marker-tick {
-    display: block;
-    width: 0;
-    height: 0;
-    margin-bottom: 2px;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid var(--el-color-primary);
-  }
-
-  &__marker-label {
-    font-size: 11px;
-    line-height: 1.2;
-    color: var(--el-text-color-secondary);
-    white-space: nowrap;
   }
 
   &__slider {
@@ -399,18 +308,10 @@ defineExpose({ play, pause, togglePlay })
   }
 }
 
-@media (max-width: 1200px) {
-  .trajectory-replay {
-    &__telemetry {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-}
-
 @media (max-width: 768px) {
   .trajectory-replay {
-    &__telemetry {
-      grid-template-columns: 1fr;
+    &__coords {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 }

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElAlert, ElDescriptions, ElDescriptionsItem, ElMessage, ElTag } from 'element-plus'
+import { ElAlert, ElDescriptions, ElDescriptionsItem, ElMessage, ElPagination, ElTag } from 'element-plus'
 import { getHistoryEventDetailApi } from '@/api/lad/incident'
+import { historyTargetTypeTagType, resolveHistoryTargetType } from '@/api/lad/incident/historyTargetType'
 import type {
   DisposalTimelineNode,
   HistoryEventDetail,
   HandlingStatus,
+  HistoryTargetType,
   ThreatLevel
 } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
@@ -16,6 +18,8 @@ import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import DisposalTimelinePanel from './components/DisposalTimelinePanel.vue'
 import TrajectoryReplay from './components/TrajectoryReplay.vue'
 import LadVideoMonitor from '../shared/LadVideoMonitor.vue'
+import { buildTrajectoryListRows } from './trajectoryListRows'
+import { targetAirframeLabel } from '../shared/ladOptionConstants'
 
 defineOptions({
   name: 'LadIncidentTargetDetail'
@@ -32,77 +36,6 @@ const confirmVisible = ref(false)
 
 const eventId = computed(() => String(route.params.id || ''))
 
-const sourceDeviceRows = [
-  {
-    seq: 1,
-    deviceName: '雷达-01',
-    deviceType: '雷达设备',
-    deviceCode: 'RD-001',
-    discoveredAt: '2024-03-04 08:00:00',
-    endedAt: '2024-03-04 08:00:20',
-    longitude: '113.4058',
-    latitude: '23.1132',
-    altitude: 80,
-    speed: 8,
-    azimuth: 180
-  },
-  {
-    seq: 2,
-    deviceName: '无线电-02',
-    deviceType: '无线电设备',
-    deviceCode: 'RF-002',
-    discoveredAt: '2024-03-04 08:00:03',
-    endedAt: '2024-03-04 08:00:21',
-    longitude: '113.4062',
-    latitude: '23.1128',
-    altitude: 78,
-    speed: 7.6,
-    azimuth: 175
-  }
-]
-
-const exportSourceDevices = () => {
-  const headers = [
-    '序号',
-    '设备名',
-    '设备类型',
-    '设备编号',
-    '发现时间',
-    '结束时间',
-    '经度',
-    '纬度',
-    '高度(m)',
-    '速度(m/s)',
-    '方位角(°)'
-  ]
-  const lines = [
-    headers.join(','),
-    ...sourceDeviceRows.map((row) =>
-      [
-        row.seq,
-        row.deviceName,
-        row.deviceType,
-        row.deviceCode,
-        row.discoveredAt,
-        row.endedAt,
-        row.longitude,
-        row.latitude,
-        row.altitude,
-        row.speed,
-        row.azimuth
-      ].join(',')
-    )
-  ]
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `原始探测设备信息_${eventId.value || 'demo'}.csv`
-  link.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('原始探测设备信息已导出')
-}
-
 const normalizeText = (text: unknown) =>
   String(text || '')
     .replaceAll('人工确认', '人工核查')
@@ -113,16 +46,38 @@ const normalizedTimeline = (nodes: DisposalTimelineNode[] | undefined) =>
   (nodes || []).map((node) => ({
     ...node,
     title: normalizeText(node.title),
-    summary: normalizeText(node.summary),
-    detail: normalizeText(node.detail),
+    summary: node.summary ? normalizeText(node.summary) : undefined,
+    summaries: node.summaries?.map((line) => normalizeText(line)),
+    details: node.details?.map((item) => ({
+      ...item,
+      label: normalizeText(item.label),
+      value: normalizeText(item.value)
+    })),
+    detailGroups: node.detailGroups?.map((group) => ({
+      ...group,
+      title: normalizeText(group.title),
+      details: group.details.map((item) => ({
+        ...item,
+        label: normalizeText(item.label),
+        value: normalizeText(item.value)
+      }))
+    })),
     tags: node.tags?.map((tag) => normalizeText(tag))
   }))
 
 const viewDetail = computed<HistoryEventDetail | null>(() => {
   if (!detail.value) return null
 
+  const historyTargetType: HistoryTargetType =
+    detail.value.historyTargetType ??
+    resolveHistoryTargetType({
+      uavSn: detail.value.uavSn,
+      manualConfirmStatus: detail.value.manualConfirmStatus
+    })
+
   return {
     ...detail.value,
+    historyTargetType,
     targetId: normalizeText(detail.value.targetId),
     targetModel: normalizeText(detail.value.targetModel),
     uavSn: normalizeText(detail.value.uavSn),
@@ -136,6 +91,83 @@ const viewDetail = computed<HistoryEventDetail | null>(() => {
     disposalTimeline: normalizedTimeline(detail.value.disposalTimeline)
   }
 })
+
+const trajectoryListRows = computed(() =>
+  viewDetail.value ? buildTrajectoryListRows(viewDetail.value) : []
+)
+
+const TRAJECTORY_PAGE_SIZES = [10, 20, 50, 100]
+const trajectoryPageIndex = ref(1)
+const trajectoryPageSize = ref(10)
+
+const showTrajectoryPagination = computed(() => trajectoryListRows.value.length > 10)
+
+const paginatedTrajectoryListRows = computed(() => {
+  const rows = trajectoryListRows.value
+  if (!showTrajectoryPagination.value) return rows
+  const start = (trajectoryPageIndex.value - 1) * trajectoryPageSize.value
+  return rows.slice(start, start + trajectoryPageSize.value)
+})
+
+watch(eventId, () => {
+  trajectoryPageIndex.value = 1
+})
+
+watch(trajectoryPageSize, () => {
+  trajectoryPageIndex.value = 1
+})
+
+watch(trajectoryListRows, (rows) => {
+  const maxPage = Math.max(1, Math.ceil(rows.length / trajectoryPageSize.value))
+  if (trajectoryPageIndex.value > maxPage) {
+    trajectoryPageIndex.value = maxPage
+  }
+})
+
+const exportTrajectoryList = () => {
+  const rows = trajectoryListRows.value
+  if (!rows.length) {
+    ElMessage.warning('暂无航迹数据可导出')
+    return
+  }
+  const headers = [
+    '序号',
+    '目标ID',
+    '时间',
+    '高度(m)',
+    '经度',
+    '纬度',
+    '距离(m)',
+    '速度(m/s)',
+    '方位角(°)',
+    '俯仰角(°)'
+  ]
+  const lines = [
+    headers.join(','),
+    ...rows.map((row) =>
+      [
+        row.seq,
+        row.targetId,
+        row.time,
+        row.altitude,
+        row.longitude,
+        row.latitude,
+        row.distance,
+        row.speed,
+        row.azimuth,
+        row.pitch
+      ].join(',')
+    )
+  ]
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `航机列表_${eventId.value || 'demo'}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('航机列表已导出')
+}
 
 const threatTagType = (level: ThreatLevel) => threatLevelTagType(level)
 
@@ -247,6 +279,15 @@ onMounted(async () => {
                 {{ viewDetail.listType }}
               </ElTag>
             </ElDescriptionsItem>
+            <ElDescriptionsItem label="目标类型">
+              <ElTag
+                :type="historyTargetTypeTagType(viewDetail.historyTargetType)"
+                size="small"
+                effect="light"
+              >
+                {{ viewDetail.historyTargetType }}
+              </ElTag>
+            </ElDescriptionsItem>
 
             <ElDescriptionsItem label="飞手位置">
               <template v-if="viewDetail.pilotLocation === '未定位'">未定位</template>
@@ -259,7 +300,7 @@ onMounted(async () => {
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="频率信息">{{ viewDetail.frequencyInfo }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="目标类型">{{ viewDetail.targetType }}</ElDescriptionsItem>
+            <ElDescriptionsItem :label="targetAirframeLabel">{{ viewDetail.targetType }}</ElDescriptionsItem>
             <ElDescriptionsItem label="探测设备">{{
               viewDetail.detectionDevice
             }}</ElDescriptionsItem>
@@ -290,13 +331,13 @@ onMounted(async () => {
         <section class="detail-split-layout__eo detail-eo-section">
           <div class="detail-eo-section__title">无人机光电</div>
           <LadVideoMonitor
+            :linked="eoConnected"
             :channel-label="eoChannelLabel"
             :location-label="eoLocationLabel"
-            camera-label="光电跟踪 / 无人机目标"
-            :timestamp="viewDetail.discoveredAt"
-            :live="eoConnected"
+            camera-label="光电跟踪 / 录像回放"
+            :record-start="viewDetail.discoveredAt"
+            :record-end="viewDetail.endedAt"
             :screenshot-name-prefix="`光电截图_${viewDetail.targetId}`"
-            empty-text="暂无光电画面，接入光电设备后展示"
           />
         </section>
       </div>
@@ -308,48 +349,52 @@ onMounted(async () => {
 
       <section class="detail-source-section">
         <div class="detail-source-section__header">
-          <div>
-            <div class="detail-source-section__title">原始探测设备信息</div>
-            <div class="detail-source-section__hint">
-              多源数据融合前的原始探测记录演示，每类设备保留一条模拟数据。
-            </div>
-          </div>
-          <BaseButton type="primary" size="small" @click="exportSourceDevices">导出</BaseButton>
+          <div class="detail-source-section__title">航机列表</div>
+          <BaseButton type="primary" size="small" @click="exportTrajectoryList">导出</BaseButton>
         </div>
         <div class="detail-source-section__table-wrap">
           <table class="detail-source-table">
             <thead>
               <tr>
                 <th>序号</th>
-                <th>设备名</th>
-                <th>设备类型</th>
-                <th>设备编号</th>
-                <th>发现时间</th>
-                <th>结束时间</th>
+                <th>目标ID</th>
+                <th>时间</th>
+                <th>高度</th>
                 <th>经度</th>
                 <th>纬度</th>
-                <th>高度</th>
+                <th>距离</th>
                 <th>速度</th>
                 <th>方位角</th>
+                <th>俯仰角</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in sourceDeviceRows" :key="row.deviceCode">
+              <tr v-for="row in paginatedTrajectoryListRows" :key="row.seq">
                 <td>{{ row.seq }}</td>
-                <td>{{ row.deviceName }}</td>
-                <td>{{ row.deviceType }}</td>
-                <td>{{ row.deviceCode }}</td>
-                <td>{{ row.discoveredAt }}</td>
-                <td>{{ row.endedAt }}</td>
+                <td>{{ row.targetId }}</td>
+                <td>{{ row.time }}</td>
+                <td>{{ row.altitude }}m</td>
                 <td>{{ row.longitude }}</td>
                 <td>{{ row.latitude }}</td>
-                <td>{{ row.altitude }}m</td>
+                <td>{{ row.distance }}m</td>
                 <td>{{ row.speed }}m/s</td>
                 <td>{{ row.azimuth }}°</td>
+                <td>{{ row.pitch }}°</td>
               </tr>
             </tbody>
           </table>
         </div>
+        <ElPagination
+          v-if="showTrajectoryPagination"
+          v-model:current-page="trajectoryPageIndex"
+          v-model:page-size="trajectoryPageSize"
+          class="detail-source-section__pagination"
+          :page-sizes="TRAJECTORY_PAGE_SIZES"
+          :total="trajectoryListRows.length"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          small
+        />
       </section>
     </template>
 
@@ -459,7 +504,7 @@ onMounted(async () => {
   &__header {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
@@ -471,20 +516,20 @@ onMounted(async () => {
     color: var(--el-text-color-primary);
   }
 
-  &__hint {
-    margin-top: 4px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-
   &__table-wrap {
     overflow-x: auto;
+  }
+
+  &__pagination {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
   }
 }
 
 .detail-source-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 1080px;
   font-size: 13px;
   border-spacing: 0;
   border-collapse: collapse;

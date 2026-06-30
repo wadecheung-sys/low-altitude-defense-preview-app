@@ -62,7 +62,7 @@ function removeCondition(id: string) {
       <BaseButton type="primary" link @click="addCondition">+ 新增</BaseButton>
     </div>
     <div
-      v-for="(condition, index) in conditions"
+      v-for="(condition, index) in conditions || []"
       :key="condition.id"
       class="plan-weather-condition-row"
     >

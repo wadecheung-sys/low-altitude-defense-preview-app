@@ -1,36 +1,136 @@
 <script setup lang="tsx">
-import { reactive, ref, unref } from 'vue'
+import { computed, reactive, ref, unref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
+import type { FormSchema } from '@/components/Form'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { deleteMessageCenterApi, getMessageCenterListApi } from '@/api/lad/message'
+import type { EventAttributeEventType, EventOwnership } from '@/api/lad/system/types'
 import type { MessageCenterItem } from '@/api/lad/message/types'
 import {
   MESSAGE_SEARCH_COL,
   MESSAGE_SEARCH_DATE_COL,
-  formatMessageOccurredAt,
-  messageEventNameOptions
+  formatMessagePushedAt,
+  getEventTypeSearchOptions,
+  messageEventNameOptions,
+  messageOwnershipOptions
 } from './messageConstants'
 
 defineOptions({ name: 'LadMessageCenterList' })
 
+type SearchExpose = {
+  setValues: (data: Recordable) => Promise<void>
+}
+
 const searchParams = ref<Recordable>({})
 const selectedIds = ref<string[]>([])
+const searchOwnership = ref<EventOwnership | undefined>()
+const searchExpose = ref<SearchExpose>()
+
+const searchEventTypeOptions = computed(() => getEventTypeSearchOptions(searchOwnership.value))
+
+const searchSchema = computed<FormSchema[]>(() => [
+  {
+    field: 'eventId',
+    label: '事件ID',
+    component: 'Input',
+    colProps: MESSAGE_SEARCH_COL,
+    componentProps: {
+      clearable: true,
+      placeholder: '请输入事件ID'
+    }
+  },
+  {
+    field: 'eventName',
+    label: '事件名称',
+    component: 'Select',
+    colProps: MESSAGE_SEARCH_COL,
+    componentProps: {
+      options: messageEventNameOptions,
+      clearable: true,
+      filterable: true,
+      placeholder: '全部'
+    }
+  },
+  {
+    field: 'eventOwnership',
+    label: '事件归属',
+    component: 'Select',
+    colProps: MESSAGE_SEARCH_COL,
+    componentProps: {
+      options: messageOwnershipOptions,
+      clearable: true,
+      placeholder: '全部',
+      onChange: (value: EventOwnership | undefined) => {
+        searchOwnership.value = value
+        searchExpose.value?.setValues({ eventType: undefined })
+      }
+    }
+  },
+  {
+    field: 'eventType',
+    label: '事件类型',
+    component: 'Select',
+    colProps: MESSAGE_SEARCH_COL,
+    componentProps: {
+      options: searchEventTypeOptions.value,
+      clearable: true,
+      filterable: true,
+      placeholder: searchOwnership.value ? '请选择事件类型' : '全部类型'
+    }
+  },
+  {
+    field: 'description',
+    label: '消息描述',
+    component: 'Input',
+    colProps: MESSAGE_SEARCH_COL,
+    componentProps: {
+      clearable: true,
+      placeholder: '请输入描述关键词'
+    }
+  },
+  {
+    field: 'pushedAtRange',
+    label: '推送时间',
+    component: 'DatePicker',
+    colProps: MESSAGE_SEARCH_DATE_COL,
+    componentProps: {
+      type: 'datetimerange',
+      valueFormat: 'YYYY-MM-DD HH:mm:ss',
+      startPlaceholder: '开始时间',
+      endPlaceholder: '结束时间',
+      style: { width: '100%' }
+    }
+  }
+])
+
+const onSearchRegister = (expose: SearchExpose) => {
+  searchExpose.value = expose
+}
 
 const setSearchParams = (params: Recordable) => {
-  const range = params.occurredAtRange as string[] | undefined
+  const range = params.pushedAtRange as string[] | undefined
+  searchOwnership.value = params.eventOwnership as EventOwnership | undefined
   searchParams.value = {
-    eventName: !params.eventName || params.eventName === '全部' ? undefined : params.eventName,
+    eventId: params.eventId,
+    eventName: params.eventName,
+    eventOwnership: params.eventOwnership as EventOwnership | undefined,
+    eventType: params.eventType as EventAttributeEventType | undefined,
     description: params.description?.trim() || undefined,
-    occurredAtStart: range?.[0],
-    occurredAtEnd: range?.[1]
+    pushedAtStart: range?.[0],
+    pushedAtEnd: range?.[1]
   }
   currentPage.value = 1
   getList()
+}
+
+const onSearchReset = (params: Recordable) => {
+  searchOwnership.value = undefined
+  setSearchParams(params)
 }
 
 function onSelectionChange(rows: MessageCenterItem[]) {
@@ -102,45 +202,46 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: { hidden: true }
   },
   {
-    field: 'eventName',
-    label: '事件名称',
-    search: {
-      component: 'Select',
-      colProps: MESSAGE_SEARCH_COL,
-      componentProps: {
-        options: messageEventNameOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: { width: '100%' }
-      }
-    },
-    table: { minWidth: 140, showOverflowTooltip: true }
+    field: 'eventId',
+    label: '事件ID',
+    search: { hidden: true },
+    table: { minWidth: 130, showOverflowTooltip: true }
   },
   {
-    field: 'occurredAt',
-    label: '发生时间',
+    field: 'eventName',
+    label: '事件名称',
+    search: { hidden: true },
+    table: { minWidth: 160, showOverflowTooltip: true }
+  },
+  {
+    field: 'eventOwnership',
+    label: '事件归属',
+    search: { hidden: true },
+    table: { minWidth: 108 }
+  },
+  {
+    field: 'eventType',
+    label: '事件类型',
+    search: { hidden: true },
+    table: { minWidth: 108, showOverflowTooltip: true }
+  },
+  {
+    field: 'pushedAt',
+    label: '推送时间',
     search: { hidden: true },
     table: {
       width: 180,
       slots: {
         default: ({ row }: { row: MessageCenterItem }) => (
-          <span>{formatMessageOccurredAt(row.occurredAt)}</span>
+          <span>{formatMessagePushedAt(row.pushedAt)}</span>
         )
       }
     }
   },
   {
     field: 'description',
-    label: '描述',
-    search: {
-      component: 'Input',
-      colProps: MESSAGE_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入描述关键词',
-        style: { width: '100%' }
-      }
-    },
+    label: '消息描述',
+    search: { hidden: true },
     table: {
       minWidth: 420,
       showOverflowTooltip: true,
@@ -148,22 +249,6 @@ const crudSchemas = reactive<CrudSchema[]>([
         default: ({ row }: { row: MessageCenterItem }) => renderDescription(row)
       }
     }
-  },
-  {
-    field: 'occurredAtRange',
-    label: '发生时间',
-    search: {
-      component: 'DatePicker',
-      colProps: MESSAGE_SEARCH_DATE_COL,
-      componentProps: {
-        type: 'datetimerange',
-        valueFormat: 'YYYY-MM-DD HH:mm:ss',
-        startPlaceholder: '开始时间',
-        endPlaceholder: '结束时间',
-        style: { width: '100%' }
-      }
-    },
-    table: { hidden: true }
   }
 ])
 
@@ -173,9 +258,12 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 <template>
   <ContentWrap>
     <Search
-      :schema="allSchemas.searchSchema"
+      :schema="searchSchema"
+      show-expand
+      expand-field="eventType"
+      @register="onSearchRegister"
       @search="setSearchParams"
-      @reset="setSearchParams"
+      @reset="onSearchReset"
     />
 
     <div class="mb-10px">

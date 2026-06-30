@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import {
   ElCascader,
@@ -18,8 +18,7 @@ import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { getPlanDetailApi, savePlanApi } from '@/api/lad/plan'
 import { getAreaRegionListApi } from '@/api/lad/area'
-import { getDeviceGroupListApi } from '@/api/lad/device-group'
-import { PLAN_DEFAULT_PRIORITY } from '@/api/lad/plan/planStore'
+import { PLAN_DEFAULT_PRIORITY } from '@/api/lad/plan/planDefaults'
 import {
   PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS,
   planDisposalModeOptions
@@ -35,17 +34,19 @@ import {
   weatherConditionsComplete
 } from '@/api/lad/plan/planWeatherConditions'
 import { UI } from '../planConstants'
-import { listFunctionsByDeviceGroupType, resolveDeviceFunction } from '../planDeviceConstants'
+import {
+  listCountermeasureActions,
+  resolveCountermeasureFunction
+} from '../planDeviceConstants'
 import {
   buildPlanAreaCascaderOptions,
   normalizePlanAreaIds,
   type PlanAreaCascaderOption
 } from '../planAreaOptions'
 import { allOption } from '../../shared/ladOptionConstants'
-import { THREAT_LEVEL_OPTIONS } from '../../shared/ladDictHelpers'
+import { LAD_DICT_COUNTERMEASURE_ACTION, THREAT_LEVEL_OPTIONS } from '../../shared/ladDictHelpers'
+import { useLadDictOptions } from '../../shared/useLadDictOptions'
 import PlanWeatherConditionEditor from './PlanWeatherConditionEditor.vue'
-
-type GroupOption = { label: string; value: string; groupType: string }
 
 const props = defineProps<{ modelValue: boolean; row?: PlanStrategy }>()
 const emit = defineEmits<{ 'update:modelValue': [boolean]; success: [] }>()
@@ -64,7 +65,6 @@ const isEdit = computed(() => !!props.row?.id)
 const loading = ref(false)
 const detailLoading = ref(false)
 const areaOptions = ref<PlanAreaCascaderOption[]>([])
-const groupOptions = ref<GroupOption[]>([])
 
 const form = ref({
   planCode: '',
@@ -78,6 +78,14 @@ const form = ref({
 })
 
 const triggerRules = ref<PlanTriggerRule[]>([])
+const { entries: countermeasureEntries, reload: reloadCountermeasureEntries } = useLadDictOptions(
+  LAD_DICT_COUNTERMEASURE_ACTION,
+  false
+)
+
+const countermeasureOptions = computed(() =>
+  listCountermeasureActions(countermeasureEntries.value)
+)
 
 function syncTriggerRuleOrder() {
   triggerRules.value = triggerRules.value.map((item, index) => ({
@@ -110,25 +118,12 @@ watch(
 )
 
 async function loadBaseOptions() {
-  const [areaRes, groupRes] = await Promise.all([
-    getAreaRegionListApi({ pageIndex: 1, pageSize: 200 }),
-    getDeviceGroupListApi({ pageIndex: 1, pageSize: 200, enabled: true })
-  ])
+  const areaRes = await getAreaRegionListApi({ pageIndex: 1, pageSize: 200 })
   areaOptions.value = buildPlanAreaCascaderOptions(areaRes.data.list)
-  groupOptions.value = groupRes.data.list.map((item) => ({
-    label: item.groupName,
-    value: item.id,
-    groupType: item.groupType
-  }))
-}
-
-function groupById(id: string) {
-  return groupOptions.value.find((item) => item.value === id)
 }
 
 function createEmptyRule(): PlanTriggerRule {
-  const group = groupOptions.value[0]
-  const fn = group ? listFunctionsByDeviceGroupType(group.groupType)[0] : undefined
+  const fn = countermeasureOptions.value[0]
   return {
     id: `ptr-temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     ruleName: '',
@@ -136,9 +131,9 @@ function createEmptyRule(): PlanTriggerRule {
     weatherConditionLogic: 'and',
     weatherConditions: [createPlanWeatherCondition()],
     areaLevel: [],
-    deviceGroupId: group?.value || '',
-    deviceGroupName: group?.label || '',
-    deviceGroupType: group?.groupType || '',
+    deviceGroupId: '',
+    deviceGroupName: '',
+    deviceGroupType: '',
     deviceFunction: fn?.value || '',
     deviceAction: fn?.deviceAction || '',
     enabled: true
@@ -160,9 +155,11 @@ function onRuleAreaLevelChange(rule: PlanTriggerRule, values: string[]) {
 
 function normalizeRule(rule: Partial<PlanTriggerRule>): PlanTriggerRule {
   const base = createEmptyRule()
-  const group = groupById(rule.deviceGroupId || base.deviceGroupId)
-  const groupType = rule.deviceGroupType || group?.groupType || base.deviceGroupType
-  const fn = resolveDeviceFunction(groupType, rule.deviceFunction || base.deviceFunction)
+  const fn =
+    resolveCountermeasureFunction(
+      rule.deviceFunction || base.deviceFunction,
+      countermeasureEntries.value
+    ) || countermeasureOptions.value[0]
   const weather = normalizePlanWeatherConditions(rule)
   if (!weather.weatherConditions?.length) {
     weather.weatherConditions = [createPlanWeatherCondition()]
@@ -173,9 +170,9 @@ function normalizeRule(rule: Partial<PlanTriggerRule>): PlanTriggerRule {
     ...weather,
     sortOrder: Number(rule.sortOrder) || base.sortOrder,
     areaLevel: normalizeRuleAreaLevel(rule.areaLevel || base.areaLevel),
-    deviceGroupId: group?.value || rule.deviceGroupId || '',
-    deviceGroupName: group?.label || rule.deviceGroupName || '',
-    deviceGroupType: groupType,
+    deviceGroupId: '',
+    deviceGroupName: '',
+    deviceGroupType: '',
     deviceFunction: fn?.value || '',
     deviceAction: fn?.deviceAction || '',
     ruleName: rule.ruleName || '',
@@ -192,23 +189,8 @@ function removeTriggerRule(index: number) {
   syncTriggerRuleOrder()
 }
 
-function onRowDeviceGroupChange(row: PlanTriggerRule) {
-  const group = groupById(row.deviceGroupId)
-  row.deviceGroupName = group?.label || ''
-  row.deviceGroupType = group?.groupType || ''
-  const options = listFunctionsByDeviceGroupType(row.deviceGroupType)
-  if (!options.some((item) => item.value === row.deviceFunction)) {
-    const first = options[0]
-    row.deviceFunction = first?.value || ''
-    row.deviceAction = first?.deviceAction || ''
-  } else {
-    const fn = resolveDeviceFunction(row.deviceGroupType, row.deviceFunction)
-    row.deviceAction = fn?.deviceAction || row.deviceAction
-  }
-}
-
 function onRowFunctionChange(row: PlanTriggerRule) {
-  const fn = resolveDeviceFunction(row.deviceGroupType, row.deviceFunction)
+  const fn = resolveCountermeasureFunction(row.deviceFunction, countermeasureEntries.value)
   row.deviceAction = fn?.deviceAction || ''
 }
 
@@ -267,7 +249,7 @@ watch(
   () => [props.modelValue, props.row?.id] as const,
   async ([open, id]) => {
     if (!open) return
-    await loadBaseOptions()
+    await Promise.all([loadBaseOptions(), reloadCountermeasureEntries()])
     if (!id) {
       resetNewForm()
       return
@@ -298,8 +280,8 @@ async function onSave() {
       ElMessage.warning('请填写每条触发策略的规则名称')
       return
     }
-    if (!rule.deviceGroupId || !rule.deviceFunction) {
-      ElMessage.warning('请为每条触发策略选择执行设备组与反制动作')
+    if (!rule.deviceFunction) {
+      ElMessage.warning('请为每条触发策略选择反制动作')
       return
     }
     if (!ruleWeatherComplete(rule)) {
@@ -331,6 +313,9 @@ async function onSave() {
         return {
           ...item,
           ...weather,
+          deviceGroupId: '',
+          deviceGroupName: '',
+          deviceGroupType: '',
           weatherConditions: conditions.map((condition, index) => ({
             ...condition,
             nextLogic:
@@ -501,29 +486,15 @@ async function onSave() {
                   />
                 </div>
                 <div class="trigger-rule-form__item">
-                  <label>{{ UI.deviceGroup }}</label>
-                  <ElSelect
-                    v-model="rule.deviceGroupId"
-                    class="w-full"
-                    @change="onRowDeviceGroupChange(rule)"
-                  >
-                    <ElOption
-                      v-for="option in groupOptions"
-                      :key="option.value"
-                      :label="option.label"
-                      :value="option.value"
-                    />
-                  </ElSelect>
-                </div>
-                <div class="trigger-rule-form__item">
                   <label>{{ UI.counterDevice }}</label>
                   <ElSelect
                     v-model="rule.deviceFunction"
                     class="w-full"
+                    placeholder="请选择反制动作"
                     @change="onRowFunctionChange(rule)"
                   >
                     <ElOption
-                      v-for="option in listFunctionsByDeviceGroupType(rule.deviceGroupType)"
+                      v-for="option in countermeasureOptions"
                       :key="option.value"
                       :label="option.label"
                       :value="option.value"

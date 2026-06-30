@@ -160,10 +160,6 @@ const MAP_BASE_LATITUDE = 39.916527
 const MAP_LONGITUDE_SCALE = 0.0022
 const MAP_LATITUDE_SCALE = 0.0018
 
-function extendedRowValue(label: string) {
-  return extendedRows.value.find((row) => row.label === label)?.value || ''
-}
-
 function isExtendedDateField(label: string) {
   return ['生产日期', '出厂日期', '启用日期'].includes(label)
 }
@@ -178,13 +174,6 @@ function syncCoordinateFromMap() {
     1000000
   placement.latitude =
     Math.round((MAP_BASE_LATITUDE + (50 - placement.mapY) * MAP_LATITUDE_SCALE) * 1000000) / 1000000
-}
-
-function syncMapPointFromCoordinate() {
-  const nextX = 50 + (placement.longitude - MAP_BASE_LONGITUDE) / MAP_LONGITUDE_SCALE
-  const nextY = 50 - (placement.latitude - MAP_BASE_LATITUDE) / MAP_LATITUDE_SCALE
-  placement.mapX = Math.round(Math.max(8, Math.min(92, nextX)) * 10) / 10
-  placement.mapY = Math.round(Math.max(8, Math.min(92, nextY)) * 10) / 10
 }
 
 function toggleMapPlacing() {
@@ -690,73 +679,6 @@ watch(metricsTab, (tab) => {
               </div>
             </ElForm>
           </ElTabPane>
-          <ElTabPane label="地图" name="map">
-            <div class="device-detail-map-panel">
-              <div class="device-detail-map-block__head">
-                <div>
-                  <div class="device-detail-panel__title">地图选点</div>
-                  <p class="device-detail-panel__hint">
-                    用于演示设备部署点选择，可点击地图放置位置并同步经纬度。
-                  </p>
-                </div>
-                <BaseButton v-if="isEditable" type="primary" @click="toggleMapPlacing">
-                  {{ mapPlacing ? '结束选点' : '地图选点' }}
-                </BaseButton>
-              </div>
-
-              <div class="device-detail-map-block__grid">
-                <div class="device-detail-map-block__canvas">
-                  <DeviceInfoGisMap
-                    v-model:mapX="placement.mapX"
-                    v-model:mapY="placement.mapY"
-                    :control-range-m="placement.controlRangeM"
-                    :device-label="form.deviceName || '设备'"
-                    :readonly="!isEditable"
-                    :placing="mapPlacing"
-                  />
-                </div>
-                <div class="device-detail-map-block__meta">
-                  <ElForm label-position="top">
-                    <ElFormItem label="经度">
-                      <ElInputNumber
-                        v-model="placement.longitude"
-                        class="w-100%"
-                        :disabled="!isEditable"
-                        :precision="6"
-                        :step="0.000001"
-                        controls-position="right"
-                        @change="syncMapPointFromCoordinate"
-                      />
-                    </ElFormItem>
-                    <ElFormItem label="纬度">
-                      <ElInputNumber
-                        v-model="placement.latitude"
-                        class="w-100%"
-                        :disabled="!isEditable"
-                        :precision="6"
-                        :step="0.000001"
-                        controls-position="right"
-                        @change="syncMapPointFromCoordinate"
-                      />
-                    </ElFormItem>
-                    <ElFormItem label="部署区域">
-                      <ElInput :model-value="extendedRowValue('部署区域')" disabled />
-                    </ElFormItem>
-                    <ElFormItem label="控制范围（米）">
-                      <ElInputNumber
-                        v-model="placement.controlRangeM"
-                        class="w-100%"
-                        :disabled="!isEditable"
-                        :min="100"
-                        :max="5000"
-                        controls-position="right"
-                      />
-                    </ElFormItem>
-                  </ElForm>
-                </div>
-              </div>
-            </div>
-          </ElTabPane>
           <ElTabPane label="档案指标" name="archive">
             <p v-if="!linkedArchive" class="device-detail-metrics-empty">
               未关联基础档案，暂无档案指标。请绑定基础档案后查看。
@@ -832,6 +754,25 @@ watch(metricsTab, (tab) => {
                 </ElTableColumn>
               </ElTable>
             </template>
+          </ElTabPane>
+          <ElTabPane label="地图" name="map">
+            <div class="device-detail-map-panel">
+              <div class="device-detail-map-block__head">
+                <div class="device-detail-panel__title">地图选点</div>
+                <BaseButton v-if="isEditable" type="primary" @click="toggleMapPlacing">
+                  {{ mapPlacing ? '结束选点' : '地图选点' }}
+                </BaseButton>
+              </div>
+
+              <DeviceInfoGisMap
+                v-model:mapX="placement.mapX"
+                v-model:mapY="placement.mapY"
+                :control-range-m="placement.controlRangeM"
+                :device-label="form.deviceName || '设备'"
+                :readonly="!isEditable"
+                :placing="mapPlacing"
+              />
+            </div>
           </ElTabPane>
         </ElTabs>
       </section>
@@ -1177,28 +1118,6 @@ watch(metricsTab, (tab) => {
   margin-bottom: 12px;
 }
 
-.device-detail-map-block__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.device-detail-map-block__canvas {
-  min-width: 0;
-}
-
-.device-detail-map-block__meta {
-  padding: 12px;
-  background: rgb(255 255 255 / 72%);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-}
-
-.device-detail-map-block__meta :deep(.el-form-item:last-child) {
-  margin-bottom: 0;
-}
-
 .device-detail-metrics-empty {
   margin: 24px 0;
   font-size: 13px;
@@ -1235,10 +1154,6 @@ watch(metricsTab, (tab) => {
   .device-detail-extended-grid {
     grid-template-columns: 1fr;
     column-gap: 0;
-  }
-
-  .device-detail-map-block__grid {
-    grid-template-columns: 1fr;
   }
 
   .device-detail-map-block__head {

@@ -3,9 +3,11 @@ import { computed, ref, watch } from 'vue'
 import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveBlackWhiteApi } from '@/api/lad/list'
+import { BLACK_WHITE_TARGET_KIND_OPTIONS, displayBlackWhiteTargetKind } from '@/api/lad/list/listTargetKind'
+import type { BlackWhiteTargetKind } from '@/api/lad/list/listTargetKind'
 import type { BlackWhiteListItem, EntryMethod, ListType } from '@/api/lad/list/types'
 import { normalizeValidUntil } from '@/api/lad/list/validUntilUtils'
-import { targetModelOptions } from '../../shared/ladOptionConstants'
+import { targetAirframeLabel, targetAirframeOptions, targetModelOptions } from '../../shared/ladOptionConstants'
 import {
   ElDatePicker,
   ElForm,
@@ -70,6 +72,7 @@ function createDefaultForm() {
   return {
     listType: '未知' as ListType,
     targetId: '',
+    historyTargetType: '合作式无人机' as BlackWhiteTargetKind,
     targetType: '多旋翼',
     validUntil: '',
     model: modelOptions[0],
@@ -84,6 +87,21 @@ function createDefaultForm() {
 }
 
 const form = ref(createDefaultForm())
+
+const isBlackFlyTarget = computed(() => form.value.historyTargetType === '黑飞无人机')
+
+function syncBlackFlyFields() {
+  if (!isBlackFlyTarget.value) return
+  form.value.sn = '未解析'
+  form.value.listType = '未知'
+  if (!form.value.model || (modelOptions[0] && form.value.model === modelOptions[0])) {
+    form.value.model = '未知型号'
+  }
+}
+
+watch(() => form.value.historyTargetType, () => {
+  syncBlackFlyFields()
+})
 
 function formatFrequencyValue(value: number) {
   return Number(value.toFixed(3)).toString()
@@ -115,6 +133,7 @@ watch(
         ...createDefaultForm(),
         listType: props.row.listType,
         targetId: props.row.targetId,
+        historyTargetType: displayBlackWhiteTargetKind(props.row),
         targetType: props.row.targetType,
         validUntil:
           props.row.validUntil === '永久' ? '' : normalizeValidUntil(props.row.validUntil),
@@ -130,6 +149,7 @@ watch(
       if (!modelOptions.includes(form.value.model)) {
         form.value.model = '其他'
       }
+      syncBlackFlyFields()
     } else {
       form.value = createDefaultForm()
     }
@@ -142,22 +162,25 @@ const onSubmit = async () => {
     ElMessage.warning('请至少录入一个有效的频段数值')
     return
   }
-  if (!isEdit.value && !form.value.sn.trim()) {
-    ElMessage.warning('请填写识别码')
+  if (!isEdit.value && form.value.historyTargetType === '合作式无人机' && !form.value.sn.trim()) {
+    ElMessage.warning('合作式无人机请填写识别码')
     return
   }
 
   loading.value = true
   try {
+    const sn =
+      form.value.historyTargetType === '黑飞无人机' ? '未解析' : form.value.sn.trim()
     await saveBlackWhiteApi({
       id: props.row?.id,
-      listType: form.value.listType,
+      listType: form.value.historyTargetType === '黑飞无人机' ? '未知' : form.value.listType,
       targetId: form.value.targetId,
+      historyTargetType: form.value.historyTargetType,
       targetType: form.value.targetType,
       validUntil: normalizeValidUntil(form.value.validUntil || '永久'),
       model: form.value.model,
       frequency,
-      sn: form.value.sn.trim(),
+      sn,
       zoneName: form.value.zoneName,
       longitude: form.value.longitude,
       latitude: form.value.latitude,
@@ -180,8 +203,22 @@ const onSubmit = async () => {
     max-height="auto"
   >
     <ElForm label-width="100px">
+      <ElFormItem label="目标类型" required>
+        <ElSelect v-model="form.historyTargetType" style="width: 100%">
+          <ElOption
+            v-for="item in BLACK_WHITE_TARGET_KIND_OPTIONS"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </ElSelect>
+      </ElFormItem>
       <ElFormItem label="名单类型" required>
-        <ElSelect v-model="form.listType" style="width: 100%">
+        <ElSelect
+          v-model="form.listType"
+          style="width: 100%"
+          :disabled="isBlackFlyTarget"
+        >
           <ElOption label="黑名单" value="黑名单" />
           <ElOption label="白名单" value="白名单" />
           <ElOption label="未知" value="未知" />
@@ -190,20 +227,26 @@ const onSubmit = async () => {
       <ElFormItem label="目标 ID" required>
         <ElInput v-model="form.targetId" placeholder="融合目标编号" />
       </ElFormItem>
-      <ElFormItem label="识别码" :required="!isEdit">
-        <ElInput v-model="form.sn" placeholder="请输入识别码" />
+      <ElFormItem label="识别码" :required="!isEdit && !isBlackFlyTarget">
+        <ElInput
+          v-model="form.sn"
+          :disabled="isBlackFlyTarget"
+          :placeholder="isBlackFlyTarget ? '黑飞目标无法解析识别码' : '请输入识别码'"
+        />
       </ElFormItem>
       <ElFormItem label="目标型号">
         <ElSelect v-model="form.model" style="width: 100%" placeholder="请选择目标型号">
           <ElOption v-for="item in modelOptions" :key="item" :label="item" :value="item" />
         </ElSelect>
       </ElFormItem>
-      <ElFormItem label="目标类型">
-        <ElSelect v-model="form.targetType" style="width: 100%">
-          <ElOption label="多旋翼" value="多旋翼" />
-          <ElOption label="固定翼" value="固定翼" />
-          <ElOption label="行业级" value="行业级" />
-          <ElOption label="未知" value="未知" />
+      <ElFormItem :label="targetAirframeLabel">
+        <ElSelect v-model="form.targetType" style="width: 100%" :placeholder="`请选择${targetAirframeLabel}`">
+          <ElOption
+            v-for="item in targetAirframeOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
         </ElSelect>
       </ElFormItem>
       <ElFormItem label="频段/频率">

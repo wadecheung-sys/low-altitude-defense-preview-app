@@ -1,4 +1,5 @@
-import { resolveDeviceFunction } from './planDeviceCatalog'
+import { countermeasureActionLabel, resolveCountermeasureFunction } from './planDeviceCatalog'
+import { listAreaRegions } from '@/api/lad/area/areaStore'
 import {
   formatPlanWeatherConditions,
   getWeatherContextValue,
@@ -79,6 +80,14 @@ function matchesRule(rule: PlanTriggerRule, ctx: PlanTriggerContext) {
   return matchesArea(rule, ctx.areaLevel) && matchesWeather(rule, ctx)
 }
 
+export function findMatchingTriggerRule(
+  plan: Pick<PlanStrategy, 'triggerRules'>,
+  ctx: PlanTriggerContext = {}
+): PlanTriggerRule | null {
+  const rules = [...(plan.triggerRules || [])].filter((r) => r.enabled).sort(bySortOrder)
+  return rules.find((rule) => matchesRule(rule, ctx)) || null
+}
+
 export function resolvePlanTriggerRule(
   plan: Pick<PlanStrategy, 'triggerRules'>,
   ctx: PlanTriggerContext = {}
@@ -96,8 +105,15 @@ export function formatTriggerCondition(rule: PlanTriggerRule): string {
   return formatPlanWeatherConditions(rule)
 }
 
+export function formatTriggerRuleAreaLevel(rule: PlanTriggerRule): string {
+  const selected = rule.areaLevel?.filter(Boolean) || []
+  if (!selected.length) return '全部'
+  const areaMap = new Map(listAreaRegions().map((item) => [item.id, item.name]))
+  return selected.map((id) => areaMap.get(id) || id).join('、')
+}
+
 export function formatTriggerRuleBrief(rule: PlanTriggerRule): string {
-  return `${rule.ruleName} / 排序${rule.sortOrder || '-'} / ${formatTriggerCondition(rule)} / ${rule.deviceGroupName} / ${rule.deviceAction}`
+  return `${rule.ruleName} / 排序${rule.sortOrder || '-'} / ${formatTriggerCondition(rule)} / ${rule.deviceAction || countermeasureActionLabel(rule.deviceFunction)}`
 }
 
 export function formatTriggerRulesSummary(rules: PlanTriggerRule[]): string {
@@ -105,15 +121,30 @@ export function formatTriggerRulesSummary(rules: PlanTriggerRule[]): string {
   const enabled = rules.filter((r) => r.enabled)
   if (enabled.length <= 1) {
     const r = enabled[0] || rules[0]
-    return r ? `${formatTriggerCondition(r)} / ${r.deviceGroupName} / ${r.deviceAction}` : '-'
+    return r
+      ? `${formatTriggerCondition(r)} / ${r.deviceAction || countermeasureActionLabel(r.deviceFunction)}`
+      : '-'
   }
   return enabled.map((rule) => formatTriggerRuleBrief(rule)).join('；')
 }
 
+const legacyCountermeasureFunctionMap: Record<string, string> = {
+  alarm_sound_light: 'sound_light_expulsion',
+  eo_track_lock: 'navigation_spoofing',
+  eo_evidence_tracking: 'navigation_spoofing',
+  radar_track: 'radio_jamming',
+  fusion_monitor_report: 'sound_light_expulsion',
+  hpm_suppression: 'microwave_strike',
+  forced_landing: 'sound_light_expulsion',
+  link_disruption: 'radio_jamming',
+  protocol_takeover: 'navigation_spoofing'
+}
+
 export function normalizeTriggerRule(rule: PlanTriggerRule): PlanTriggerRule {
-  const fn = resolveDeviceFunction(rule.deviceGroupType, rule.deviceFunction)
+  const functionValue = legacyCountermeasureFunctionMap[rule.deviceFunction] || rule.deviceFunction
+  const fn = resolveCountermeasureFunction(functionValue)
   if (!fn) {
-    throw new Error(`规则“${rule.ruleName}”的反制动作与设备组类型不匹配`)
+    throw new Error(`规则“${rule.ruleName}”的反制动作无效`)
   }
   const weather = normalizePlanWeatherConditions(rule)
   return {
@@ -130,6 +161,9 @@ export function normalizeTriggerRule(rule: PlanTriggerRule): PlanTriggerRule {
     windPowerValue: toFiniteNumber(rule.windPowerValue),
     rainfallOperator: rule.rainfallOperator || '',
     rainfallValue: toFiniteNumber(rule.rainfallValue),
+    deviceGroupId: '',
+    deviceGroupName: '',
+    deviceGroupType: '',
     deviceFunction: fn.value,
     deviceAction: fn.deviceAction,
     weatherFactor: undefined

@@ -41,6 +41,7 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增设备组')
 const deviceOptions = ref<DeviceInfoItem[]>([])
 const togglingId = ref<string | null>(null)
+const ids = ref<string[]>([])
 
 const form = reactive({
   id: '',
@@ -123,7 +124,30 @@ async function removeRow(row: DeviceGroupItem) {
   } catch {
     return
   }
-  await deleteDeviceGroupApi(row.id)
+  await deleteDeviceGroupApi([row.id])
+  ids.value = ids.value.filter((id) => id !== row.id)
+  ElMessage.success('删除成功')
+  getList()
+}
+
+function onSelectionChange(list: DeviceGroupItem[]) {
+  ids.value = list.map((item) => item.id)
+}
+
+async function batchRemove() {
+  if (!ids.value.length) {
+    ElMessage.warning('请先勾选需要删除的设备组')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(`确认删除选中的 ${ids.value.length} 个设备组吗？`, '批量删除', {
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+  await deleteDeviceGroupApi([...ids.value])
+  ids.value = []
   ElMessage.success('删除成功')
   getList()
 }
@@ -176,6 +200,13 @@ function memberNames(row: DeviceGroupItem) {
 loadDeviceOptions()
 
 const crudSchemas = reactive<CrudSchema[]>([
+  {
+    field: 'selection',
+    search: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true },
+    table: { type: 'selection' }
+  },
   {
     field: 'index',
     label: '序号',
@@ -299,6 +330,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
     <div class="mb-10px">
       <BaseButton type="primary" @click="openCreate">新增设备组</BaseButton>
+      <BaseButton type="danger" class="ml-12px" @click="batchRemove">批量删除</BaseButton>
     </div>
 
     <Table
@@ -309,6 +341,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       :loading="loading"
       :pagination="{ total }"
       @register="tableRegister"
+      @selection-change="onSelectionChange"
     />
 
     <ElDialog v-model="dialogVisible" :title="dialogTitle" width="720px" destroy-on-close>

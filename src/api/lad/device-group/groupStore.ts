@@ -133,6 +133,7 @@ export function saveDeviceGroupRecord(payload: DeviceGroupSavePayload): DeviceGr
   return created
 }
 
-export function deleteDeviceGroupRecord(id: string) {
-  allGroups = allGroups.filter((item) => item.id !== id)
+export function deleteDeviceGroupRecords(ids: string[]) {
+  const idSet = new Set(ids)
+  allGroups = allGroups.filter((item) => !idSet.has(item.id))
 }

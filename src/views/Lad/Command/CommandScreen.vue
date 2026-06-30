@@ -13,14 +13,24 @@ const PROTOTYPE_HEIGHT = 1080
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/index.html`
 const BACKEND_ENTRY_RESET_DELAY = 240
 
-const DRONE_ICON_IDS = ['u203', 'u204', 'u205'] as const
-const DRONE_DETAIL_IDS = ['u217', 'u210', 'u207', 'u215'] as const
+const DRONE_ICON_IDS = ['u198', 'u199', 'u200'] as const
+const DRONE_DETAIL_IDS = ['u209', 'u203', 'u201', 'u206'] as const
+const DRONE_LINE_IDS = ['u196', 'u193', 'u194', 'u195'] as const
 const DRONE_ICON_DETAIL_MAP: Record<(typeof DRONE_ICON_IDS)[number], (typeof DRONE_DETAIL_IDS)[number]> =
   {
-    u203: 'u217',
-    u204: 'u210',
-    u205: 'u207'
+    u198: 'u209',
+    u199: 'u203',
+    u200: 'u201'
   }
+const DRONE_ICON_LINE_MAP: Record<(typeof DRONE_ICON_IDS)[number], (typeof DRONE_LINE_IDS)[number]> =
+  {
+    u198: 'u196',
+    u199: 'u193',
+    u200: 'u194'
+  }
+
+const HISTORY_EVENT_LINK_ID = 'u111'
+const MESSAGE_CENTER_LINK_ID = 'u177'
 
 type Cleanup = () => void
 
@@ -140,11 +150,25 @@ function showDetailPanel(doc: Document, panelId: string) {
   }
 }
 
+function showDroneLine(doc: Document, lineId: string) {
+  for (const id of DRONE_LINE_IDS) {
+    const line = doc.getElementById(id)
+    if (!line) continue
+
+    const visible = id === lineId
+    line.style.display = visible ? '' : 'none'
+    line.style.visibility = visible ? 'visible' : 'hidden'
+    line.classList.toggle('ax_default_hidden', !visible)
+    setElementSelected(doc, id, visible)
+  }
+}
+
 function selectDroneIcon(doc: Document, iconId: (typeof DRONE_ICON_IDS)[number]) {
   for (const id of DRONE_ICON_IDS) {
     setElementSelected(doc, id, id === iconId)
   }
   showDetailPanel(doc, DRONE_ICON_DETAIL_MAP[iconId])
+  showDroneLine(doc, DRONE_ICON_LINE_MAP[iconId])
 }
 
 function bindClickableElement(
@@ -218,7 +242,7 @@ function bindPrototypeInteractions() {
 
   const historyLinkCleanup = bindClickableElement(
     doc,
-    'u106',
+    HISTORY_EVENT_LINK_ID,
     () => {
       void navigateFromScreen(LAD_BACKEND_HOME_PATH)
     },
@@ -228,7 +252,7 @@ function bindPrototypeInteractions() {
 
   const messageLinkCleanup = bindClickableElement(
     doc,
-    'u234',
+    MESSAGE_CENTER_LINK_ID,
     () => {
       void navigateFromScreen(LAD_MESSAGE_CENTER_PATH)
     },
@@ -245,6 +269,8 @@ function bindPrototypeInteractions() {
   }
 
   if (!cleanups.length) return false
+
+  selectDroneIcon(doc, DRONE_ICON_IDS[0])
 
   cleanupPrototypeBindings = () => {
     cleanups.forEach((cleanup) => cleanup())

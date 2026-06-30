@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { ThreatSimulateResult } from '@/api/lad/threat/types'
 import { UI } from '../threatConstants'
+import {
+  listTypeTagType,
+  threatLevelForRule,
+  threatLevelTagTypeForRule
+} from '../../shared/ladDictHelpers'
 import { ElAlert, ElDescriptions, ElDescriptionsItem, ElTag } from 'element-plus'
 
 defineProps<{
@@ -17,39 +22,38 @@ defineProps<{
     :closable="false"
     show-icon
   >
-    <p class="threat-simulate-result__message">{{ result.message }}</p>
+    <p v-if="result.message" class="threat-simulate-result__message">{{ result.message }}</p>
 
-    <template v-if="result.matched">
+    <template v-if="result.matched && result.rule">
       <ElDescriptions :column="1" border size="small" class="threat-simulate-result__desc">
         <ElDescriptionsItem :label="UI.simulateMatchedRule">
-          {{ result.ruleName }}
+          <span class="threat-simulate-result__highlight">{{ result.ruleName }}</span>
           <ElTag v-if="result.isMonitorCatchAll" type="info" size="small" effect="plain" class="ml-6px">
             {{ UI.fallbackTag }}
           </ElTag>
         </ElDescriptionsItem>
-        <ElDescriptionsItem :label="UI.threatLevel">
-          {{ result.threatLevel || '—' }}
+        <ElDescriptionsItem :label="UI.simulateThreatLevelConclusion">
+          <ElTag
+            :type="threatLevelTagTypeForRule(result.rule)"
+            size="default"
+            effect="dark"
+          >
+            {{ threatLevelForRule(result.rule) }}
+          </ElTag>
         </ElDescriptionsItem>
-        <ElDescriptionsItem :label="UI.triggerPlan">
-          {{ result.planName }}（{{ result.planCode }}）
+        <ElDescriptionsItem :label="UI.simulateRuleTargetType">
+          <ElTag :type="listTypeTagType(result.rule.targetType)" size="small" effect="light">
+            {{ result.rule.targetType }}
+          </ElTag>
         </ElDescriptionsItem>
-        <ElDescriptionsItem :label="UI.simulateDisposalMode">
-          {{ result.disposalModeLabel || '—' }}
+        <ElDescriptionsItem :label="UI.simulateRuleTargetModel">
+          {{ result.rule.targetModel || '—' }}
         </ElDescriptionsItem>
-        <ElDescriptionsItem :label="UI.simulateTriggerStrategy">
-          {{ result.triggerStrategyName || '—' }}
-        </ElDescriptionsItem>
-        <ElDescriptionsItem :label="UI.detailDeviceType">
-          {{ result.planDeviceType }} / {{ result.planDeviceFunction }}
-        </ElDescriptionsItem>
-        <ElDescriptionsItem :label="UI.simulateDeviceAction">
-          {{ result.planDeviceAction || '—' }}
+        <ElDescriptionsItem :label="UI.simulateRuleConditions">
+          {{ result.rule.conditionSummary || '—' }}
         </ElDescriptionsItem>
       </ElDescriptions>
 
-      <p v-if="result.outcomeSummary" class="threat-simulate-result__outcome">
-        {{ result.outcomeSummary }}
-      </p>
       <p v-if="result.monitorNote" class="threat-simulate-result__note">{{ result.monitorNote }}</p>
       <p v-if="result.swarmNote" class="threat-simulate-result__note">{{ result.swarmNote }}</p>
     </template>
@@ -69,14 +73,9 @@ defineProps<{
     margin-bottom: 10px;
   }
 
-  &__outcome {
-    margin: 0 0 6px;
-    padding: 8px 10px;
-    border-radius: 4px;
-    background: rgb(103 194 58 / 8%);
+  &__highlight {
+    font-weight: 600;
     color: var(--el-text-color-primary);
-    font-size: 13px;
-    line-height: 1.6;
   }
 
   &__note {

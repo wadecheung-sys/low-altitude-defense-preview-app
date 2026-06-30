@@ -1,10 +1,4 @@
-export type MessageEventName =
-  | '无人机驱离'
-  | '无人机消失'
-  | '设备故障'
-  | '噪扰告警'
-  | '无人机入侵'
-  | '无人机反制'
+import type { EventAttributeEventType, EventOwnership } from '@/api/lad/system/types'
 
 export interface MessageDescriptionSegment {
   text: string
@@ -13,18 +7,27 @@ export interface MessageDescriptionSegment {
 
 export interface MessageCenterItem {
   id: string
-  eventName: MessageEventName
-  occurredAt: string
+  /** 与事件属性配置「事件ID」一致 */
+  eventId: string
+  /** 与事件属性配置「事件名称」一致 */
+  eventName: string
+  eventOwnership: EventOwnership
+  eventType: EventAttributeEventType
+  /** 消息推送时间 */
+  pushedAt: string
   descriptionSegments: MessageDescriptionSegment[]
 }
 
 export interface MessageCenterQuery {
   pageIndex?: number
   pageSize?: number
+  eventId?: string
   eventName?: string
+  eventOwnership?: EventOwnership
+  eventType?: EventAttributeEventType
   description?: string
-  occurredAtStart?: string
-  occurredAtEnd?: string
+  pushedAtStart?: string
+  pushedAtEnd?: string
 }
 
 export interface MessageCenterListResult {

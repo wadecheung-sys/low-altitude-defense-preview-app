@@ -28,7 +28,7 @@ const dictTypesSeed: DictTypeItem[] = [
   {
     id: 'dt-002',
     dictCode: 'target_type',
-    dictName: '目标类型',
+    dictName: '目标机型',
     itemCount: 4,
     updatedAt: '2026-05-18 10:05:00'
   },
@@ -43,8 +43,9 @@ const dictTypesSeed: DictTypeItem[] = [
     id: 'dt-004',
     dictCode: 'device_type',
     dictName: '设备类型',
+    remark: '探测与反制装备分类（雷达/光电/无线电/高功率微波/激光）',
     itemCount: 5,
-    updatedAt: '2026-05-19 14:00:00'
+    updatedAt: '2026-06-30 10:00:00'
   },
   {
     id: 'dt-007',
@@ -61,6 +62,14 @@ const dictTypesSeed: DictTypeItem[] = [
     remark: '历史事件、黑白名单与威胁评估共用',
     itemCount: LAD_TARGET_MODELS.length,
     updatedAt: '2026-06-25 10:00:00'
+  },
+  {
+    id: 'dt-009',
+    dictCode: 'countermeasure_action',
+    dictName: '反制动作',
+    remark: '预案联动与反制设备可执行的动作类型',
+    itemCount: 5,
+    updatedAt: '2026-06-30 09:30:00'
   }
 ]
 
@@ -180,18 +189,18 @@ const dictEntriesSeed: DictEntryItem[] = [
   {
     id: 'de-015',
     dictTypeId: 'dt-004',
-    label: '反制',
-    value: 'jammer',
+    label: '高功率微波',
+    value: 'hpm',
     sort: 4,
-    updatedAt: '2026-05-19 14:00:00'
+    updatedAt: '2026-06-30 10:00:00'
   },
   {
     id: 'de-016',
     dictTypeId: 'dt-004',
-    label: '融合',
-    value: 'fusion',
+    label: '激光',
+    value: 'laser',
     sort: 5,
-    updatedAt: '2026-05-19 14:00:00'
+    updatedAt: '2026-06-30 10:00:00'
   },
   ...LAD_TARGET_MODELS.map((item, index) => ({
     id: `de-target-model-${String(index + 1).padStart(2, '0')}`,
@@ -272,6 +281,46 @@ const dictEntriesSeed: DictEntryItem[] = [
     value: 'other',
     sort: 9,
     updatedAt: '2026-05-21 10:00:00'
+  },
+  {
+    id: 'de-032',
+    dictTypeId: 'dt-009',
+    label: '无线电干扰',
+    value: 'radio_jamming',
+    sort: 1,
+    updatedAt: '2026-06-30 09:30:00'
+  },
+  {
+    id: 'de-033',
+    dictTypeId: 'dt-009',
+    label: '导航诱骗',
+    value: 'navigation_spoofing',
+    sort: 2,
+    updatedAt: '2026-06-30 09:30:00'
+  },
+  {
+    id: 'de-034',
+    dictTypeId: 'dt-009',
+    label: '声光驱离',
+    value: 'sound_light_expulsion',
+    sort: 3,
+    updatedAt: '2026-06-30 09:30:00'
+  },
+  {
+    id: 'de-035',
+    dictTypeId: 'dt-009',
+    label: '微波打击',
+    value: 'microwave_strike',
+    sort: 4,
+    updatedAt: '2026-06-30 09:30:00'
+  },
+  {
+    id: 'de-036',
+    dictTypeId: 'dt-009',
+    label: '激光打击',
+    value: 'laser_strike',
+    sort: 5,
+    updatedAt: '2026-06-30 09:30:00'
   }
 ]
 

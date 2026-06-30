@@ -8,7 +8,7 @@ import { getAreaRegionListApi } from '@/api/lad/area'
 import { formatDisposalModeDetail } from '@/api/lad/plan/planDisposal'
 import { formatTriggerCondition } from '@/api/lad/plan/planTrigger'
 import type { PlanStrategy } from '@/api/lad/plan/types'
-import { functionLabel } from '../planDeviceConstants'
+import { countermeasureActionLabel } from '../planDeviceConstants'
 import { createPlanAreaLabelMap, formatPlanAreaLabel } from '../planAreaOptions'
 import { UI } from '../planConstants'
 
@@ -107,15 +107,9 @@ watch(
           {{ formatTriggerCondition(row) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn
-        prop="deviceGroupName"
-        :label="UI.deviceGroup"
-        min-width="150"
-        show-overflow-tooltip
-      />
       <ElTableColumn :label="UI.counterDevice" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">
-          {{ functionLabel(row.deviceGroupType, row.deviceFunction) }}
+          {{ countermeasureActionLabel(row.deviceFunction) }}
         </template>
       </ElTableColumn>
       <ElTableColumn prop="deviceAction" label="动作分类" width="110" />

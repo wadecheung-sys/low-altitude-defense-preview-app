@@ -1,6 +1,6 @@
 import type { ThreatLevelLabel, ThreatRule, ThreatSimulateInput } from './types'
 
-/** 蜂群目标类型维度 */
+/** 蜂群目标机型维度 */
 export const SWARM_TARGET_TYPE = '无人机蜂群'
 
 /** 匹配排序时蜂群规则优先级加成（数值越大越先匹配） */
@@ -50,7 +50,12 @@ export function swarmEscalationNote(planDeviceAction?: string): string {
   if (planDeviceAction === '驱离') {
     return '蜂群场景下可升级为激光或高功率微波打击（由关联预案定义）。'
   }
-  if (planDeviceAction === '激光打击' || planDeviceAction === '高功率微波') {
+  if (
+    planDeviceAction === '激光打击' ||
+    planDeviceAction === '微波打击' ||
+    planDeviceAction === '高功率微波压制' ||
+    planDeviceAction === '高功率微波'
+  ) {
     return '蜂群入侵默认采用强制打击级预案。'
   }
   return ''

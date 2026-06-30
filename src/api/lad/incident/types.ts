@@ -10,10 +10,33 @@ export type ManualConfirmStatus = ManualConfirmResult | `人工-${ManualConfirmR
 
 export type VerificationMethod = '自动识别' | '人工核查'
 
+export interface ThreatAssessmentMetrics {
+  speed: number
+  stayDurationSec: number
+  intrusionCount: number
+  altitude: number
+  swarmCount?: number
+  signalStrength?: number
+}
+
+export interface PlanTriggerContextMetrics {
+  temperature: number
+  humidity: number
+  windPower: number
+  rainfall: number
+  areaId: string
+}
+
+export type DisposalExecutionSource = 'plan' | 'manual' | 'none'
+
+/** 历史事件列表「目标类型」 */
+export type HistoryTargetType = '黑飞无人机' | '合作式无人机' | '躁扰信号-飞鸟'
+
 export interface HistoryEventItem {
   id: string
   targetId: string
   relatedEventCount: number
+  historyTargetType: HistoryTargetType
   threatLevel: ThreatLevel
   handledAt: string
   discoveredAt: string
@@ -22,6 +45,9 @@ export interface HistoryEventItem {
   duration: string
   pilotLocation: string
   targetLocation: string
+  approachingDistance: string
+  assessmentMetrics: ThreatAssessmentMetrics
+  planTriggerContext: PlanTriggerContextMetrics
   zoneName: string
   dataSource: string
   trajectoryFeature: string
@@ -29,6 +55,9 @@ export interface HistoryEventItem {
   uavSn: string
   detectionDevice: string
   countermeasureDevice: string
+  disposalExecutionSource: DisposalExecutionSource
+  manualDisposalAction?: string
+  disposalOperator?: string
   handlingResult: string
   handlingStatus: HandlingStatus
   manualConfirmStatus: ManualConfirmStatus
@@ -50,6 +79,7 @@ export interface HistoryEventQuery {
   detectionDevice?: string
   countermeasureDevice?: string
   listType?: HistoryEventItem['listType']
+  historyTargetType?: HistoryTargetType
   discoveredAtStart?: string
   discoveredAtEnd?: string
   zoneName?: string

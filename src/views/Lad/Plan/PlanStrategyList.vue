@@ -11,6 +11,7 @@ import { deletePlanApi, getPlanListApi, togglePlanEnabledApi } from '@/api/lad/p
 import type { PlanStrategy } from '@/api/lad/plan/types'
 import PlanFormDialog from './components/PlanFormDialog.vue'
 import PlanDetailDialog from './components/PlanDetailDialog.vue'
+import PlanSimulateDialog from './components/PlanSimulateDialog.vue'
 import { PLAN_SEARCH_COL, UI } from './planConstants'
 import { allOption } from '../shared/ladOptionConstants'
 
@@ -22,6 +23,7 @@ const formVisible = ref(false)
 const formRow = ref<PlanStrategy>()
 const detailVisible = ref(false)
 const detailId = ref<string>()
+const simulateVisible = ref(false)
 const togglingId = ref<string | null>(null)
 
 const disposalFilterOptions = [
@@ -126,7 +128,7 @@ const { tableRegister, tableState, tableMethods } = useTable({
       pageSize: unref(pageSize),
       ...unref(searchParams)
     })
-    return { list: res.data.list, total: res.data.total }
+    return { list: res?.data?.list ?? [], total: res?.data?.total ?? 0 }
   }
 })
 
@@ -276,6 +278,9 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     />
     <div class="mb-10px">
       <BaseButton type="primary" @click="openAdd">{{ UI.btnAdd }}</BaseButton>
+      <BaseButton type="primary" class="ml-8px" @click="simulateVisible = true">{{
+        UI.btnSimulate
+      }}</BaseButton>
       <BaseButton type="danger" class="ml-8px" @click="batchRemove">{{
         UI.btnBatchDelete
       }}</BaseButton>
@@ -292,5 +297,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     />
     <PlanFormDialog v-model="formVisible" :row="formRow" @success="getList" />
     <PlanDetailDialog v-model="detailVisible" :plan-id="detailId" />
+    <PlanSimulateDialog v-if="simulateVisible" v-model="simulateVisible" />
   </ContentWrap>
 </template>

@@ -4,7 +4,6 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElInputNumber,
   ElMessage,
   ElOption,
   ElSelect,
@@ -22,7 +21,7 @@ import type {
 } from '@/api/lad/threat/types'
 import { LAD_DICT_THREAT_LEVEL } from '../../shared/ladDictHelpers'
 import { useLadDictOptions } from '../../shared/useLadDictOptions'
-import { buildThreatLevelSelectOptions, threatTargetModelSelectOptions } from '../threatConstants'
+import { buildThreatLevelFormOptions, threatTargetModelSelectOptions } from '../threatConstants'
 import ThreatConditionEditor from './ThreatConditionEditor.vue'
 import { listTypeOptions } from '../../shared/ladOptionConstants'
 
@@ -48,7 +47,7 @@ const { entries: threatLevelEntries, reload: reloadThreatLevels } = useLadDictOp
   false
 )
 
-const threatLevelOptions = computed(() => buildThreatLevelSelectOptions(threatLevelEntries.value))
+const threatLevelOptions = computed(() => buildThreatLevelFormOptions(threatLevelEntries.value))
 const loading = ref(false)
 const defaultPlanId = ref('')
 
@@ -249,18 +248,7 @@ async function onSave() {
             :value="option.label"
           />
         </ElSelect>
-      </ElFormItem>
-      <ElFormItem label="优先级" required>
-        <ElInputNumber
-          v-model="form.priority"
-          :min="0"
-          :max="999"
-          :step="1"
-          step-strictly
-          controls-position="right"
-          class="w-full"
-        />
-        <div class="threat-rule-form__tip">范围 0-999，数值越大，规则命中优先级越高。</div>
+        <div class="threat-rule-form__tip">规则条件命中后输出的威胁等级结论。</div>
       </ElFormItem>
       <ElFormItem label="状态">
         <ElSwitch v-model="form.enabled" inline-prompt active-text="ON" inactive-text="OFF" />

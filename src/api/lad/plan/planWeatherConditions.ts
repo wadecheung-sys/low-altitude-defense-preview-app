@@ -138,6 +138,18 @@ export function formatPlanWeatherConditions(rule: Partial<PlanTriggerRule>): str
     .join('')
 }
 
+/** 触发策略天气要素展示（不含「天气:」前缀） */
+export function formatTriggerRuleWeather(rule: Partial<PlanTriggerRule>): string {
+  const conditions = resolveRuleWeatherConditions(rule)
+  if (!conditions.length) {
+    const factor = rule.weatherFactor?.trim()
+    if (factor && factor !== '全部') return factor
+    return '全部'
+  }
+  const formatted = formatPlanWeatherConditions(rule)
+  return formatted.startsWith('天气:') ? formatted.slice(3) : formatted
+}
+
 export function getWeatherContextValue(
   property: PlanWeatherConditionProperty,
   ctx: Partial<Record<PlanWeatherConditionProperty, number | undefined>>

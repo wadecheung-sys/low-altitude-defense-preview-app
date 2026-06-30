@@ -1,6 +1,6 @@
 import request from '@/axios'
 import { SUCCESS_CODE } from '@/constants'
-import { deleteDeviceGroupRecord, queryDeviceGroupList, saveDeviceGroupRecord } from './groupStore'
+import { deleteDeviceGroupRecords, queryDeviceGroupList, saveDeviceGroupRecord } from './groupStore'
 import type {
   DeviceGroupItem,
   DeviceGroupListResult,
@@ -32,10 +32,10 @@ export const saveDeviceGroupApi = async (
   return request.post({ url: '/mock/lad/device/group/save', data })
 }
 
-export const deleteDeviceGroupApi = async (id: string): Promise<IResponse<true>> => {
+export const deleteDeviceGroupApi = async (ids: string[]): Promise<IResponse<true>> => {
   if (useLocalStore) {
-    deleteDeviceGroupRecord(id)
+    deleteDeviceGroupRecords(ids)
     return ok(true)
   }
-  return request.post({ url: '/mock/lad/device/group/delete', data: { id } })
+  return request.post({ url: '/mock/lad/device/group/delete', data: { ids } })
 }

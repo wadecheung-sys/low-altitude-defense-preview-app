@@ -187,6 +187,31 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
+    field: 'threatLevel',
+    label: '威胁等级',
+    search: {
+      component: 'Select',
+      colProps: THREAT_SEARCH_COL,
+      componentProps: {
+        options: threatLevelFilterOptions,
+        clearable: true,
+        placeholder: '全部',
+        style: searchFieldStyle
+      }
+    },
+    table: {
+      minWidth: 96,
+      align: 'center',
+      slots: {
+        default: ({ row }: { row: ThreatRule }) => (
+          <ElTag type={threatLevelTagTypeForRule(row)} size="small" effect="light">
+            {threatLevelForRule(row)}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
     field: 'targetType',
     label: '名单类型',
     search: {
@@ -233,31 +258,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { minWidth: 260, showOverflowTooltip: true }
   },
   {
-    field: 'threatLevel',
-    label: '威胁等级',
-    search: {
-      component: 'Select',
-      colProps: THREAT_SEARCH_COL,
-      componentProps: {
-        options: threatLevelFilterOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: searchFieldStyle
-      }
-    },
-    table: {
-      minWidth: 96,
-      align: 'center',
-      slots: {
-        default: ({ row }: { row: ThreatRule }) => (
-          <ElTag type={threatLevelTagTypeForRule(row)} size="small" effect="light">
-            {threatLevelForRule(row)}
-          </ElTag>
-        )
-      }
-    }
-  },
-  {
     field: 'priority',
     label: '优先级',
     search: { hidden: true },
@@ -283,6 +283,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     },
     table: {
       width: 88,
+      fixed: 'right',
       slots: {
         default: ({ row }: { row: ThreatRule }) => (
           <ElSwitch

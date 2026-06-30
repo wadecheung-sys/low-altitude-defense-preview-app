@@ -32,6 +32,16 @@ export const targetTypeOptions = [
 
 export const listTypeOptions = targetTypeOptions
 
+/** 航空器构型字段（targetType）展示名：多旋翼、固定翼等 */
+export const targetAirframeLabel = '目标机型'
+
+export const targetAirframeOptions = [
+  { label: '多旋翼', value: '多旋翼' },
+  { label: '固定翼', value: '固定翼' },
+  { label: '行业级', value: '行业级' },
+  { label: '未知', value: '未知' }
+]
+
 export const targetModelOptions = ladTargetModelOptions
 
 export const targetModelOptionsWithAll = [allOption, ...targetModelOptions]

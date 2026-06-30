@@ -29,7 +29,7 @@ function statusLabel(status: DisposalTimelineNode['status']) {
   <ElTimeline class="disposal-timeline">
     <ElTimelineItem
       v-for="node in nodes"
-      :key="node.key"
+      :key="node.nodeId"
       :timestamp="node.time"
       :type="itemType(node.status)"
       :hollow="itemHollow(node.status)"
@@ -42,11 +42,41 @@ function statusLabel(status: DisposalTimelineNode['status']) {
             {{ statusLabel(node.status) }}
           </ElTag>
         </div>
-        <p class="disposal-timeline__summary">{{ node.summary }}</p>
-        <p v-if="node.detail" class="disposal-timeline__detail">{{ node.detail }}</p>
-        <details v-if="node.details?.length" class="disposal-timeline__details">
+        <template v-if="node.summaries?.length">
+          <p
+            v-for="(line, index) in node.summaries"
+            :key="`${node.nodeId}-summary-${index}`"
+            class="disposal-timeline__summary"
+          >
+            {{ line }}
+          </p>
+        </template>
+        <p v-else class="disposal-timeline__summary">{{ node.summary }}</p>
+        <details
+          v-if="node.detailGroups?.length || node.details?.length"
+          class="disposal-timeline__details"
+        >
           <summary>阶段详情</summary>
-          <dl class="disposal-timeline__detail-list">
+          <div v-if="node.detailGroups?.length" class="disposal-timeline__detail-groups">
+            <div
+              v-for="group in node.detailGroups"
+              :key="group.title"
+              class="disposal-timeline__detail-card"
+            >
+              <div class="disposal-timeline__detail-card-title">{{ group.title }}</div>
+              <dl class="disposal-timeline__detail-list">
+                <div
+                  v-for="item in group.details"
+                  :key="`${group.title}-${item.label}`"
+                  class="disposal-timeline__detail-item"
+                >
+                  <dt>{{ item.label }}</dt>
+                  <dd>{{ item.value || '--' }}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+          <dl v-else class="disposal-timeline__detail-list">
             <div
               v-for="item in node.details"
               :key="item.label"
@@ -90,17 +120,35 @@ function statusLabel(status: DisposalTimelineNode['status']) {
   }
 
   &__summary {
-    margin: 0 0 4px;
+    margin: 0 0 6px;
     font-size: 13px;
     line-height: 1.5;
     color: var(--el-text-color-regular);
+
+    &:last-of-type {
+      margin-bottom: 8px;
+    }
   }
 
-  &__detail {
-    margin: 0 0 6px;
+  &__detail-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  &__detail-card {
+    padding: 8px 10px;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 6px;
+  }
+
+  &__detail-card-title {
+    margin-bottom: 6px;
     font-size: 12px;
-    line-height: 1.5;
-    color: var(--el-text-color-secondary);
+    font-weight: 600;
+    color: var(--el-text-color-primary);
   }
 
   &__details {

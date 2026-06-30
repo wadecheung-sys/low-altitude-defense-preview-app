@@ -23,6 +23,7 @@ import {
   getHistoryEventListApi,
   updateHistoryEventListTypeApi
 } from '@/api/lad/incident'
+import { HISTORY_TARGET_TYPE_OPTIONS, historyTargetTypeTagType } from '@/api/lad/incident/historyTargetType'
 import type { HandlingStatus, HistoryEventItem } from '@/api/lad/incident/types'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import {
@@ -69,6 +70,7 @@ const setSearchParams = (params: Recordable) => {
   const range = params.discoveredAtRange as string[] | undefined
   searchParams.value = {
     listType: params.listType,
+    historyTargetType: params.historyTargetType,
     targetModel: params.targetModel,
     uavSn: params.uavSn,
     targetId: params.targetId,
@@ -146,7 +148,10 @@ const goDetail = (row: HistoryEventItem) => {
 
 const goUavRegistry = (row: HistoryEventItem) => {
   if (row.uavSn === '未解析') return
-  push({ path: '/lad/list/black-white', query: { sn: row.uavSn, targetId: row.targetId } })
+  push({
+    path: '/lad/list/black-white',
+    query: { sn: row.uavSn, targetId: row.targetId, openDetail: '1' }
+  })
 }
 
 const openManualConfirm = (row: HistoryEventItem) => {
@@ -325,6 +330,29 @@ const crudSchemas = reactive<CrudSchema[]>([
             }
           >
             {row.listType}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
+    field: 'historyTargetType',
+    label: '目标类型',
+    minWidth: 132,
+    search: {
+      component: 'Select',
+      componentProps: {
+        placeholder: '请选择目标类型',
+        style: { width: '100%' },
+        clearable: true,
+        options: HISTORY_TARGET_TYPE_OPTIONS
+      }
+    },
+    table: {
+      slots: {
+        default: ({ row }: { row: HistoryEventItem }) => (
+          <ElTag type={historyTargetTypeTagType(row.historyTargetType)} size="small" effect="light">
+            {row.historyTargetType}
           </ElTag>
         )
       }

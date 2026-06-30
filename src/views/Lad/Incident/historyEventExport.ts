@@ -22,6 +22,8 @@ export const HISTORY_EVENT_EXPORT_HEADERS = [
 
   '名单类型',
 
+  '目标类型',
+
   '发现时间',
 
   '处置时间',
@@ -85,6 +87,8 @@ export function mapHistoryEventToExportRow(item: HistoryEventItem): string[] {
     displayValue(item.targetId),
 
     displayValue(item.listType),
+
+    displayValue(item.historyTargetType),
 
     displayValue(item.discoveredAt),
 

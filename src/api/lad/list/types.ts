@@ -1,4 +1,5 @@
 import type { HandlingStatus, ThreatLevel } from '@/api/lad/incident/types'
+import type { BlackWhiteTargetKind, BlackWhiteTargetKindFilter } from './listTargetKind'
 
 /** 名单类型 */
 export type ListType = '黑名单' | '白名单' | '未知'
@@ -14,6 +15,9 @@ export interface BlackWhiteListItem {
   /** 融合/业务目标 ID */
   targetId: string
   listType: ListType
+  /** 目标类型：黑飞 / 合作式（不含飞鸟躁扰） */
+  historyTargetType: BlackWhiteTargetKind
+  /** 目标机型：多旋翼、固定翼等 */
   targetType: string
   /** 永久 或 YYYY-MM-DD HH:mm:ss */
   validUntil: string
@@ -37,6 +41,7 @@ export interface BlackWhiteListQuery {
   targetId?: string
   sn?: string
   model?: string
+  historyTargetType?: BlackWhiteTargetKindFilter
   targetType?: string
   zoneName?: string
   entryMethod?: EntryMethod
@@ -55,6 +60,7 @@ export type BlackWhiteFormPayload = Pick<
   BlackWhiteListItem,
   | 'listType'
   | 'targetId'
+  | 'historyTargetType'
   | 'targetType'
   | 'validUntil'
   | 'model'

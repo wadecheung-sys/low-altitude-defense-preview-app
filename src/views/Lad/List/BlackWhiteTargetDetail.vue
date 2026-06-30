@@ -1,7 +1,12 @@
 <script setup lang="tsx">
-import { getBlackWhiteDetailApi, updateBlackWhiteListTypeApi } from '@/api/lad/list'
+import {
+  deleteBlackWhiteApi,
+  getBlackWhiteDetailApi,
+  updateBlackWhiteListTypeApi
+} from '@/api/lad/list'
 import type { BlackWhiteTargetDetail, ListType } from '@/api/lad/list/types'
 import { formatValidUntilDisplay } from '@/api/lad/list/validUntilUtils'
+import { historyTargetTypeTagType, displayBlackWhiteTargetKind } from '@/api/lad/list/listTargetKind'
 import { deleteHistoryEventApi, getHistoryEventListApi } from '@/api/lad/incident'
 import type { HandlingStatus, HistoryEventItem, ThreatLevel } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
@@ -25,6 +30,7 @@ import {
 } from 'element-plus'
 import { computed, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { targetAirframeLabel } from '../shared/ladOptionConstants'
 
 defineOptions({
   name: 'LadBlackWhiteTargetDetail'
@@ -64,12 +70,12 @@ const dataSourceOptions = [
 
 const threatTagType = (level: ThreatLevel) => {
   const map: Record<ThreatLevel, 'danger' | 'warning' | 'success' | 'info'> = {
-    高: 'danger',
-    中: 'warning',
-    低: 'success',
-    未知: 'info'
+    高危: 'danger',
+    中危: 'warning',
+    低危: 'success',
+    无危: 'info'
   }
-  return map[level]
+  return map[level] ?? 'info'
 }
 
 const listTypeTag = (type: ListType) => {
@@ -84,6 +90,14 @@ const listTypeTag = (type: ListType) => {
 const statusLabel = (status: HandlingStatus) => {
   if (status === '待处置') return '未处置'
   return status
+}
+
+/** 待处置时尚无处置记录，说明为「未处置」或留空 */
+function disposalDetailText(row: BlackWhiteTargetDetail): string {
+  if (row.handlingStatus === '待处置') {
+    return row.disposalDetail?.trim() || '未处置'
+  }
+  return row.disposalDetail?.trim() || '—'
 }
 
 const fetchDetail = async () => {
@@ -170,6 +184,10 @@ const goBackList = () => {
 
 const onSetListType = async (listType: ListType) => {
   if (!detail.value) return
+  if (detail.value.historyTargetType === '黑飞无人机') {
+    ElMessage.warning('黑飞无人机名单类型固定为「未知」')
+    return
+  }
   if (detail.value.listType === listType) {
     ElMessage.info(`当前已是${listType}`)
     return
@@ -180,9 +198,18 @@ const onSetListType = async (listType: ListType) => {
   ElMessage.success(`已加入${listType}`)
 }
 
-const goEventDetail = (row: HistoryEventItem) => {
+const onDeleteTarget = async () => {
+  if (!detail.value) return
+  await ElMessageBox.confirm('删除主数据后不可恢复，是否继续？', '删除目标', { type: 'warning' })
+  await deleteBlackWhiteApi([detail.value.id])
+  ElMessage.success('已删除')
+  goBackList()
+}
+
+const onReplay = (row: HistoryEventItem) => {
   push({
-    path: `/lad/list/incident/target/${row.id}`
+    path: `/lad/list/incident/target/${row.id}`,
+    query: { tab: 'replay' }
   })
 }
 
@@ -267,14 +294,14 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'action',
     label: '操作',
-    width: '160px',
+    width: '200px',
     fixed: 'right',
     table: {
       slots: {
         default: (data: { row: HistoryEventItem }) => (
           <>
-            <BaseButton type="success" onClick={() => goEventDetail(data.row)}>
-              详情
+            <BaseButton type="primary" onClick={() => onReplay(data.row)}>
+              回放
             </BaseButton>
             <BaseButton type="danger" onClick={() => onDeleteEvent(data.row)}>
               删除
@@ -306,7 +333,13 @@ watch(
     <template v-if="detail">
       <ContentWrap class="target-detail-profile">
         <el-row :gutter="16">
-          <el-col :span="24">
+          <el-col :xs="24" :md="7" :lg="6">
+            <div class="target-detail-profile__image">
+              <span class="target-detail-profile__image-label">无人机光电图像</span>
+              <span class="target-detail-profile__image-hint">暂无图像，接入光电后展示</span>
+            </div>
+          </el-col>
+          <el-col :xs="24" :md="17" :lg="18">
             <div class="target-detail-profile__head">
               <span class="target-detail-profile__title">目标档案</span>
               <ElTag :type="listTypeTag(detail.listType)" size="small" effect="light">
@@ -322,16 +355,35 @@ watch(
               class="target-detail-descriptions"
             >
               <ElDescriptionsItem label="目标 ID">{{ detail.targetId }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="目标型号">{{ detail.model }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="识别码">{{ detail.sn }}</ElDescriptionsItem>
-              <ElDescriptionsItem label="目标类型">{{ detail.targetType }}</ElDescriptionsItem>
+              <ElDescriptionsItem label="目标类型">
+                <ElTag
+                  :type="historyTargetTypeTagType(displayBlackWhiteTargetKind(detail))"
+                  size="small"
+                  effect="light"
+                >
+                  {{ displayBlackWhiteTargetKind(detail) }}
+                </ElTag>
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="品牌型号">{{ detail.model }}</ElDescriptionsItem>
+              <ElDescriptionsItem label="识别码">
+                <span
+                  v-if="detail.sn === '未解析'"
+                  class="text-[var(--el-text-color-secondary)]"
+                >
+                  未解析
+                </span>
+                <span v-else>{{ detail.sn }}</span>
+              </ElDescriptionsItem>
+              <ElDescriptionsItem :label="targetAirframeLabel">{{
+                detail.targetType
+              }}</ElDescriptionsItem>
 
               <ElDescriptionsItem label="频段信息">{{ detail.frequency }}</ElDescriptionsItem>
               <ElDescriptionsItem label="录入方式">{{ detail.entryMethod }}</ElDescriptionsItem>
 
-              <ElDescriptionsItem label="有效时间">
+              <ElDescriptionsItem label="有效期至">
                 <ElTag
-                  v-if="detail.validUntil === '永久'"
+                  v-if="formatValidUntilDisplay(detail.validUntil) === '永久'"
                   type="success"
                   size="small"
                   effect="light"
@@ -359,8 +411,63 @@ watch(
       <ContentWrap
         class="target-detail-events"
         title="历史事件信息"
-        message="下方表格为全部飞行记录明细。"
+        message="上方为最近一次探测摘要，下方表格为全部飞行记录明细。"
       >
+        <section class="target-detail-events__snapshot">
+          <div class="target-detail-events__snapshot-title">最近一次探测</div>
+          <ElDescriptions
+            :column="2"
+            border
+            size="small"
+            label-width="128px"
+            class="target-detail-descriptions target-detail-events__snapshot-table"
+          >
+            <ElDescriptionsItem label="探测时间">
+              {{ detail.lastObservedAt || detail.updatedAt }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="威胁等级">
+              <ElTag :type="threatTagType(detail.threatLevel)" size="small" effect="light">
+                {{ detail.threatLevel }}
+              </ElTag>
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="处置状态">
+              {{ statusLabel(detail.handlingStatus) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="所在区域">{{ detail.zoneName }}</ElDescriptionsItem>
+
+            <ElDescriptionsItem label="无人机最后位置" :span="2">
+              {{ detail.lastPosition }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="飞手最后已知位置" :span="2">
+              <template v-if="detail.pilotLocation === '未定位'">
+                <span class="text-[var(--el-text-color-secondary)]">未定位</span>
+              </template>
+              <template v-else>
+                {{ detail.pilotLocation }}
+                <span v-if="detail.pilotConfidence !== '—'" class="target-detail-events__cell-sub">
+                  置信度 {{ detail.pilotConfidence }}
+                </span>
+                <span
+                  v-if="detail.pilotLocatedAt && detail.pilotLocatedAt !== '—'"
+                  class="target-detail-events__cell-sub"
+                >
+                  推算 {{ detail.pilotLocatedAt }}
+                </span>
+              </template>
+            </ElDescriptionsItem>
+
+            <ElDescriptionsItem label="处置说明" :span="2">
+              <span
+                :class="
+                  detail.handlingStatus === '待处置' ? 'text-[var(--el-text-color-secondary)]' : ''
+                "
+              >
+                {{ disposalDetailText(detail) }}
+              </span>
+            </ElDescriptionsItem>
+          </ElDescriptions>
+        </section>
+
         <div class="target-detail-events__list-head">全部历史记录</div>
         <div class="target-detail-events__toolbar mb-10px">
           <ElForm inline class="target-detail-events__filters">
@@ -416,18 +523,19 @@ watch(
           <div class="target-detail-events__actions">
             <BaseButton
               type="primary"
-              :disabled="detail.listType === '黑名单'"
+              :disabled="detail.historyTargetType === '黑飞无人机' || detail.listType === '黑名单'"
               @click="onSetListType('黑名单')"
             >
               + 加入黑名单
             </BaseButton>
             <BaseButton
               type="primary"
-              :disabled="detail.listType === '白名单'"
+              :disabled="detail.historyTargetType === '黑飞无人机' || detail.listType === '白名单'"
               @click="onSetListType('白名单')"
             >
               + 加入白名单
             </BaseButton>
+            <BaseButton type="warning" @click="onDeleteTarget">删除</BaseButton>
           </div>
         </div>
 
@@ -492,9 +600,57 @@ watch(
     line-height: 1.5;
     color: var(--el-text-color-secondary);
   }
+
+  &__image {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    padding: 16px;
+    text-align: center;
+    background: var(--el-fill-color-light);
+    border: 1px dashed var(--el-border-color);
+    border-radius: 8px;
+  }
+
+  &__image-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  &__image-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
 }
 
 .target-detail-events {
+  &__snapshot {
+    margin-bottom: 12px;
+  }
+
+  &__snapshot-title {
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  &__snapshot-table {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  &__cell-sub {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
   &__list-head {
     margin: 0 0 12px;
     font-size: 13px;

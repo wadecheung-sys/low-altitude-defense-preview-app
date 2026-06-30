@@ -24,7 +24,7 @@ export const UI = {
   triggerRuleName: '规则名称',
   triggerSortOrder: '排序',
   triggerRuleAdd: '新增规则',
-  triggerRuleHint: '按天气要素配置对应的执行设备组与反制动作，支持多条条件及「或/且」组合。',
+  triggerRuleHint: '按天气要素配置对应的反制动作，支持多条条件及「或/且」组合。',
   triggerRuleEmpty: '请至少添加一条触发策略规则',
   primaryRule: '主触发规则',
   triggerRuleCount: '触发策略条数',
@@ -44,5 +44,15 @@ export const UI = {
   btnSave: '保存',
   btnCancel: '取消',
   saveOk: '保存成功',
-  deleteOk: '已删除'
+  deleteOk: '已删除',
+  btnSimulate: '模拟测试',
+  dialogSimulate: '模拟测试',
+  simulateRun: '开始模拟',
+  simulateResultSuccess: '预案策略结论',
+  simulateResultFail: '未得出预案策略结论',
+  simulateMatchedPlan: '命中预案',
+  simulateMatchedTriggerRule: '触发策略',
+  simulatePlanThreatLevel: '预案威胁等级',
+  simulateCoreSection: '命中结论',
+  simulateDetailSection: '预案详情'
 } as const

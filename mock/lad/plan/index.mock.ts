@@ -5,10 +5,11 @@ import {
   listPlanOptions,
   queryPlanList,
   savePlan,
+  simulatePlan,
   syncPlansFromSeed,
   togglePlanEnabled
 } from '@/api/lad/plan/planStore'
-import type { PlanStrategyQuery } from '@/api/lad/plan/types'
+import type { PlanSimulateInput, PlanStrategyQuery } from '@/api/lad/plan/types'
 
 const timeout = 300
 
@@ -72,6 +73,18 @@ export default [
         return { code: SUCCESS_CODE, data: null }
       } catch (e) {
         return { code: 500, message: e instanceof Error ? e.message : '\u64cd\u4f5c\u5931\u8d25' }
+      }
+    }
+  },
+  {
+    url: '/mock/lad/plan/simulate',
+    method: 'post',
+    timeout,
+    response: ({ body }: { body: PlanSimulateInput }) => {
+      syncPlansFromSeed()
+      return {
+        code: SUCCESS_CODE,
+        data: simulatePlan(body)
       }
     }
   }

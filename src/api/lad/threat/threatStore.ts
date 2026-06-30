@@ -3,7 +3,7 @@ import { getPlan, listPlanOptions } from '../plan/planStore'
 import { formatDisposalExecNote } from '../plan/planDisposal'
 import { resolvePlanTriggerRule } from '../plan/planTrigger'
 import { listAreaRegions } from '../area/areaStore'
-import { coerceThreatLevelLabel } from './threatLevelUtils'
+import { coerceThreatLevelLabel, normalizeThreatLevel } from './threatLevelUtils'
 import {
   isMonitorCatchAllRule,
   monitorCatchAllNote,
@@ -142,6 +142,14 @@ function buildSummary(conditions: RuleCondition[], logic: RuleConditionLogic = '
       return `${text}${conditionLogicLabel(c.nextLogic)}`
     })
     .join('')
+}
+
+/** 与威胁规则列表/详情中的「判级条件」展示格式一致 */
+export function formatThreatConditionSummary(
+  conditions: RuleCondition[],
+  logic: RuleConditionLogic = 'and'
+): string {
+  return buildSummary(conditions, logic)
 }
 
 function evalConditions(conditions: RuleCondition[], input: ThreatSimulateInput) {
@@ -690,6 +698,30 @@ export function getThreatRule(id: string): ThreatRule | null {
   return row ? { ...row, conditions: row.conditions.map((c) => ({ ...c })) } : null
 }
 
+function normalizeSimulateInput(input: ThreatSimulateInput): ThreatSimulateInput {
+  const normalizedTargetType =
+    input.targetType && input.targetType !== '全部' ? input.targetType : undefined
+  const inferredSwarmType =
+    input.swarmMode && (input.swarmCount ?? 0) >= 3 ? SWARM_TARGET_TYPE : undefined
+  return {
+    ...input,
+    targetType: normalizedTargetType || inferredSwarmType,
+    targetModel:
+      input.targetModel && input.targetModel !== '全部型号' && input.targetModel !== '全部'
+        ? input.targetModel
+        : undefined
+  }
+}
+
+export function matchThreatRuleForInput(input: ThreatSimulateInput): ThreatRule | undefined {
+  syncRulesFromSeed()
+  const simInput = normalizeSimulateInput(input)
+  const enabled = allRules
+    .filter((r) => r.enabled)
+    .sort((a, b) => effectiveRulePriority(b, simInput) - effectiveRulePriority(a, simInput))
+  return enabled.find((r) => ruleMatches(r, simInput))
+}
+
 export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
   const now = formatNow()
   const conditionLogic = normalizeConditionLogic(body.conditionLogic)
@@ -777,17 +809,23 @@ export function toggleThreatRuleEnabled(id: string, enabled: boolean) {
 }
 
 export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult {
-  const normalizedTargetType =
-    input.targetType && input.targetType !== '全部' ? input.targetType : undefined
-  const inferredSwarmType =
-    input.swarmMode && (input.swarmCount ?? 0) >= 3 ? SWARM_TARGET_TYPE : undefined
-  const simInput: ThreatSimulateInput = {
-    ...input,
-    targetType: normalizedTargetType || inferredSwarmType,
-    targetModel:
-      input.targetModel && input.targetModel !== '全部型号' && input.targetModel !== '全部'
-        ? input.targetModel
-        : undefined
+  const simInput = normalizeSimulateInput(input)
+  const scenarioSummary = simInput.simulateConditions?.length
+    ? buildSummary(simInput.simulateConditions, simInput.simulateConditionLogic || 'and')
+    : ''
+  const scenarioPrefix = scenarioSummary ? `模拟场景：${scenarioSummary}。` : ''
+
+  if (simInput.simulateConditions?.length) {
+    const scenarioOk = evalConditions(
+      normalizeConditionList(simInput.simulateConditions, simInput.simulateConditionLogic || 'and'),
+      simInput
+    )
+    if (!scenarioOk) {
+      return {
+        matched: false,
+        message: `${scenarioPrefix}模拟目标属性不满足已配置的且/或组合条件`
+      }
+    }
   }
 
   let matched: ThreatRule | undefined
@@ -802,69 +840,28 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
   if (!matched) {
     return {
       matched: false,
-      message: '未匹配到启用规则，不触发预案'
+      message: `${scenarioPrefix}未匹配到启用的威胁评估规则`
     }
   }
 
-  const plan = getPlan(matched.planId)
-  if (!plan?.enabled) {
-    return {
-      matched: false,
-      message: '匹配规则但关联预案已停用'
-    }
-  }
-  const triggerRule = resolvePlanTriggerRule(plan, {
-    areaLevel: simInput.areaRegionType,
-    temperature: simInput.temperature,
-    humidity: simInput.humidity,
-    windPower: simInput.windPower,
-    rainfall: simInput.rainfall
-  })
-  if (!triggerRule) {
-    return {
-      matched: false,
-      message: '匹配规则但预案无可用触发策略'
-    }
-  }
-  const fnLabel = functionLabel(triggerRule.deviceType, triggerRule.deviceFunction)
   const isMonitorCatchAll = isMonitorCatchAllRule(matched)
+  const threatLevelLabel = normalizeThreatLevel(matched.threatLevel)
   const swarmNote =
     !isMonitorCatchAll && (isSwarmRule(matched) || isSwarmSimulateInput(simInput))
-      ? swarmEscalationNote(triggerRule.deviceAction)
+      ? swarmEscalationNote()
       : undefined
   const monitorNote = isMonitorCatchAll ? monitorCatchAllNote() : undefined
-  const prefix = isSwarmSimulateInput(simInput) && !isMonitorCatchAll ? '【蜂群升级】' : ''
-  const conditionScene = [
-    simInput.temperature !== undefined ? `温度${simInput.temperature}` : '',
-    simInput.humidity !== undefined ? `湿度${simInput.humidity}` : '',
-    simInput.windPower !== undefined ? `风力${simInput.windPower}` : '',
-    simInput.rainfall !== undefined ? `雨量${simInput.rainfall}` : ''
-  ]
-    .filter(Boolean)
-    .join(' / ')
-  const scene = conditionScene ? `（${conditionScene}→ 规则「${triggerRule.ruleName}」）` : ''
-  const disposalNote = formatDisposalExecNote(plan)
-  const outcomeSummary = isMonitorCatchAll
-    ? `系统将启动「${plan.planName}」：${triggerRule.deviceGroupName}执行「${triggerRule.deviceAction}」，持续跟踪目标并上报，不自动升级打击。`
-    : `系统将触发「${plan.planName}」，由${triggerRule.deviceGroupName}执行「${triggerRule.deviceAction}」（${fnLabel}）。`
+  const prefix = isSwarmSimulateInput(simInput) && !isMonitorCatchAll ? '【蜂群场景】' : ''
+
   return {
     matched: true,
     rule: { ...matched },
     ruleName: matched.ruleName,
-    threatLevel: matched.threatLevel,
-    planId: plan.id,
-    planCode: plan.planCode,
-    planName: plan.planName,
-    planDeviceAction: triggerRule.deviceAction,
-    planDeviceType: triggerRule.deviceType,
-    planDeviceFunction: fnLabel,
-    disposalModeLabel: plan.disposalModeLabel,
-    triggerStrategyName: triggerRule.ruleName,
-    outcomeSummary,
-    swarmNote,
+    threatLevel: threatLevelLabel,
     isMonitorCatchAll,
     monitorNote,
-    message: `${prefix}匹配规则「${matched.ruleName}」，将触发预案「${plan.planName}」（${plan.planCode}）${scene}→ ${triggerRule.deviceType} / ${fnLabel}；${disposalNote}`
+    swarmNote,
+    message: `${scenarioPrefix}${prefix}命中规则「${matched.ruleName}」，威胁等级结论：${threatLevelLabel}`
   }
 }
 
@@ -876,7 +873,7 @@ export function assessThreatRule(id: string): ThreatAssessResult {
   const levelKey = resolveThreatLevelKey(rule)
   const planLabel = plan ? `\u300c${plan.planName}\u300d\uff08${plan.planCode}\uff09` : '-'
   const fnLabel = triggerRule
-    ? functionLabel(triggerRule.deviceType, triggerRule.deviceFunction)
+    ? functionLabel(triggerRule.deviceGroupType, triggerRule.deviceFunction)
     : '-'
   const swarmNote = isSwarmRule(rule) ? swarmEscalationNote(triggerRule?.deviceAction) : undefined
   const swarmSummary = isSwarmRule(rule)
@@ -891,14 +888,14 @@ export function assessThreatRule(id: string): ThreatAssessResult {
     suggestedPlan: plan?.planName || '-',
     planCode: plan?.planCode,
     planDeviceAction: triggerRule?.deviceAction,
-    planDeviceType: triggerRule?.deviceType,
+    planDeviceType: triggerRule?.deviceGroupType,
     planDeviceFunction: fnLabel,
     alarmLevel: levelKey === 'high' ? '一级告警' : '二级预警',
     summary: `${monitorSummary}${swarmSummary}规则威胁等级「${rule.threatLevel}」；名单类型「${rule.targetType}」；目标型号「${rule.targetModel}」；触发条件：${rule.conditionSummary}`,
     swarmNote,
     triggerNote:
       plan && triggerRule
-        ? `\u89c4\u5219\u547d\u4e2d\u540e\u89e6\u53d1\u9884\u6848${planLabel}\uff1b${formatDisposalExecNote(plan)}\uff1b\u89e6\u53d1\u300c${triggerRule.ruleName}\u300d\uff08${triggerRule.weatherFactor}\uff09\u2192 ${triggerRule.deviceType} / ${fnLabel}\uff1b\u5904\u7f6e\u300c${triggerRule.deviceAction}\u300d${plan.triggerRules.length > 1 ? '\uff1b\u591a\u573a\u666f\u6309\u5929\u6c14\u5207\u6362' : ''}${swarmNote ? `\uff1b${swarmNote}` : ''}`
+        ? `\u89c4\u5219\u547d\u4e2d\u540e\u89e6\u53d1\u9884\u6848${planLabel}\uff1b${formatDisposalExecNote(plan)}\uff1b\u89e6\u53d1\u300c${triggerRule.ruleName}\u300d\uff08${triggerRule.weatherFactor}\uff09\u2192 ${fnLabel}\uff1b\u5904\u7f6e\u300c${triggerRule.deviceAction}\u300d${plan.triggerRules.length > 1 ? '\uff1b\u591a\u573a\u666f\u6309\u5929\u6c14\u5207\u6362' : ''}${swarmNote ? `\uff1b${swarmNote}` : ''}`
         : '\u672a\u5173\u8054\u6709\u6548\u9884\u6848'
   }
 }

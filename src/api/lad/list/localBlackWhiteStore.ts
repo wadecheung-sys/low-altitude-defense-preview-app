@@ -10,9 +10,15 @@ import type {
   ListType
 } from './types'
 import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
+import {
+  displayBlackWhiteTargetKind,
+  enrichBlackWhiteListItem,
+  normalizeBlackWhiteTargetFields,
+  resolveBlackWhiteTargetKind
+} from './listTargetKind'
 import { matchValidUntilRange, normalizeValidUntil } from './validUntilUtils'
 
-const listTypes: ListType[] = ['黑名单', '白名单', '未知']
+const listTypes: ListType[] = ['黑名单', '白名单']
 const targetTypes = ['多旋翼', '固定翼', '未知', '行业级']
 const models = LAD_TARGET_MODELS.filter((item) => item !== '蜂群目标' && item !== '其他')
 const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
@@ -36,29 +42,47 @@ function buildSeedList(): BlackWhiteListItem[] {
     const updated = `2024-03-${day} ${hour}:${String(updatedMin).padStart(2, '0')}:${String((Number(sec) + 8) % 60).padStart(2, '0')}`
     const durationSec = 15 + (i % 120)
     const hasSn = i % 5 !== 0
+    const sn = hasSn ? `1581F4${String(100000 + i * 131).slice(0, 6)}` : '未解析'
+    const historyTargetType = resolveBlackWhiteTargetKind(sn)
 
-    return {
+    return normalizeBlackWhiteTargetFields({
       id: `bw-${10001 + i}`,
       targetId: `TG-2024-${String((i % 24) + 1).padStart(4, '0')}`,
-      listType: listTypes[i % listTypes.length],
+      listType: historyTargetType === '黑飞无人机' ? '未知' : listTypes[i % listTypes.length],
+      historyTargetType,
       targetType: targetTypes[i % targetTypes.length],
       validUntil: normalizeValidUntil(validOptions[i % validOptions.length]),
       discoveredAt: discovered,
       updatedAt: updated,
       duration: `00:${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`,
-      model: models[i % models.length],
-      frequency: frequencies[i % frequencies.length],
-      sn: hasSn ? `1581F4${String(100000 + i * 131).slice(0, 6)}` : '未解析',
+      model: hasSn ? models[i % models.length] : '未知型号',
+      frequency: hasSn ? frequencies[i % frequencies.length] : '--',
+      sn,
       zoneName: zones[i % zones.length],
       longitude: Number((113.38 + (i % 30) * 0.008).toFixed(4)),
       latitude: Number((23.08 + (i % 25) * 0.006).toFixed(4)),
       entryMethod: entryMethods[i % entryMethods.length],
       remark: i % 8 === 0 ? '历史事件自动同步' : ''
-    }
+    })
   })
 }
 
+export const BLACK_WHITE_STORE_VERSION = 2
+
+function ensureStoreVersion() {
+  const g = globalThis as { __ladBlackWhiteStoreVer?: number }
+  if (g.__ladBlackWhiteStoreVer === BLACK_WHITE_STORE_VERSION) return
+  g.__ladBlackWhiteStoreVer = BLACK_WHITE_STORE_VERSION
+  allList = buildSeedList()
+}
+
+function migrateAllRows() {
+  allList = allList.map((row) => enrichBlackWhiteListItem(row))
+}
+
 let allList: BlackWhiteListItem[] = buildSeedList()
+ensureStoreVersion()
+migrateAllRows()
 
 function formatTimestamp(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -129,6 +153,15 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
     const kw = params.model.trim().toLowerCase()
     rows = rows.filter((r) => r.model.toLowerCase().includes(kw))
   }
+  if (params.historyTargetType) {
+    if (params.historyTargetType === '躁扰信号-飞鸟') {
+      rows = []
+    } else {
+      rows = rows.filter(
+        (r) => displayBlackWhiteTargetKind(r) === params.historyTargetType
+      )
+    }
+  }
   if (params.targetType) {
     rows = rows.filter((r) => r.targetType === params.targetType)
   }
@@ -149,10 +182,12 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
       matchValidUntilRange(r.validUntil, params.validUntilStart, params.validUntilEnd)
     )
   }
-  return rows
+  return rows.map((row) => enrichBlackWhiteListItem(row))
 }
 
 export function queryLocalBlackWhiteList(params: BlackWhiteListQuery): BlackWhiteListResult {
+  ensureStoreVersion()
+  migrateAllRows()
   const pageIndex = Number(params.pageIndex) || 1
   const pageSize = Number(params.pageSize) || 10
   const filtered = filterList(params)
@@ -164,8 +199,10 @@ export function queryLocalBlackWhiteList(params: BlackWhiteListQuery): BlackWhit
 }
 
 export function getLocalBlackWhiteDetail(id: string): BlackWhiteTargetDetail | null {
+  ensureStoreVersion()
+  migrateAllRows()
   const row = allList.find((item) => item.id === id)
-  return row ? buildTargetDetail(row) : null
+  return row ? buildTargetDetail(enrichBlackWhiteListItem(row)) : null
 }
 
 export function deleteLocalBlackWhite(ids: string[]) {
@@ -178,6 +215,9 @@ export function updateLocalBlackWhiteListType(
 ): BlackWhiteTargetDetail | null {
   const idx = allList.findIndex((row) => row.id === payload.id)
   if (idx < 0) return null
+  if (displayBlackWhiteTargetKind(allList[idx]) === '黑飞无人机') {
+    return buildTargetDetail(allList[idx])
+  }
   allList[idx] = {
     ...allList[idx],
     listType: payload.listType,
@@ -192,29 +232,31 @@ export function syncLocalBlackWhiteListType(
 ) {
   const ts = formatTimestamp(new Date())
   targets.forEach((target) => {
+    const isBlackFly = target.uavSn === '未解析'
     const rows = allList.filter(
       (row) =>
-        row.targetId === target.targetId || (target.uavSn !== '未解析' && row.sn === target.uavSn)
+        row.targetId === target.targetId || (!isBlackFly && row.sn === target.uavSn)
     )
     if (rows.length) {
       rows.forEach((row) => {
+        if (row.historyTargetType === '黑飞无人机') return
         row.listType = listType
         row.updatedAt = ts
       })
       return
     }
 
-    allList.unshift({
-      id: `bw-${Date.now()}-${target.targetId}`,
+    const base = normalizeBlackWhiteTargetFields({
       targetId: target.targetId,
-      listType,
+      listType: isBlackFly ? '未知' : listType,
+      historyTargetType: resolveBlackWhiteTargetKind(target.uavSn),
       targetType: '多旋翼',
       validUntil: '永久',
       discoveredAt: ts,
       updatedAt: ts,
       duration: '00:00:00',
-      model: target.targetModel,
-      frequency: '未知',
+      model: isBlackFly ? '未知型号' : target.targetModel,
+      frequency: isBlackFly ? '--' : '未知',
       sn: target.uavSn,
       zoneName: '',
       longitude: 0,
@@ -222,11 +264,20 @@ export function syncLocalBlackWhiteListType(
       entryMethod: '人工录入',
       remark: '由历史事件批量设置'
     })
+
+    allList.unshift({
+      id: `bw-${Date.now()}-${target.targetId}`,
+      ...base
+    } as BlackWhiteListItem)
   })
 }
 
 export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteListItem {
   const ts = formatTimestamp(new Date())
+  const normalized = normalizeBlackWhiteTargetFields({
+    ...payload,
+    validUntil: normalizeValidUntil(payload.validUntil || '永久')
+  })
 
   if (payload.id) {
     const idx = allList.findIndex((row) => row.id === payload.id)
@@ -235,8 +286,7 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     }
     allList[idx] = {
       ...allList[idx],
-      ...payload,
-      validUntil: normalizeValidUntil(payload.validUntil || '永久'),
+      ...normalized,
       updatedAt: ts
     }
     return allList[idx]
@@ -247,9 +297,8 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     discoveredAt: ts,
     updatedAt: ts,
     duration: '00:00:00',
-    ...payload,
-    validUntil: normalizeValidUntil(payload.validUntil || '永久')
-  } as BlackWhiteListItem
+    ...normalized
+  }
   allList.unshift(row)
   return row
 }

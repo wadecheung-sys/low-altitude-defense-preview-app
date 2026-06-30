@@ -103,6 +103,35 @@ export interface PlanStrategySavePayload {
   triggerRules: PlanTriggerRule[]
 }
 
+export interface PlanSimulateInput {
+  threatLevel: string
+  areaLevel?: string
+  temperature?: number
+  humidity?: number
+  windPower?: number
+  rainfall?: number
+}
+
+export interface PlanSimulateResult {
+  matched: boolean
+  message: string
+  /** 模拟输入的威胁等级 */
+  threatLevel: string
+  planName?: string
+  planCode?: string
+  /** 命中预案配置的威胁等级 */
+  planThreatLevel?: string
+  disposalMode?: PlanDisposalMode
+  disposalModeLabel?: string
+  /** 命中预案自身优先级（0-999），命中时返回 */
+  priority?: number
+  triggerRuleName?: string
+  triggerAreaLevel?: string
+  triggerWeatherSummary?: string
+  deviceAction?: string
+  deviceFunctionLabel?: string
+}
+
 export interface PlanExecutionPayload {
   planId: string
   planCode: string

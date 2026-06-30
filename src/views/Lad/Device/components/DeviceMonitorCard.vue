@@ -7,9 +7,8 @@ import productImage from '@/assets/imgs/counter-uas-device.png'
 import deviceSiteCctv from '@/assets/imgs/device-site-cctv.png'
 import { BaseButton } from '@/components/Button'
 import { Icon } from '@/components/Icon'
-import { ElCard, ElDialog, ElImage, ElPopover, ElTabPane, ElTabs, ElTooltip } from 'element-plus'
+import { ElCard, ElDialog, ElImage, ElPopover, ElTooltip } from 'element-plus'
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   item: DeviceMonitorItem
@@ -19,10 +18,7 @@ const emit = defineEmits<{
   detail: [DeviceMonitorItem]
 }>()
 
-const { push } = useRouter()
-
 const videoVisible = ref(false)
-const popoverTab = ref<'extend' | 'archive'>('extend')
 const archiveLoading = ref(false)
 const linkedArchiveDetail = ref<DeviceLinkedArchive | null>(null)
 
@@ -37,47 +33,7 @@ const connectionLabel = computed(() => {
   return '设备连接已断开'
 })
 
-const accessProtocol = computed(() => {
-  const type = String(props.item.deviceType)
-  if (type.includes('光电')) return 'ONVIF / GB28181'
-  if (type.includes('雷达')) return 'ASTERIX / TCP'
-  if (type.includes('声光')) return 'Modbus TCP'
-  if (type.includes('无线电')) return 'TCP/IP 专用协议'
-  return 'TCP/IP 专用协议'
-})
-
-const extendedInfo = computed(() => {
-  const versionSuffix = (props.item.deviceId.length + props.item.deviceName.length) % 9
-  return [
-    { label: '运行状态', value: props.item.onlineStatus },
-    { label: '设备序列号', value: props.item.serialNo || '—' },
-    { label: '设备类型', value: props.item.deviceType || '—' },
-    { label: '厂商 / 型号', value: `${props.item.manufacturer} / ${props.item.deviceModel}` },
-    { label: '固件版本', value: `V2.3.${versionSuffix}` },
-    { label: '接入协议', value: accessProtocol.value },
-    { label: '通信地址', value: props.item.ipAddress ? `${props.item.ipAddress}:8000` : '—' },
-    { label: '所属区域', value: props.item.deployLocation || '—' },
-    { label: '负责人', value: props.item.personInCharge || '—' },
-    { label: '维护状态', value: props.item.onlineStatus === '正常' ? '在保 · 巡检正常' : '待检修' },
-    { label: '最后心跳', value: props.item.lastHeartbeat },
-    { label: '数据上报周期', value: '5 秒' }
-  ]
-})
-
 const linkedArchive = computed(() => linkedArchiveDetail.value ?? props.item.linkedArchive)
-
-const archiveSummary = computed(() => {
-  const arch = linkedArchive.value
-  if (!arch) return []
-  return [
-    { label: '档案名称', value: arch.archiveName },
-    { label: '档案编号', value: arch.archiveNo },
-    { label: '设备类型', value: arch.deviceType },
-    { label: '厂商', value: arch.vendor },
-    { label: '设备型号', value: arch.deviceModel },
-    { label: '档案摘要', value: props.item.archiveInfo || '—' }
-  ]
-})
 
 async function loadArchiveDetail() {
   archiveLoading.value = true
@@ -107,10 +63,6 @@ watch(
     linkedArchiveDetail.value = null
   }
 )
-
-function goDeviceInfo() {
-  push(`/lad/device/info/detail/${props.item.id}`)
-}
 </script>
 
 <template>
@@ -180,7 +132,7 @@ function goDeviceInfo() {
           <button
             type="button"
             class="device-monitor-card__expand-button"
-            aria-label="展开扩展信息"
+            aria-label="展开档案指标"
           >
             <Icon icon="vi-ep:top-right" :size="17" />
           </button>
@@ -192,60 +144,35 @@ function goDeviceInfo() {
             <BaseButton link type="primary" @click="emit('detail', item)">查看详情</BaseButton>
           </div>
 
-          <ElTabs v-model="popoverTab" class="device-monitor-detail-popover__tabs">
-            <ElTabPane label="扩展信息" name="extend">
-              <div class="device-monitor-detail-popover__grid">
-                <div v-for="info in extendedInfo" :key="info.label">
-                  <span>{{ info.label }}</span>
-                  <strong :title="String(info.value)">{{ info.value }}</strong>
+          <div v-loading="archiveLoading" class="device-monitor-detail-popover__archive-pane">
+            <div
+              v-if="linkedArchive?.indicators.length"
+              class="device-monitor-detail-popover__indicators"
+            >
+              <div class="device-monitor-detail-popover__indicators-head">
+                <span>指标项</span>
+                <span>单位</span>
+                <span>指标值</span>
+              </div>
+              <div class="device-monitor-detail-popover__indicators-body">
+                <div
+                  v-for="row in linkedArchive.indicators"
+                  :key="row.id"
+                  class="device-monitor-detail-popover__indicator-row"
+                >
+                  <span :title="row.item">{{ row.item }}</span>
+                  <span>{{ row.unit || '—' }}</span>
+                  <strong :title="row.value || '—'">{{ row.value || '—' }}</strong>
                 </div>
               </div>
-            </ElTabPane>
-            <ElTabPane label="档案指标" name="archive">
-              <div v-loading="archiveLoading" class="device-monitor-detail-popover__archive-pane">
-                <template v-if="linkedArchive">
-                  <p class="device-monitor-detail-popover__archive-tip">
-                    以下指标来自设备信息页关联的基础档案「{{ linkedArchive.archiveName }}」
-                  </p>
-                  <div class="device-monitor-detail-popover__grid">
-                    <div v-for="info in archiveSummary" :key="info.label">
-                      <span>{{ info.label }}</span>
-                      <strong :title="String(info.value)">{{ info.value }}</strong>
-                    </div>
-                  </div>
-                  <div
-                    v-if="linkedArchive.indicators.length"
-                    class="device-monitor-detail-popover__indicators"
-                  >
-                    <div class="device-monitor-detail-popover__indicators-head">
-                      <span>指标项</span>
-                      <span>单位</span>
-                      <span>指标值</span>
-                    </div>
-                    <div class="device-monitor-detail-popover__indicators-body">
-                      <div
-                        v-for="row in linkedArchive.indicators"
-                        :key="row.id"
-                        class="device-monitor-detail-popover__indicator-row"
-                      >
-                        <span :title="row.item">{{ row.item }}</span>
-                        <span>{{ row.unit || '—' }}</span>
-                        <strong :title="row.value || '—'">{{ row.value || '—' }}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-                <p v-else-if="!archiveLoading" class="device-monitor-detail-popover__empty">
-                  未关联基础档案，暂无档案指标。请在
-                  <BaseButton link type="primary" @click="goDeviceInfo">设备信息</BaseButton>
-                  页面绑定档案后查看。
-                </p>
-                <div v-if="linkedArchive" class="device-monitor-detail-popover__archive-foot">
-                  <BaseButton link type="primary" @click="goDeviceInfo">查看设备信息</BaseButton>
-                </div>
-              </div>
-            </ElTabPane>
-          </ElTabs>
+            </div>
+            <p v-else-if="linkedArchive && !archiveLoading" class="device-monitor-detail-popover__empty">
+              暂无档案指标
+            </p>
+            <p v-else-if="!archiveLoading" class="device-monitor-detail-popover__empty">
+              未关联基础档案，暂无档案指标
+            </p>
+          </div>
         </div>
       </ElPopover>
     </div>
@@ -446,33 +373,13 @@ function goDeviceInfo() {
     font-weight: 600;
   }
 
-  &__tabs {
-    margin-top: 4px;
-
-    :deep(.el-tabs__header) {
-      margin-bottom: 10px;
-    }
-
-    :deep(.el-tabs__item) {
-      height: 32px;
-      padding: 0 12px;
-      font-size: 12px;
-    }
-  }
-
   &__archive-pane {
     min-height: 80px;
-  }
-
-  &__archive-tip {
-    margin: 0 0 8px;
-    color: var(--el-text-color-secondary);
-    font-size: 11px;
-    line-height: 1.5;
+    margin-top: 8px;
   }
 
   &__empty {
-    margin: 8px 0 0;
+    margin: 0;
     padding: 12px 10px;
     border-radius: 5px;
     background: #f5f7f9;
@@ -482,43 +389,7 @@ function goDeviceInfo() {
     text-align: center;
   }
 
-  &__archive-foot {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 8px;
-  }
-
-  &__grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 14px;
-    padding: 9px 10px;
-    border-radius: 5px;
-    background: #f5f7f9;
-
-    span,
-    strong {
-      display: block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    span {
-      margin-bottom: 2px;
-      color: var(--el-text-color-secondary);
-      font-size: 10px;
-    }
-
-    strong {
-      color: var(--el-text-color-regular);
-      font-size: 11px;
-      font-weight: 500;
-    }
-  }
-
   &__indicators {
-    margin-top: 10px;
     overflow: hidden;
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 5px;

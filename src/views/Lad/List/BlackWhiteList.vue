@@ -12,10 +12,15 @@ import {
   deleteBlackWhiteApi,
   getBlackWhiteListApi
 } from '@/api/lad/list'
+import {
+  BLACK_WHITE_TARGET_KIND_SEARCH_OPTIONS,
+  displayBlackWhiteTargetKind,
+  historyTargetTypeTagType
+} from '@/api/lad/list/listTargetKind'
 import type { BlackWhiteListItem, ListType } from '@/api/lad/list/types'
 import BlackWhiteFormDialog from './components/BlackWhiteFormDialog.vue'
 import ValidUntilRangeSearch from './components/ValidUntilRangeSearch.vue'
-import { targetModelOptions } from '../shared/ladOptionConstants'
+import { targetAirframeLabel, targetAirframeOptions, targetModelOptions } from '../shared/ladOptionConstants'
 import { formatValidUntilDisplay } from '@/api/lad/list/validUntilUtils'
 
 defineOptions({
@@ -40,13 +45,6 @@ const searchParams = ref<Recordable>({
 const formVisible = ref(false)
 const formRow = ref<BlackWhiteListItem>()
 
-const targetTypeOptions = [
-  { label: '多旋翼', value: '多旋翼' },
-  { label: '固定翼', value: '固定翼' },
-  { label: '行业级', value: '行业级' },
-  { label: '未知', value: '未知' }
-]
-
 const setSearchParams = (params: Recordable) => {
   const range = params.validUntilRange as string[] | undefined
   searchParams.value = {
@@ -54,6 +52,7 @@ const setSearchParams = (params: Recordable) => {
     targetId: params.targetId,
     sn: params.sn,
     model: params.model,
+    historyTargetType: params.historyTargetType,
     targetType: params.targetType,
     validUntilStart: range?.[0] || undefined,
     validUntilEnd: range?.[1] || undefined
@@ -82,7 +81,19 @@ const listTypeTag = (type: ListType) => {
 }
 
 const goDetail = (row: BlackWhiteListItem) => {
-  push(`/lad/list/target/${row.id}`)
+  push({
+    name: 'LadBlackWhiteTargetDetail',
+    params: { id: row.id }
+  })
+}
+
+const tryOpenDetailFromQuery = () => {
+  const openDetail = route.query.openDetail === '1'
+  const hasQuery = Boolean(route.query.targetId || route.query.sn)
+  if (!openDetail && !hasQuery) return
+  if (dataList.value.length >= 1) {
+    goDetail(dataList.value[0])
+  }
 }
 
 const openAdd = () => {
@@ -122,8 +133,9 @@ const { tableRegister, tableState, tableMethods } = useTable({
 const { loading, dataList, total, currentPage, pageSize } = tableState
 const { getList, getElTableExpose, delList } = tableMethods
 
-onMounted(() => {
-  getList()
+onMounted(async () => {
+  await getList()
+  tryOpenDetailFromQuery()
 })
 
 const delLoading = ref(false)
@@ -187,6 +199,31 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
+    field: 'historyTargetType',
+    label: '目标类型',
+    minWidth: 132,
+    search: {
+      component: 'Select',
+      componentProps: {
+        placeholder: '请选择目标类型',
+        clearable: true,
+        options: BLACK_WHITE_TARGET_KIND_SEARCH_OPTIONS
+      }
+    },
+    table: {
+      slots: {
+        default: ({ row }: { row: BlackWhiteListItem }) => {
+          const kind = displayBlackWhiteTargetKind(row)
+          return (
+            <ElTag type={historyTargetTypeTagType(kind)} size="small" effect="light">
+              {kind}
+            </ElTag>
+          )
+        }
+      }
+    }
+  },
+  {
     field: 'targetId',
     label: '目标ID',
     minWidth: 138,
@@ -200,7 +237,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       showOverflowTooltip: true,
       slots: {
         default: ({ row }: { row: BlackWhiteListItem }) => (
-          <ElLink type="primary" underline={false} onClick={() => goDetail(row)}>
+          <ElLink type="primary" underline={false} title="查看无人机详情" onClick={() => goDetail(row)}>
             {row.targetId}
           </ElLink>
         )
@@ -271,14 +308,14 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'targetType',
-    label: '目标类型',
+    label: targetAirframeLabel,
     minWidth: 92,
     search: {
       component: 'Select',
       componentProps: {
-        placeholder: '请选择目标类型',
+        placeholder: `请选择${targetAirframeLabel}`,
         clearable: true,
-        options: targetTypeOptions
+        options: targetAirframeOptions
       }
     },
     table: { showOverflowTooltip: true }

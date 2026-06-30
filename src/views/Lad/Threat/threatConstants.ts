@@ -19,12 +19,22 @@ export const threatTargetModelSelectOptions = [
 /** 列表筛选：首项「全部」表示不过滤 */
 export const threatTargetModelFilterOptions = [allOption, ...threatTargetModelOptions]
 
-/** 表单/筛选共用的威胁等级下拉（首项「全部」） */
-export function buildThreatLevelSelectOptions(entries: DictEntryItem[]) {
+/** 列表筛选：首项「全部」表示不过滤 */
+export function buildThreatLevelFilterOptions(entries: DictEntryItem[]) {
   return [
     allOption,
     ...entries.map((item) => ({ label: item.label, value: item.label }))
   ]
+}
+
+/** @deprecated 使用 buildThreatLevelFilterOptions */
+export const buildThreatLevelSelectOptions = buildThreatLevelFilterOptions
+
+/** 新增/编辑规则：威胁等级为判级结论，不含「全部」 */
+export function buildThreatLevelFormOptions(entries: DictEntryItem[]) {
+  return entries
+    .filter((item) => item.label !== '全部' && item.value !== '全部')
+    .map((item) => ({ label: item.label, value: item.label }))
 }
 
 export const UI = {
@@ -57,13 +67,14 @@ export const UI = {
   dialogSimulate: '模拟测试',
   simulateTabGeneral: '一般模式',
   simulateTabSwarm: '蜂群模式',
-  simulateGeneralPresetHint:
-    '默认参数可命中规则「保护区-自动驱离」；表单字段与编辑规则一致（不含规则名称），命中后在下方显示规则名称与处置结果。',
-  simulateSwarmPresetHint: '默认参数可命中蜂群反制类规则，用于对比一般模式与蜂群模式的评估差异。',
   simulateRun: '开始模拟',
-  simulateResultSuccess: '模拟命中规则',
-  simulateResultFail: '模拟未命中',
+  simulateResultSuccess: '威胁评估结论',
+  simulateResultFail: '未得出威胁评估结论',
   simulateMatchedRule: '命中规则',
+  simulateRuleTargetType: '名单类型',
+  simulateRuleTargetModel: '目标型号',
+  simulateRuleConditions: '判级条件',
+  simulateThreatLevelConclusion: '威胁等级（结论）',
   simulateDisposalMode: '处置模式',
   simulateTriggerStrategy: '预案触发策略',
   simulateDeviceAction: '设备动作',

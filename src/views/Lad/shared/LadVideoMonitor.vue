@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { ElMessage, ElTooltip } from 'element-plus'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { ElMessage, ElOption, ElSelect, ElTooltip } from 'element-plus'
 import { Icon } from '@/components/Icon'
 import deviceSiteCctv from '@/assets/imgs/device-site-cctv.png'
+import {
+  LAD_EO_DEFAULT_DURATION_SEC,
+  LAD_EO_PLAYBACK_RATES
+} from './ladVideoConstants'
 
 const props = withDefaults(
   defineProps<{
@@ -10,69 +14,168 @@ const props = withDefaults(
     locationLabel?: string
     /** 画面左上角机位说明 */
     cameraLabel?: string
-    imageSrc?: string
-    timestamp?: string
-    live?: boolean
-    showScreenshot?: boolean
-    /** 是否显示播放/暂停控制 */
-    showPlayback?: boolean
+    poster?: string
+    /** 录像起始时间（展示） */
+    recordStart?: string
+    /** 录像结束时间（展示） */
+    recordEnd?: string
+    /** 是否已接入光电设备（仅影响状态文案） */
+    linked?: boolean
     aspectRatio?: string
-    /** 截图文件前缀，默认「视频监控截图」 */
     screenshotNamePrefix?: string
-    /** 离线占位文案 */
-    emptyText?: string
+    /** 快进 / 快退步长（秒） */
+    seekStepSec?: number
   }>(),
   {
-    channelLabel: '值守监控-01',
-    locationLabel: '联动监控位',
-    cameraLabel: '固定机位 / 联动监控',
-    imageSrc: '',
-    timestamp: '',
-    live: true,
-    showScreenshot: true,
-    showPlayback: true,
+    channelLabel: '光电-01',
+    locationLabel: '事件关联区域',
+    cameraLabel: '光电跟踪 / 录像回放',
+    poster: '',
+    recordStart: '',
+    recordEnd: '',
+    linked: true,
     aspectRatio: '4 / 3',
-    screenshotNamePrefix: '视频监控截图',
-    emptyText: '暂无画面，接入视频源后展示'
+    screenshotNamePrefix: '光电录像截图',
+    seekStepSec: 10
   }
 )
 
 const frameRef = ref<HTMLImageElement | null>(null)
+const playing = ref(false)
 const capturing = ref(false)
-const playing = ref(true)
+const playbackRate = ref(1)
+const progressCurrent = ref(0)
+
+let tickTimer: ReturnType<typeof setInterval> | null = null
+
+const posterSrc = computed(() => props.poster || deviceSiteCctv)
+
+const progressDuration = computed(() => resolveRecordDurationSec(props.recordStart, props.recordEnd))
+
+const statusTag = computed(() => (props.linked ? 'REPLAY' : 'DEMO'))
+
+const statusLabel = computed(() => (props.linked ? '可回放' : '演示回放'))
+
+const recordRangeLabel = computed(() => {
+  if (props.recordStart && props.recordEnd) {
+    return `${props.recordStart} ~ ${props.recordEnd}`
+  }
+  if (props.recordStart) return `起 ${props.recordStart}`
+  return '事件关联录像'
+})
+
+const timeLabel = computed(
+  () => `${formatClock(progressCurrent.value)} / ${formatClock(progressDuration.value)}`
+)
+
+const playbackIcon = computed(() => (playing.value ? 'vi-ep:video-pause' : 'vi-ep:video-play'))
+const playbackLabel = computed(() => (playing.value ? '暂停' : '播放'))
+
+function resolveRecordDurationSec(start: string, end: string) {
+  if (start && end) {
+    const begin = Date.parse(start.replace(/-/g, '/'))
+    const finish = Date.parse(end.replace(/-/g, '/'))
+    if (Number.isFinite(begin) && Number.isFinite(finish) && finish > begin) {
+      return Math.round((finish - begin) / 1000)
+    }
+  }
+  return LAD_EO_DEFAULT_DURATION_SEC
+}
+
+function formatClock(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '00:00'
+  const total = Math.floor(seconds)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  const mm = String(m).padStart(2, '0')
+  const ss = String(s).padStart(2, '0')
+  return h > 0 ? `${String(h).padStart(2, '0')}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+function clampProgress(value: number) {
+  return Math.max(0, Math.min(progressDuration.value, value))
+}
+
+function stopTick() {
+  if (tickTimer) {
+    clearInterval(tickTimer)
+    tickTimer = null
+  }
+}
+
+function startTick() {
+  stopTick()
+  tickTimer = setInterval(() => {
+    const next = progressCurrent.value + playbackRate.value
+    if (next >= progressDuration.value) {
+      progressCurrent.value = progressDuration.value
+      playing.value = false
+      stopTick()
+      return
+    }
+    progressCurrent.value = next
+  }, 1000)
+}
+
+function seekTo(time: number, autoPlay = false) {
+  progressCurrent.value = clampProgress(time)
+  if (progressCurrent.value >= progressDuration.value) {
+    playing.value = false
+    stopTick()
+    return
+  }
+  if (autoPlay) {
+    playing.value = true
+    startTick()
+  }
+}
+
+watch(playing, (isPlaying) => {
+  if (isPlaying) startTick()
+  else stopTick()
+})
 
 watch(
-  () => props.live,
-  (online) => {
-    if (online) playing.value = true
+  () => [props.recordStart, props.recordEnd] as const,
+  () => {
+    progressCurrent.value = clampProgress(progressCurrent.value)
+    if (playing.value && progressCurrent.value >= progressDuration.value) {
+      playing.value = false
+    }
   }
 )
 
+onBeforeUnmount(() => stopTick())
+
 const togglePlayback = () => {
-  if (!props.live) {
-    ElMessage.warning('光电离线，无法播放')
-    return
+  if (progressCurrent.value >= progressDuration.value) {
+    progressCurrent.value = 0
   }
   playing.value = !playing.value
 }
 
-const playbackLabel = computed(() => (playing.value ? '暂停' : '播放'))
-const playbackIcon = computed(() => (playing.value ? 'vi-ep:video-pause' : 'vi-ep:video-play'))
+const seekStart = () => seekTo(0, true)
 
-const poster = computed(() => props.imageSrc || deviceSiteCctv)
+const seekEnd = () => {
+  progressCurrent.value = progressDuration.value
+  playing.value = false
+  stopTick()
+}
 
-const displayTime = computed(() => {
-  if (props.timestamp) return props.timestamp
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
-})
+const rewind = () => {
+  seekTo(progressCurrent.value - props.seekStepSec)
+}
+
+const forward = () => {
+  seekTo(progressCurrent.value + props.seekStepSec)
+}
+
+const onRateChange = (rate: number) => {
+  playbackRate.value = rate
+}
 
 const captureScreenshot = async () => {
-  if (!props.live) {
-    ElMessage.warning('监控离线，无法截图')
-    return
-  }
   const img = frameRef.value
   if (!img || !img.complete) {
     ElMessage.warning('画面尚未就绪，请稍后再试')
@@ -97,7 +200,7 @@ const captureScreenshot = async () => {
     ctx.fillRect(0, height - 32, width, 32)
     ctx.fillStyle = '#d4f4ea'
     ctx.font = '14px monospace'
-    ctx.fillText(`${props.channelLabel} · ${displayTime.value}`, 12, height - 10)
+    ctx.fillText(`${props.channelLabel} · ${timeLabel.value}`, 12, height - 10)
 
     await new Promise<void>((resolve, reject) => {
       canvas.toBlob((blob) => {
@@ -127,59 +230,102 @@ const captureScreenshot = async () => {
   <div class="lad-video-monitor">
     <div class="lad-video-monitor__topbar">
       <span>
-        <i class="lad-video-monitor__live-dot" :class="{ 'is-offline': !live }"></i>
-        {{ live ? 'LIVE' : 'OFFLINE' }} · {{ channelLabel }}
+        <i class="lad-video-monitor__replay-dot" :class="{ 'is-demo': !linked }"></i>
+        {{ statusTag }} · {{ channelLabel }}
       </span>
       <span>{{ locationLabel }}</span>
     </div>
 
     <div class="lad-video-monitor__view" :style="{ aspectRatio }">
-      <template v-if="live">
-        <img
-          ref="frameRef"
-          :src="poster"
-          alt="视频监控画面"
-          class="lad-video-monitor__frame"
-          :class="{ 'is-paused': !playing }"
-          crossorigin="anonymous"
-        />
-        <div class="lad-video-monitor__grain" :class="{ 'is-paused': !playing }"></div>
-        <div class="lad-video-monitor__camera-label">{{ cameraLabel }}</div>
-        <div class="lad-video-monitor__timestamp">{{ displayTime }}</div>
-        <div v-if="!playing" class="lad-video-monitor__paused-mask">已暂停</div>
-      </template>
-      <div v-else class="lad-video-monitor__empty">{{ emptyText }}</div>
+      <img
+        ref="frameRef"
+        :src="posterSrc"
+        alt="光电录像画面"
+        class="lad-video-monitor__frame"
+        :class="{ 'is-paused': !playing }"
+        crossorigin="anonymous"
+      />
+      <div class="lad-video-monitor__grain" :class="{ 'is-paused': !playing }"></div>
+      <div class="lad-video-monitor__camera-label">{{ cameraLabel }}</div>
+      <div v-if="!linked" class="lad-video-monitor__demo-badge">演示录像</div>
+      <div v-if="!playing" class="lad-video-monitor__paused-mask">已暂停</div>
     </div>
 
-    <div v-if="showPlayback || showScreenshot" class="lad-video-monitor__controls">
-      <ElTooltip v-if="showPlayback" :content="playbackLabel" placement="top">
-        <button
-          type="button"
-          class="lad-video-monitor__action-btn"
-          aria-label="播放暂停"
-          @click="togglePlayback"
-        >
-          <Icon :icon="playbackIcon" :size="16" />
-          <span>{{ playbackLabel }}</span>
-        </button>
-      </ElTooltip>
-      <ElTooltip v-if="showScreenshot" content="截图" placement="top">
-        <button
-          type="button"
-          class="lad-video-monitor__action-btn"
-          :disabled="capturing || !live"
-          aria-label="截图"
-          @click="captureScreenshot"
-        >
-          <Icon icon="vi-ep:camera" :size="16" />
-          <span>截图</span>
-        </button>
-      </ElTooltip>
+    <div class="lad-video-monitor__controls">
+      <div class="lad-video-monitor__controls-title">录像回放控制</div>
+      <div class="lad-video-monitor__controls-row">
+        <span class="lad-video-monitor__time">{{ timeLabel }}</span>
+
+        <ElTooltip content="回到开始" placement="top">
+          <button type="button" class="lad-video-monitor__action-btn" @click="seekStart">
+            <Icon icon="vi-ep:d-arrow-left" :size="16" />
+            <span>开始</span>
+          </button>
+        </ElTooltip>
+
+        <ElTooltip :content="`快退 ${seekStepSec} 秒`" placement="top">
+          <button type="button" class="lad-video-monitor__action-btn" @click="rewind">
+            <Icon icon="vi-ep:back" :size="16" />
+            <span>快退</span>
+          </button>
+        </ElTooltip>
+
+        <ElTooltip :content="playbackLabel" placement="top">
+          <button type="button" class="lad-video-monitor__action-btn" @click="togglePlayback">
+            <Icon :icon="playbackIcon" :size="16" />
+            <span>{{ playbackLabel }}</span>
+          </button>
+        </ElTooltip>
+
+        <ElTooltip :content="`快进 ${seekStepSec} 秒`" placement="top">
+          <button type="button" class="lad-video-monitor__action-btn" @click="forward">
+            <Icon icon="vi-ep:right" :size="16" />
+            <span>快进</span>
+          </button>
+        </ElTooltip>
+
+        <ElTooltip content="跳到结束并暂停" placement="top">
+          <button type="button" class="lad-video-monitor__action-btn" @click="seekEnd">
+            <Icon icon="vi-ep:d-arrow-right" :size="16" />
+            <span>结束</span>
+          </button>
+        </ElTooltip>
+
+        <div class="lad-video-monitor__rate">
+          <span class="lad-video-monitor__rate-label">速率</span>
+          <ElSelect
+            :model-value="playbackRate"
+            size="small"
+            class="lad-video-monitor__rate-select"
+            @change="onRateChange"
+          >
+            <ElOption
+              v-for="rate in LAD_EO_PLAYBACK_RATES"
+              :key="rate"
+              :label="`${rate}x`"
+              :value="rate"
+            />
+          </ElSelect>
+        </div>
+
+        <ElTooltip content="截图" placement="top">
+          <button
+            type="button"
+            class="lad-video-monitor__action-btn"
+            :disabled="capturing"
+            @click="captureScreenshot"
+          >
+            <Icon icon="vi-ep:camera" :size="16" />
+            <span>截图</span>
+          </button>
+        </ElTooltip>
+      </div>
     </div>
 
     <div class="lad-video-monitor__footer">
       <span>通道：{{ channelLabel }}</span>
-      <span>画面状态：{{ live ? '正常' : '离线' }}</span>
+      <span>录像时段：{{ recordRangeLabel }}</span>
+      <span>状态：{{ statusLabel }}</span>
     </div>
   </div>
 </template>
@@ -206,24 +352,38 @@ const captureScreenshot = async () => {
   }
 
   &__footer {
+    flex-wrap: wrap;
     justify-content: flex-start;
     gap: 16px;
     color: #8fb5ac;
   }
 
-  &__live-dot {
+  &__replay-dot {
     display: inline-block;
     width: 6px;
     height: 6px;
     margin-right: 5px;
     border-radius: 50%;
-    background: #42e3b4;
-    box-shadow: 0 0 6px #42e3b4;
+    background: #5eb8ff;
+    box-shadow: 0 0 6px #5eb8ff;
 
-    &.is-offline {
-      background: #909399;
-      box-shadow: none;
+    &.is-demo {
+      background: #e6a23c;
+      box-shadow: 0 0 6px #e6a23c;
     }
+  }
+
+  &__demo-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(230, 162, 60, 0.88);
+    color: #1a1205;
+    font: 10px monospace;
+    pointer-events: none;
   }
 
   &__view {
@@ -277,10 +437,11 @@ const captureScreenshot = async () => {
     pointer-events: none;
   }
 
-  &__camera-label,
-  &__timestamp {
+  &__camera-label {
     position: absolute;
     z-index: 2;
+    top: 8px;
+    left: 8px;
     padding: 3px 6px;
     background: rgba(4, 14, 18, 0.58);
     color: #d4f4ea;
@@ -288,38 +449,62 @@ const captureScreenshot = async () => {
     pointer-events: none;
   }
 
-  &__camera-label {
-    top: 8px;
-    left: 8px;
-  }
-
-  &__timestamp {
-    right: 8px;
-    bottom: 8px;
+  &__time {
+    min-width: 88px;
+    padding: 4px 8px;
+    border: 1px solid rgba(188, 231, 220, 0.2);
+    border-radius: 4px;
+    background: rgba(4, 14, 18, 0.55);
+    color: #d4f4ea;
+    font: 11px monospace;
   }
 
   &__controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
     padding: 8px 10px;
     background: #0a1c22;
     border-top: 1px solid #273e49;
   }
 
-  &__empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    min-height: 160px;
-    padding: 16px;
+  &__controls-title {
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 600;
     color: #8fb5ac;
-    font-size: 12px;
-    text-align: center;
-    background: #101820;
+    letter-spacing: 0.06em;
+  }
+
+  &__controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__rate {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 4px;
+  }
+
+  &__rate-label {
+    font-size: 11px;
+    color: #8fb5ac;
+  }
+
+  &__rate-select {
+    width: 78px;
+
+    :deep(.el-select__wrapper) {
+      min-height: 26px;
+      background: rgba(4, 14, 18, 0.72);
+      box-shadow: 0 0 0 1px rgba(188, 231, 220, 0.35) inset;
+    }
+
+    :deep(.el-select__selected-item) {
+      color: #d4f4ea;
+      font-size: 11px;
+    }
   }
 
   &__action-btn {

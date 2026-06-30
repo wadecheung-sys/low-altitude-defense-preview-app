@@ -95,6 +95,9 @@ export interface ThreatSimulateInput {
   rainfall?: number
   /** 蜂群模式模拟时置为 true */
   swarmMode?: boolean
+  /** 一般模式：模拟表单中的目标属性条件（含且/或关系） */
+  simulateConditions?: RuleCondition[]
+  simulateConditionLogic?: RuleConditionLogic
 }
 
 export interface ThreatSimulateResult {

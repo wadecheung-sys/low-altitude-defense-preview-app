@@ -72,7 +72,9 @@ function onPropertyChange(condition: RuleCondition) {
 
 function addCondition() {
   const last = conditions.value[conditions.value.length - 1]
-  if (props.mode === 'rule' && last && !last.nextLogic) last.nextLogic = 'and'
+  if (last && !last.nextLogic) {
+    last.nextLogic = conditionLogic.value === 'or' ? 'or' : 'and'
+  }
   conditions.value.push(newCondition())
 }
 
@@ -149,7 +151,7 @@ onMounted(async () => {
 
       <ElLink type="danger" @click="removeCondition(condition.id)">删除</ElLink>
       <ElSelect
-        v-if="mode === 'rule' && index < conditions.length - 1"
+        v-if="index < conditions.length - 1"
         v-model="condition.nextLogic"
         class="threat-condition-row__logic"
       >

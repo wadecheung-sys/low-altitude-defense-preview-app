@@ -5,11 +5,17 @@ import { regionTypeLabel } from '../Area/areaConstants'
 
 export const LAD_DICT_AREA_REGION_TYPE = 'area_region_type'
 export const LAD_DICT_THREAT_LEVEL = 'threat_level'
+export const LAD_DICT_COUNTERMEASURE_ACTION = 'countermeasure_action'
 
 export function dictEntriesToOptions(entries: DictEntryItem[], withAll = false) {
   const opts = entries.map((e) => ({ label: e.label, value: e.value }))
   if (withAll) return [{ label: '全部', value: '全部' }, ...opts]
   return opts
+}
+
+export function dictEntryLabel(entries: DictEntryItem[], value?: string): string {
+  if (!value) return ''
+  return entries.find((entry) => entry.value === value)?.label || value
 }
 
 /** 区域类型展示：优先字典项，回退区域管理内置元数据 */

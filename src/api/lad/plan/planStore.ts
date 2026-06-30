@@ -1,5 +1,4 @@
-import { queryDeviceGroupList } from '@/api/lad/device-group/groupStore'
-import { functionLabel, resolveDeviceFunction } from './planDeviceCatalog'
+import { functionLabel } from './planDeviceCatalog'
 import {
   formatDisposalModeDetail,
   normalizePlanDisposal,
@@ -8,12 +7,17 @@ import {
 } from './planDisposal'
 import {
   formatTriggerCondition,
+  formatTriggerRuleAreaLevel,
   formatTriggerRulesSummary,
+  findMatchingTriggerRule,
   normalizeTriggerRule,
   resolvePlanTriggerRule
 } from './planTrigger'
+import { formatTriggerRuleWeather } from './planWeatherConditions'
 import type {
   PlanExecutionPayload,
+  PlanSimulateInput,
+  PlanSimulateResult,
   PlanStrategy,
   PlanStrategyListResult,
   PlanStrategyQuery,
@@ -21,6 +25,9 @@ import type {
   PlanTriggerRule
 } from './types'
 import type { PlanTriggerContext } from './planTrigger'
+import { PLAN_DEFAULT_PRIORITY, normalizePlanPriority } from './planDefaults'
+import { matchesPlanThreatLevel, isSimulateThreatLevelAll } from './planThreatLevel'
+import { THREAT_LEVEL_ALL } from '@/api/lad/threat/threatLevelUtils'
 
 function formatNow() {
   const d = new Date()
@@ -40,11 +47,6 @@ function generatePlanCode() {
   return code
 }
 
-function groupMap() {
-  const { list } = queryDeviceGroupList({ pageIndex: 1, pageSize: 999 })
-  return new Map(list.map((item) => [item.id, item]))
-}
-
 type SeedInput = Omit<
   PlanStrategy,
   | 'triggerRules'
@@ -60,13 +62,33 @@ type SeedInput = Omit<
   triggerRules: PlanTriggerRule[]
 }
 
-export const PLAN_STORE_VERSION = 19
-export const PLAN_DEFAULT_PRIORITY = 500
+export { PLAN_DEFAULT_PRIORITY } from './planDefaults'
+export const PLAN_STORE_VERSION = 21
 
 function normalizePriority(value: unknown) {
-  const priority = Number(value)
-  if (!Number.isFinite(priority)) return PLAN_DEFAULT_PRIORITY
-  return Math.min(999, Math.max(0, Math.trunc(priority)))
+  return normalizePlanPriority(value)
+}
+
+const legacyCountermeasureMigration: Record<
+  string,
+  Pick<PlanTriggerRule, 'deviceFunction' | 'deviceAction'>
+> = {
+  alarm_sound_light: { deviceFunction: 'sound_light_expulsion', deviceAction: '声光驱离' },
+  eo_track_lock: { deviceFunction: 'navigation_spoofing', deviceAction: '导航诱骗' },
+  eo_evidence_tracking: { deviceFunction: 'navigation_spoofing', deviceAction: '导航诱骗' },
+  radar_track: { deviceFunction: 'radio_jamming', deviceAction: '无线电干扰' },
+  fusion_monitor_report: { deviceFunction: 'sound_light_expulsion', deviceAction: '声光驱离' }
+}
+
+function sanitizeTriggerRule(rule: PlanTriggerRule): PlanTriggerRule {
+  const migrated = legacyCountermeasureMigration[rule.deviceFunction]
+  return {
+    ...rule,
+    ...migrated,
+    deviceGroupId: '',
+    deviceGroupName: '',
+    deviceGroupType: ''
+  }
 }
 
 const seed: SeedInput[] = [
@@ -88,10 +110,17 @@ const seed: SeedInput[] = [
       {
         id: 'ptr-plan-001-1',
         ruleName: '晴天默认驱离',
+        sortOrder: 1,
         weatherFactor: '晴天',
-        deviceGroupId: 'dg-1002',
-        deviceGroupName: '核心区反制处置组',
-        deviceGroupType: '反制组',
+        weatherConditionLogic: 'and',
+        weatherConditions: [
+          { id: 'wc-p001-1', property: 'temperature', operator: '>', value: '20' },
+          { id: 'wc-p001-2', property: 'humidity', operator: '<', value: '90', nextLogic: 'and' }
+        ],
+        areaLevel: ['ar-10001'],
+        deviceGroupId: '',
+        deviceGroupName: '',
+        deviceGroupType: '',
         deviceFunction: 'radio_jamming',
         deviceAction: '无线电干扰',
         enabled: true
@@ -99,12 +128,13 @@ const seed: SeedInput[] = [
       {
         id: 'ptr-plan-001-2',
         ruleName: '兜底人工复核告警',
+        sortOrder: 2,
         weatherFactor: '全部',
-        deviceGroupId: 'dg-1003',
-        deviceGroupName: '南门光电观察组',
-        deviceGroupType: '光电协同组',
-        deviceFunction: 'alarm_sound_light',
-        deviceAction: '声光警示',
+        deviceGroupId: '',
+        deviceGroupName: '',
+        deviceGroupType: '',
+        deviceFunction: 'sound_light_expulsion',
+        deviceAction: '声光驱离',
         enabled: true
       }
     ]
@@ -127,12 +157,15 @@ const seed: SeedInput[] = [
       {
         id: 'ptr-plan-002-1',
         ruleName: '雨天迫降反制',
+        sortOrder: 1,
         weatherFactor: '雨天',
-        deviceGroupId: 'dg-1002',
-        deviceGroupName: '核心区反制处置组',
-        deviceGroupType: '反制组',
-        deviceFunction: 'forced_landing',
-        deviceAction: '迫降',
+        weatherConditions: [{ id: 'wc-p002-1', property: 'rainfall', operator: '>', value: '5' }],
+        areaLevel: ['ar-10001', 'ar-10002'],
+        deviceGroupId: '',
+        deviceGroupName: '',
+        deviceGroupType: '',
+        deviceFunction: 'sound_light_expulsion',
+        deviceAction: '声光驱离',
         enabled: true
       }
     ]
@@ -348,8 +381,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'link_disruption',
-        deviceAction: '链路阻断',
+        deviceFunction: 'radio_jamming',
+        deviceAction: '无线电干扰',
         enabled: true
       }
     ]
@@ -414,8 +447,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'hpm_suppression',
-        deviceAction: '高功率微波压制',
+        deviceFunction: 'microwave_strike',
+        deviceAction: '微波打击',
         enabled: true
       }
     ]
@@ -441,8 +474,8 @@ const seed: SeedInput[] = [
         deviceGroupId: 'dg-1002',
         deviceGroupName: '核心区反制处置组',
         deviceGroupType: '反制组',
-        deviceFunction: 'hpm_suppression',
-        deviceAction: '高功率微波压制',
+        deviceFunction: 'microwave_strike',
+        deviceAction: '微波打击',
         enabled: true
       }
     ]
@@ -479,7 +512,9 @@ const seed: SeedInput[] = [
 
 function enrichPlan(plan: SeedInput | PlanStrategy): PlanStrategy {
   const triggerRules = (plan.triggerRules || []).map((rule, index) =>
-    normalizeTriggerRule({ ...rule, sortOrder: Number(rule.sortOrder) || index + 1 })
+    normalizeTriggerRule(
+      sanitizeTriggerRule({ ...rule, sortOrder: Number(rule.sortOrder) || index + 1 })
+    )
   )
   const primary = resolvePlanTriggerRule({ triggerRules }) || triggerRules[0]
   const disposal = normalizePlanDisposal({ ...plan, id: plan.id })
@@ -615,22 +650,17 @@ function normalizeSaveBody(body: PlanStrategySavePayload): PlanStrategySavePaylo
   if (!body.triggerRules?.length) {
     throw new Error('请至少配置一条触发策略规则')
   }
-  const groups = groupMap()
   const names = new Set<string>()
   const triggerRules = body.triggerRules.map((rule, index) => {
     const name = (rule.ruleName || '').trim()
     if (!name) throw new Error('请填写每条触发规则的名称')
     if (names.has(name)) throw new Error(`触发规则名称“${name}”重复`)
     names.add(name)
-    const group = groups.get(rule.deviceGroupId)
-    if (!group) throw new Error('请选择有效的执行设备组')
     return normalizeTriggerRule({
       ...rule,
       id: rule.id || `ptr-new-${index + 1}`,
       ruleName: name,
       sortOrder: Number(rule.sortOrder) || index + 1,
-      deviceGroupName: group.groupName,
-      deviceGroupType: group.groupType,
       enabled: rule.enabled !== false
     })
   })
@@ -694,12 +724,70 @@ export function togglePlanEnabled(id: string, enabled: boolean) {
   allPlans[idx] = { ...allPlans[idx], enabled, updatedAt: formatNow() }
 }
 
+export function simulatePlan(input: PlanSimulateInput): PlanSimulateResult {
+  syncPlansFromSeed()
+  const threatLevel = input.threatLevel?.trim()
+  if (!threatLevel) {
+    return {
+      matched: false,
+      threatLevel: THREAT_LEVEL_ALL,
+      message: '请先选择威胁等级'
+    }
+  }
+
+  const ctx: PlanTriggerContext = {
+    areaLevel: input.areaLevel,
+    temperature: input.temperature,
+    humidity: input.humidity,
+    windPower: input.windPower,
+    rainfall: input.rainfall
+  }
+
+  const enabledPlans = allPlans
+    .filter((plan) => plan.enabled && matchesPlanThreatLevel(plan.threatLevel, threatLevel))
+    .sort((a, b) => b.priority - a.priority)
+
+  for (const plan of enabledPlans) {
+    const enriched = enrichPlan(plan)
+    const triggerRule = findMatchingTriggerRule(enriched, ctx)
+    if (!triggerRule) continue
+
+    const fnLabel = functionLabel(triggerRule.deviceGroupType, triggerRule.deviceFunction)
+    const actionText = triggerRule.deviceAction || fnLabel
+
+    return {
+      matched: true,
+      threatLevel,
+      planName: enriched.planName,
+      planCode: enriched.planCode,
+      planThreatLevel: enriched.threatLevel || '全部',
+      disposalMode: enriched.disposalMode,
+      disposalModeLabel: enriched.disposalModeLabel,
+      priority: normalizePlanPriority(enriched.priority),
+      triggerRuleName: triggerRule.ruleName,
+      triggerAreaLevel: formatTriggerRuleAreaLevel(triggerRule),
+      triggerWeatherSummary: formatTriggerRuleWeather(triggerRule),
+      deviceAction: triggerRule.deviceAction,
+      deviceFunctionLabel: fnLabel,
+      message: `命中预案「${enriched.planName}」，触发策略「${triggerRule.ruleName}」，反制动作「${actionText}」`
+    }
+  }
+
+  return {
+    matched: false,
+    threatLevel,
+    message: isSimulateThreatLevelAll(threatLevel)
+      ? '未匹配到符合条件的启用预案'
+      : `威胁等级「${threatLevel}」下未匹配到符合条件的启用预案`
+  }
+}
+
 export function formatPlanExecBrief(plan: PlanStrategy, ctx: PlanTriggerContext = {}) {
   const enriched = enrichPlan(plan)
   const matched = resolvePlanTriggerRule(enriched, ctx) || enriched.triggerRules[0]
-  const fn = functionLabel(matched.deviceGroupType, matched.deviceFunction)
+  const fn = functionLabel('', matched.deviceFunction)
   const rulePart = enriched.triggerRules.length > 1 ? `（${matched.ruleName}）` : ''
-  return `${matched.deviceGroupName} / ${fn}${rulePart}`
+  return `${fn}${rulePart}`
 }
 
 export { resolvePlanTriggerRule } from './planTrigger'
