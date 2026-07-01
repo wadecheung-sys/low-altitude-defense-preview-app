@@ -13,24 +13,34 @@ const PROTOTYPE_HEIGHT = 1080
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/index.html`
 const BACKEND_ENTRY_RESET_DELAY = 240
 
-const DRONE_ICON_IDS = ['u198', 'u199', 'u200'] as const
-const DRONE_DETAIL_IDS = ['u209', 'u203', 'u201', 'u206'] as const
-const DRONE_LINE_IDS = ['u196', 'u193', 'u194', 'u195'] as const
-const DRONE_ICON_DETAIL_MAP: Record<(typeof DRONE_ICON_IDS)[number], (typeof DRONE_DETAIL_IDS)[number]> =
-  {
-    u198: 'u209',
-    u199: 'u203',
-    u200: 'u201'
-  }
-const DRONE_ICON_LINE_MAP: Record<(typeof DRONE_ICON_IDS)[number], (typeof DRONE_LINE_IDS)[number]> =
-  {
-    u198: 'u196',
-    u199: 'u193',
-    u200: 'u194'
-  }
-
 const HISTORY_EVENT_LINK_ID = 'u111'
 const MESSAGE_CENTER_LINK_ID = 'u177'
+
+const MAP_TARGET_BINDINGS = [
+  { iconId: 'u191', detailId: 'u199', lineId: 'u189', label: '选择无人机目标' },
+  { iconId: 'u192', detailId: 'u196', lineId: 'u186', label: '选择无人机目标' },
+  { iconId: 'u193', detailId: 'u194', lineId: 'u187', label: '选择无人机目标' },
+  { iconId: 'u184', detailId: 'u202', lineId: 'u188', label: '选择飞鸟目标' }
+] as const
+
+const DETAIL_PANEL_IDS = MAP_TARGET_BINDINGS.map((item) => item.detailId)
+const LINE_IDS = MAP_TARGET_BINDINGS.map((item) => item.lineId)
+const ICON_IDS = MAP_TARGET_BINDINGS.map((item) => item.iconId)
+
+const DETAIL_CLOSE_BUTTON_MAP: Record<string, string> = {
+  u199: 'u200',
+  u196: 'u197',
+  u194: 'u195',
+  u202: 'u203'
+}
+
+const CLOCK_ELEMENT_IDS = {
+  weekday: 'u6',
+  date: 'u7',
+  time: 'u8'
+} as const
+
+const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
 type Cleanup = () => void
 
@@ -45,6 +55,7 @@ const stageScale = ref(1)
 
 let bindRetryTimer: number | undefined
 let resetEntryTimer: number | undefined
+let clockTimer: number | undefined
 let backendWarmupPromise: Promise<unknown> | undefined
 let cleanupPrototypeBindings: Cleanup | undefined
 
@@ -137,38 +148,45 @@ function setElementSelected(doc: Document, id: string, selected: boolean) {
   doc.getElementById(`${id}_div`)?.classList.toggle('selected', selected)
 }
 
-function showDetailPanel(doc: Document, panelId: string) {
-  for (const id of DRONE_DETAIL_IDS) {
-    const panel = doc.getElementById(id)
-    if (!panel) continue
+function setElementVisible(doc: Document, id: string, visible: boolean) {
+  const element = doc.getElementById(id)
+  if (!element) return
 
-    const visible = id === panelId
-    panel.style.display = visible ? '' : 'none'
-    panel.style.visibility = visible ? 'visible' : 'hidden'
-    panel.classList.toggle('ax_default_hidden', !visible)
-    setElementSelected(doc, id, visible)
+  element.style.display = visible ? '' : 'none'
+  element.style.visibility = visible ? 'visible' : 'hidden'
+  element.classList.toggle('ax_default_hidden', !visible)
+  setElementSelected(doc, id, visible)
+}
+
+function showDetailPanel(doc: Document, panelId: string | null) {
+  for (const id of DETAIL_PANEL_IDS) {
+    setElementVisible(doc, id, id === panelId)
   }
 }
 
-function showDroneLine(doc: Document, lineId: string) {
-  for (const id of DRONE_LINE_IDS) {
-    const line = doc.getElementById(id)
-    if (!line) continue
-
-    const visible = id === lineId
-    line.style.display = visible ? '' : 'none'
-    line.style.visibility = visible ? 'visible' : 'hidden'
-    line.classList.toggle('ax_default_hidden', !visible)
-    setElementSelected(doc, id, visible)
+function showTargetLine(doc: Document, lineId: string | null) {
+  for (const id of LINE_IDS) {
+    setElementVisible(doc, id, id === lineId)
   }
 }
 
-function selectDroneIcon(doc: Document, iconId: (typeof DRONE_ICON_IDS)[number]) {
-  for (const id of DRONE_ICON_IDS) {
-    setElementSelected(doc, id, id === iconId)
+function clearMapTargetSelection(doc: Document) {
+  for (const id of ICON_IDS) {
+    setElementSelected(doc, id, false)
   }
-  showDetailPanel(doc, DRONE_ICON_DETAIL_MAP[iconId])
-  showDroneLine(doc, DRONE_ICON_LINE_MAP[iconId])
+  showDetailPanel(doc, null)
+  showTargetLine(doc, null)
+}
+
+function selectMapTarget(
+  doc: Document,
+  binding: (typeof MAP_TARGET_BINDINGS)[number]
+) {
+  for (const item of MAP_TARGET_BINDINGS) {
+    setElementSelected(doc, item.iconId, item.iconId === binding.iconId)
+  }
+  showDetailPanel(doc, binding.detailId)
+  showTargetLine(doc, binding.lineId)
 }
 
 function bindClickableElement(
@@ -193,6 +211,29 @@ function bindClickableElement(
 
   element.addEventListener('click', handleClick, true)
   return () => element.removeEventListener('click', handleClick, true)
+}
+
+function updateHeaderClock(doc: Document) {
+  const now = new Date()
+  const weekdayEl = doc.getElementById(CLOCK_ELEMENT_IDS.weekday)?.querySelector('.text span')
+  const dateEl = doc.getElementById(CLOCK_ELEMENT_IDS.date)?.querySelector('.text span')
+  const timeEl = doc.getElementById(CLOCK_ELEMENT_IDS.time)?.querySelector('.text span')
+
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+
+  if (weekdayEl) weekdayEl.textContent = WEEKDAY_LABELS[now.getDay()]
+  if (dateEl) dateEl.textContent = `${year}.${month}.${day}`
+  if (timeEl) timeEl.textContent = `${hours}:${minutes}`
+}
+
+function startHeaderClock(doc: Document) {
+  updateHeaderClock(doc)
+  window.clearInterval(clockTimer)
+  clockTimer = window.setInterval(() => updateHeaderClock(doc), 30_000)
 }
 
 function bindPrototypeInteractions() {
@@ -260,19 +301,33 @@ function bindPrototypeInteractions() {
   )
   if (messageLinkCleanup) cleanups.push(messageLinkCleanup)
 
-  for (const iconId of DRONE_ICON_IDS) {
-    const cleanup = bindClickableElement(doc, iconId, () => selectDroneIcon(doc, iconId), {
-      role: 'button',
-      ariaLabel: '选择无人机目标'
-    })
+  for (const binding of MAP_TARGET_BINDINGS) {
+    const cleanup = bindClickableElement(
+      doc,
+      binding.iconId,
+      () => selectMapTarget(doc, binding),
+      { role: 'button', ariaLabel: binding.label }
+    )
+    if (cleanup) cleanups.push(cleanup)
+  }
+
+  for (const [detailId, closeId] of Object.entries(DETAIL_CLOSE_BUTTON_MAP)) {
+    const cleanup = bindClickableElement(
+      doc,
+      closeId,
+      () => clearMapTargetSelection(doc),
+      { role: 'button', ariaLabel: `关闭${detailId === 'u202' ? '飞鸟' : '无人机'}详情` }
+    )
     if (cleanup) cleanups.push(cleanup)
   }
 
   if (!cleanups.length) return false
 
-  selectDroneIcon(doc, DRONE_ICON_IDS[0])
+  selectMapTarget(doc, MAP_TARGET_BINDINGS[0])
+  startHeaderClock(doc)
 
   cleanupPrototypeBindings = () => {
+    window.clearInterval(clockTimer)
     cleanups.forEach((cleanup) => cleanup())
   }
 
@@ -314,6 +369,7 @@ onBeforeUnmount(() => {
   cleanupPrototypeBindings = undefined
   window.clearTimeout(bindRetryTimer)
   window.clearTimeout(resetEntryTimer)
+  window.clearInterval(clockTimer)
   window.removeEventListener('resize', updateStageScale)
 })
 </script>

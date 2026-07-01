@@ -83,9 +83,8 @@ export const MESSAGE_PLACEHOLDER_SAMPLES: Record<
   '驱离/自离': [
     {
       时间: '2026-06-30 11:42:18',
-      目标型号: 'DJI Mavic 3T',
-      目标ID: 'TG-2024-0006',
-      方位角: '东北 45°',
+      编码: 'TG-2024-0006',
+      '无人机/非无人机': '无人机',
       逗留时间: '00:12:35'
     }
   ],
@@ -119,13 +118,6 @@ export const MESSAGE_PLACEHOLDER_SAMPLES: Record<
       设备名称: '核心区光电 P-01',
       设备ID: 'DEV-P01',
       故障类型: '云台自检失败'
-    }
-  ],
-  规则缺失: [
-    {
-      时间: '2026-06-30 09:48:11',
-      目标型号: 'DJI Mini 4 Pro',
-      目标ID: 'TG-2024-0009'
     }
   ]
 }

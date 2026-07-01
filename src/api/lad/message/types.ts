@@ -1,4 +1,4 @@
-import type { EventAttributeEventType, EventOwnership } from '@/api/lad/system/types'
+import type { MessageEventCategory } from '@/views/Lad/Message/messageConstants'
 
 export interface MessageDescriptionSegment {
   text: string
@@ -7,25 +7,16 @@ export interface MessageDescriptionSegment {
 
 export interface MessageCenterItem {
   id: string
-  /** 与事件属性配置「事件ID」一致 */
-  eventId: string
-  /** 与事件属性配置「事件名称」一致 */
-  eventName: string
-  eventOwnership: EventOwnership
-  eventType: EventAttributeEventType
-  /** 消息推送时间 */
+  eventName: MessageEventCategory
   pushedAt: string
-  descriptionSegments: MessageDescriptionSegment[]
+  contentSegments: MessageDescriptionSegment[]
 }
 
 export interface MessageCenterQuery {
   pageIndex?: number
   pageSize?: number
-  eventId?: string
-  eventName?: string
-  eventOwnership?: EventOwnership
-  eventType?: EventAttributeEventType
-  description?: string
+  eventName?: MessageEventCategory | string
+  content?: string
   pushedAtStart?: string
   pushedAtEnd?: string
 }

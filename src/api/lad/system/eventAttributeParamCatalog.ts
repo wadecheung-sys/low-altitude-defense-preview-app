@@ -16,7 +16,8 @@ export const MESSAGE_VARIABLE_PARAMS: MessageVariableParam[] = [
   { param: '{目标ID}', code: 'targetId' },
   { param: '{规则名称}', code: 'ruleName' },
   { param: '{反制动作}', code: 'countermeasureAction' },
-  { param: '{方位角}', code: 'bearing' },
+  { param: '{编码}', code: 'targetCode' },
+  { param: '{无人机/非无人机}', code: 'uavKind' },
   { param: '{逗留时间}', code: 'dwellDuration' },
   { param: '{经纬度}', code: 'coordinates' },
   { param: '{故障类型}', code: 'faultType' }

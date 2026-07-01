@@ -16,7 +16,7 @@ function shiftPushedAt(baseTime: string, dayOffset: number): string {
   )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-/** 基于事件属性配置（仅开启告警项）生成消息中心种子 */
+/** 基于内置消息模板生成消息中心演示数据 */
 export function buildMessageCenterSeed(): MessageCenterItem[] {
   const prototypes: Omit<MessageCenterItem, 'id'>[] = []
 
@@ -28,12 +28,9 @@ export function buildMessageCenterSeed(): MessageCenterItem[] {
 
     samples.forEach((values) => {
       prototypes.push({
-        eventId: attr.eventId,
-        eventName: attr.eventName,
-        eventOwnership: attr.eventOwnership,
-        eventType: attr.eventType,
+        eventName: attr.eventName as MessageCenterItem['eventName'],
         pushedAt: values['时间'],
-        descriptionSegments: renderMessageDescriptionSegments(template, values)
+        contentSegments: renderMessageDescriptionSegments(template, values)
       })
     })
   }
@@ -46,12 +43,9 @@ export function buildMessageCenterSeed(): MessageCenterItem[] {
       const seq = batch * prototypes.length + index + 1
       rows.push({
         id: `msg-${String(seq).padStart(4, '0')}`,
-        eventId: item.eventId,
         eventName: item.eventName,
-        eventOwnership: item.eventOwnership,
-        eventType: item.eventType,
         pushedAt: shiftPushedAt(item.pushedAt, batch * 2 + (index % 3)),
-        descriptionSegments: item.descriptionSegments.map((part) => ({ ...part }))
+        contentSegments: item.contentSegments.map((part) => ({ ...part }))
       })
     })
   }

@@ -37,5 +37,4 @@ export type {
   MessageDescriptionSegment
 } from './types'
 
-export { listAlarmEnabledEventAttributes } from './messageStore'
 export { renderMessageDescriptionSegments } from './messageTemplateRender'

@@ -7,6 +7,7 @@ import {
   percentToLatLng,
   shapeToLatLngRing
 } from './areaGisCoords'
+import { getShapeHandles } from './areaGisShapeEdit'
 import L from 'leaflet'
 
 /** 地图叠放：先绘低裁剪优先级，后绘高优先级（高优先级图形压住低优先级） */
@@ -103,6 +104,96 @@ export function renderPreviewShape(group: L.LayerGroup, shape: AreaShape | null)
   if (ring.length >= 3) {
     L.polygon(ring, previewStyle).addTo(group)
   }
+}
+
+const editShapeStyle: L.PathOptions = {
+  color: '#409eff',
+  fillColor: '#409eff',
+  fillOpacity: 0.22,
+  weight: 3,
+  opacity: 1,
+  interactive: false
+}
+
+const editHitStyle: L.PathOptions = {
+  color: 'transparent',
+  fillColor: '#409eff',
+  fillOpacity: 0.05,
+  weight: 16,
+  opacity: 0,
+  interactive: true
+}
+
+const handleStyle: L.CircleMarkerOptions = {
+  radius: 7,
+  color: '#409eff',
+  fillColor: '#ffffff',
+  fillOpacity: 1,
+  weight: 2,
+  interactive: true
+}
+
+const centerHandleStyle: L.CircleMarkerOptions = {
+  ...handleStyle,
+  radius: 6,
+  fillColor: '#409eff',
+  fillOpacity: 1
+}
+
+export interface EditableShapeHandlers {
+  onBodyMouseDown: (ev: L.LeafletMouseEvent) => void
+  onHandleMouseDown: (handleIndex: number, ev: L.LeafletMouseEvent) => void
+}
+
+export function renderEditableShape(
+  group: L.LayerGroup,
+  shape: AreaShape,
+  handlers: EditableShapeHandlers
+) {
+  group.clearLayers()
+
+  const bindBody = (layer: L.Path) => {
+    layer.on('mousedown', (ev) => {
+      L.DomEvent.stop(ev)
+      handlers.onBodyMouseDown(ev)
+    })
+  }
+
+  if (shape.type === 'circle') {
+    const [lat, lng] = percentToLatLng(shape.cx ?? 50, shape.cy ?? 50)
+    const circle = L.circle([lat, lng], {
+      ...editShapeStyle,
+      interactive: true,
+      radius: percentRadiusToMeters(shape.r ?? 1)
+    })
+    bindBody(circle)
+    circle.addTo(group)
+  } else {
+    const ring = shapeToLatLngRing(shape)
+    if (ring.length >= 3) {
+      if (shape.type === 'polygon') {
+        const hit = L.polygon(ring, editHitStyle)
+        bindBody(hit)
+        hit.addTo(group)
+        L.polygon(ring, editShapeStyle).addTo(group)
+      } else {
+        const polygon = L.polygon(ring, { ...editShapeStyle, interactive: true })
+        bindBody(polygon)
+        polygon.addTo(group)
+      }
+    }
+  }
+
+  getShapeHandles(shape).forEach((handle) => {
+    const [lat, lng] = percentToLatLng(handle.x, handle.y)
+    const style = handle.kind === 'center' ? centerHandleStyle : handleStyle
+    const marker = L.circleMarker([lat, lng], style)
+    marker.on('mousedown', (ev) => {
+      L.DomEvent.stop(ev)
+      handlers.onHandleMouseDown(handle.index, ev)
+    })
+    marker.addTo(group)
+  })
 }
 
 /** 国内可访问的公开底图（GeoQ），无需 Key */

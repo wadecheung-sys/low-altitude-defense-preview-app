@@ -9,7 +9,7 @@ export const HISTORY_TARGET_TYPE_OPTIONS: { label: string; value: HistoryTargetT
 /** 演示用躁扰飞鸟样本：列表第 8 条（he-10008） */
 export const BIRD_NUISANCE_DEMO_EVENT_ID = 'he-10008'
 
-/** 根据识别码与核查状态推断目标类型（不含处置结果关键词，避免误判） */
+/** 根据识别码与核查状态推断目标类型（不含目标结果关键词，避免误判） */
 export function resolveHistoryTargetType(input: {
   historyTargetType?: HistoryTargetType
   uavSn: string

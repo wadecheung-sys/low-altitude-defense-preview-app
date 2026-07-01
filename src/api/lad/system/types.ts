@@ -1,11 +1,10 @@
 export type EventOwnership =
-  | '设备发现'
+  | '目标发现'
   | '威胁识别'
   | '威胁评估'
   | '处置执行'
-  | '处置结果'
+  | '目标结果'
   | '设备故障'
-  | '系统消息'
 
 export type EventAlarmLevel = '提示' | '重要' | '紧急'
 
@@ -26,7 +25,6 @@ export type EventAttributeEventType =
   | '迫降'
   | '打击'
   | DeviceFaultEventType
-  | '规则缺失'
 
 export interface EventAttributeItem {
   id: string

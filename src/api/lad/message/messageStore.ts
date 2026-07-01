@@ -1,4 +1,3 @@
-import { buildEventAttributeSeedList } from '@/api/lad/system/eventAttributeMessageAlign'
 import { buildMessageCenterSeed } from './buildMessageSeed'
 import { messageDescriptionText } from './messageTemplateRender'
 import type {
@@ -8,7 +7,7 @@ import type {
 } from './types'
 
 /** 递增以清空旧版消息数据并重新生成 */
-export const MESSAGE_STORE_VERSION = 3
+export const MESSAGE_STORE_VERSION = 4
 
 let allMessages: MessageCenterItem[] = []
 
@@ -28,30 +27,19 @@ ensureStoreVersion()
 export function isNewFormatMessageList(list: unknown[] | undefined): boolean {
   if (!list?.length) return false
   const first = list[0] as Partial<MessageCenterItem>
-  return Boolean(first.eventId && first.eventOwnership && first.eventType && first.pushedAt)
+  return Boolean(first.eventName && first.pushedAt && first.contentSegments)
 }
 
 function filterMessages(query: MessageCenterQuery): MessageCenterItem[] {
   let rows = [...allMessages]
 
-  if (query.eventId?.trim()) {
-    const kw = query.eventId.trim().toLowerCase()
-    rows = rows.filter((item) => item.eventId.toLowerCase().includes(kw))
-  }
   if (query.eventName?.trim()) {
-    const kw = query.eventName.trim().toLowerCase()
-    rows = rows.filter((item) => item.eventName.toLowerCase().includes(kw))
+    rows = rows.filter((item) => item.eventName === query.eventName)
   }
-  if (query.eventOwnership) {
-    rows = rows.filter((item) => item.eventOwnership === query.eventOwnership)
-  }
-  if (query.eventType) {
-    rows = rows.filter((item) => item.eventType === query.eventType)
-  }
-  if (query.description?.trim()) {
-    const keyword = query.description.trim().toLowerCase()
+  if (query.content?.trim()) {
+    const keyword = query.content.trim().toLowerCase()
     rows = rows.filter((item) =>
-      messageDescriptionText(item.descriptionSegments).toLowerCase().includes(keyword)
+      messageDescriptionText(item.contentSegments).toLowerCase().includes(keyword)
     )
   }
   if (query.pushedAtStart) {
@@ -80,9 +68,4 @@ export function deleteMessageCenterItems(ids: string[]) {
   ensureStoreVersion()
   const set = new Set(ids)
   allMessages = allMessages.filter((item) => !set.has(item.id))
-}
-
-/** 可推送消息中心的事件属性（开启告警） */
-export function listAlarmEnabledEventAttributes() {
-  return buildEventAttributeSeedList().filter((item) => item.alarmEnabled)
 }

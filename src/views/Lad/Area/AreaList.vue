@@ -242,6 +242,22 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   { field: 'clipPriority', label: '区域优先级', minWidth: 105, search: { hidden: true } },
   {
+    field: 'color',
+    label: '区域颜色',
+    minWidth: 140,
+    search: { hidden: true },
+    table: {
+      slots: {
+        default: ({ row }: { row: AreaRegion }) => (
+          <span class="area-color-cell">
+            <span class="area-color-cell__swatch" style={{ background: row.color }} />
+            <span class="area-color-cell__text">{row.color}</span>
+          </span>
+        )
+      }
+    }
+  },
+  {
     field: 'createdAt',
     label: '创建时间',
     minWidth: 168,
@@ -437,6 +453,29 @@ onMounted(loadSiteTree)
   padding: 120px 0;
   color: var(--el-text-color-secondary);
   text-align: center;
+}
+
+:deep(.area-color-cell) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+:deep(.area-color-cell__swatch) {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+}
+
+:deep(.area-color-cell__text) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 @media (max-width: 1000px) {

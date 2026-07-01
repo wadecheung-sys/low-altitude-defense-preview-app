@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { computed, reactive, ref, unref } from 'vue'
+import { reactive, ref, unref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
@@ -9,88 +9,40 @@ import type { FormSchema } from '@/components/Form'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { deleteMessageCenterApi, getMessageCenterListApi } from '@/api/lad/message'
-import type { EventAttributeEventType, EventOwnership } from '@/api/lad/system/types'
 import type { MessageCenterItem } from '@/api/lad/message/types'
 import {
   MESSAGE_SEARCH_COL,
   MESSAGE_SEARCH_DATE_COL,
-  formatMessagePushedAt,
-  getEventTypeSearchOptions,
-  messageEventNameOptions,
-  messageOwnershipOptions
+  MESSAGE_EVENT_NAME_OPTIONS,
+  formatMessagePushedAt
 } from './messageConstants'
 
 defineOptions({ name: 'LadMessageCenterList' })
 
-type SearchExpose = {
-  setValues: (data: Recordable) => Promise<void>
-}
-
 const searchParams = ref<Recordable>({})
 const selectedIds = ref<string[]>([])
-const searchOwnership = ref<EventOwnership | undefined>()
-const searchExpose = ref<SearchExpose>()
 
-const searchEventTypeOptions = computed(() => getEventTypeSearchOptions(searchOwnership.value))
-
-const searchSchema = computed<FormSchema[]>(() => [
-  {
-    field: 'eventId',
-    label: '事件ID',
-    component: 'Input',
-    colProps: MESSAGE_SEARCH_COL,
-    componentProps: {
-      clearable: true,
-      placeholder: '请输入事件ID'
-    }
-  },
+const searchSchema: FormSchema[] = [
   {
     field: 'eventName',
     label: '事件名称',
     component: 'Select',
     colProps: MESSAGE_SEARCH_COL,
     componentProps: {
-      options: messageEventNameOptions,
+      options: [...MESSAGE_EVENT_NAME_OPTIONS],
       clearable: true,
       filterable: true,
       placeholder: '全部'
     }
   },
   {
-    field: 'eventOwnership',
-    label: '事件归属',
-    component: 'Select',
-    colProps: MESSAGE_SEARCH_COL,
-    componentProps: {
-      options: messageOwnershipOptions,
-      clearable: true,
-      placeholder: '全部',
-      onChange: (value: EventOwnership | undefined) => {
-        searchOwnership.value = value
-        searchExpose.value?.setValues({ eventType: undefined })
-      }
-    }
-  },
-  {
-    field: 'eventType',
-    label: '事件类型',
-    component: 'Select',
-    colProps: MESSAGE_SEARCH_COL,
-    componentProps: {
-      options: searchEventTypeOptions.value,
-      clearable: true,
-      filterable: true,
-      placeholder: searchOwnership.value ? '请选择事件类型' : '全部类型'
-    }
-  },
-  {
-    field: 'description',
-    label: '消息描述',
+    field: 'content',
+    label: '内容',
     component: 'Input',
     colProps: MESSAGE_SEARCH_COL,
     componentProps: {
       clearable: true,
-      placeholder: '请输入描述关键词'
+      placeholder: '请输入内容关键词'
     }
   },
   {
@@ -106,31 +58,18 @@ const searchSchema = computed<FormSchema[]>(() => [
       style: { width: '100%' }
     }
   }
-])
-
-const onSearchRegister = (expose: SearchExpose) => {
-  searchExpose.value = expose
-}
+]
 
 const setSearchParams = (params: Recordable) => {
   const range = params.pushedAtRange as string[] | undefined
-  searchOwnership.value = params.eventOwnership as EventOwnership | undefined
   searchParams.value = {
-    eventId: params.eventId,
     eventName: params.eventName,
-    eventOwnership: params.eventOwnership as EventOwnership | undefined,
-    eventType: params.eventType as EventAttributeEventType | undefined,
-    description: params.description?.trim() || undefined,
+    content: params.content?.trim() || undefined,
     pushedAtStart: range?.[0],
     pushedAtEnd: range?.[1]
   }
   currentPage.value = 1
   getList()
-}
-
-const onSearchReset = (params: Recordable) => {
-  searchOwnership.value = undefined
-  setSearchParams(params)
 }
 
 function onSelectionChange(rows: MessageCenterItem[]) {
@@ -172,10 +111,10 @@ const { tableRegister, tableState, tableMethods } = useTable({
 const { loading, dataList, total, currentPage, pageSize } = tableState
 const { getList } = tableMethods
 
-function renderDescription(row: MessageCenterItem) {
+function renderContent(row: MessageCenterItem) {
   return (
     <span class="message-center-desc">
-      {row.descriptionSegments.map((segment, index) =>
+      {row.contentSegments.map((segment, index) =>
         segment.highlight ? (
           <span key={`${row.id}-${index}`} class="message-center-desc__highlight">
             {segment.text}
@@ -202,28 +141,10 @@ const crudSchemas = reactive<CrudSchema[]>([
     search: { hidden: true }
   },
   {
-    field: 'eventId',
-    label: '事件ID',
-    search: { hidden: true },
-    table: { minWidth: 130, showOverflowTooltip: true }
-  },
-  {
     field: 'eventName',
     label: '事件名称',
     search: { hidden: true },
-    table: { minWidth: 160, showOverflowTooltip: true }
-  },
-  {
-    field: 'eventOwnership',
-    label: '事件归属',
-    search: { hidden: true },
-    table: { minWidth: 108 }
-  },
-  {
-    field: 'eventType',
-    label: '事件类型',
-    search: { hidden: true },
-    table: { minWidth: 108, showOverflowTooltip: true }
+    table: { minWidth: 120, showOverflowTooltip: true }
   },
   {
     field: 'pushedAt',
@@ -239,14 +160,14 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'description',
-    label: '消息描述',
+    field: 'content',
+    label: '内容',
     search: { hidden: true },
     table: {
       minWidth: 420,
       showOverflowTooltip: true,
       slots: {
-        default: ({ row }: { row: MessageCenterItem }) => renderDescription(row)
+        default: ({ row }: { row: MessageCenterItem }) => renderContent(row)
       }
     }
   }
@@ -257,14 +178,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search
-      :schema="searchSchema"
-      show-expand
-      expand-field="eventType"
-      @register="onSearchRegister"
-      @search="setSearchParams"
-      @reset="onSearchReset"
-    />
+    <Search :schema="searchSchema" @search="setSearchParams" @reset="setSearchParams" />
 
     <div class="mb-10px">
       <BaseButton type="danger" @click="batchRemove">批量删除</BaseButton>

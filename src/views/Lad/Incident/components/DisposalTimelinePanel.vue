@@ -53,30 +53,11 @@ function statusLabel(status: DisposalTimelineNode['status']) {
         </template>
         <p v-else class="disposal-timeline__summary">{{ node.summary }}</p>
         <details
-          v-if="node.detailGroups?.length || node.details?.length"
+          v-if="node.key !== 'result' && node.details?.length"
           class="disposal-timeline__details"
         >
           <summary>阶段详情</summary>
-          <div v-if="node.detailGroups?.length" class="disposal-timeline__detail-groups">
-            <div
-              v-for="group in node.detailGroups"
-              :key="group.title"
-              class="disposal-timeline__detail-card"
-            >
-              <div class="disposal-timeline__detail-card-title">{{ group.title }}</div>
-              <dl class="disposal-timeline__detail-list">
-                <div
-                  v-for="item in group.details"
-                  :key="`${group.title}-${item.label}`"
-                  class="disposal-timeline__detail-item"
-                >
-                  <dt>{{ item.label }}</dt>
-                  <dd>{{ item.value || '--' }}</dd>
-                </div>
-              </dl>
-            </div>
-          </div>
-          <dl v-else class="disposal-timeline__detail-list">
+          <dl class="disposal-timeline__detail-list">
             <div
               v-for="item in node.details"
               :key="item.label"
@@ -87,11 +68,6 @@ function statusLabel(status: DisposalTimelineNode['status']) {
             </div>
           </dl>
         </details>
-        <div v-if="node.tags?.length" class="disposal-timeline__tags">
-          <ElTag v-for="tag in node.tags" :key="tag" size="small" type="info" effect="plain">
-            {{ tag }}
-          </ElTag>
-        </div>
       </div>
     </ElTimelineItem>
   </ElTimeline>
@@ -128,27 +104,6 @@ function statusLabel(status: DisposalTimelineNode['status']) {
     &:last-of-type {
       margin-bottom: 8px;
     }
-  }
-
-  &__detail-groups {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-  }
-
-  &__detail-card {
-    padding: 8px 10px;
-    background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: 6px;
-  }
-
-  &__detail-card-title {
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
   }
 
   &__details {
@@ -196,12 +151,6 @@ function statusLabel(status: DisposalTimelineNode['status']) {
       font-size: 12px;
       color: var(--el-text-color-primary);
     }
-  }
-
-  &__tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
   }
 }
 </style>

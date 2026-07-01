@@ -53,15 +53,6 @@ const normalizedTimeline = (nodes: DisposalTimelineNode[] | undefined) =>
       label: normalizeText(item.label),
       value: normalizeText(item.value)
     })),
-    detailGroups: node.detailGroups?.map((group) => ({
-      ...group,
-      title: normalizeText(group.title),
-      details: group.details.map((item) => ({
-        ...item,
-        label: normalizeText(item.label),
-        value: normalizeText(item.value)
-      }))
-    })),
     tags: node.tags?.map((tag) => normalizeText(tag))
   }))
 

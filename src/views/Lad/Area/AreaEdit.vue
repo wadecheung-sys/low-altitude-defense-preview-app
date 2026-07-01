@@ -27,7 +27,8 @@ import {
   ElMessage,
   ElMessageBox,
   ElOption,
-  ElSelect
+  ElSelect,
+  ElColorPicker
 } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -127,10 +128,21 @@ async function loadPage() {
   }
 }
 
+function syncShapeColors(color: string) {
+  form.value.shapes = form.value.shapes.map((shape) => ({ ...shape, color }))
+}
+
 function onRegionTypeChange(type: AreaRegionType) {
   form.value.clipPriority = defaultClipPriorityForType(type)
   form.value.alarmEnabled = defaultAlarmForType(type)
   form.value.color = defaultColorForType(type)
+  syncShapeColors(form.value.color)
+}
+
+function onColorChange(color: string | null) {
+  if (!color) return
+  form.value.color = color
+  syncShapeColors(color)
 }
 
 function setTool(tool: AreaShapeType) {
@@ -139,6 +151,10 @@ function setTool(tool: AreaShapeType) {
 
 function finishPolygonDraw() {
   gisMapRef.value?.finishPolygon()
+  drawTool.value = null
+}
+
+function onMapDrawn() {
   drawTool.value = null
 }
 
@@ -279,6 +295,18 @@ watch(
             />
             <p class="area-field-tip"> 数值越大越优先保留；重叠时低优先级区域会被镂空扣除。 </p>
           </ElFormItem>
+          <ElFormItem label="区域颜色" required>
+            <div class="area-color-field">
+              <ElColorPicker
+                :model-value="form.color"
+                show-alpha
+                color-format="rgb"
+                @update:model-value="onColorChange"
+              />
+              <span class="area-color-field__value">{{ form.color }}</span>
+            </div>
+            <p class="area-field-tip">用于地图范围填充色；切换区域类型时将恢复为默认色，可再手动调整。</p>
+          </ElFormItem>
           <ElFormItem label="范围绘制">
             <div class="area-draw-toolbar" role="toolbar" aria-label="范围绘制工具">
               <button
@@ -331,6 +359,7 @@ watch(
           :active-color="form.color"
           :tool="drawTool"
           @update:shapes="onShapesUpdate"
+          @drawn="onMapDrawn"
         />
       </section>
     </div>
@@ -397,6 +426,18 @@ watch(
   font-size: 12px;
   line-height: 1.45;
   color: var(--el-text-color-secondary);
+}
+
+.area-color-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.area-color-field__value {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  word-break: break-all;
 }
 
 .area-draw-toolbar {

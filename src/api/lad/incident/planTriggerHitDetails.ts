@@ -124,12 +124,7 @@ export function buildDisposalExecutionStageDetails(
   }
 ): DisposalTimelineDetailItem[] {
   if (options.skipped) {
-    return [
-      { label: '策略名称', value: '--' },
-      { label: '触发条件', value: options.skipReason },
-      { label: '联动设备', value: options.countermeasureDevice },
-      { label: '执行动作', value: '未执行' }
-    ]
+    return []
   }
 
   if (row.disposalExecutionSource === 'manual') {
@@ -147,12 +142,7 @@ export function buildDisposalExecutionStageDetails(
 
   const resolved = resolvePlanTriggerForEvent(row)
   if (!resolved) {
-    return [
-      { label: '策略名称', value: options.fallbackPlanName },
-      { label: '触发条件', value: '未关联到具体预案触发策略' },
-      { label: '联动设备', value: options.countermeasureDevice },
-      { label: '执行动作', value: options.fallbackActionName }
-    ]
+    return []
   }
 
   const { plan, triggerRule, ctx } = resolved

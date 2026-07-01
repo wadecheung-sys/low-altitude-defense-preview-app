@@ -1,9 +1,9 @@
 import type { AreaShape } from '@/api/lad/area/types'
 import { GIS_BASE_LAT, GIS_BASE_LNG } from './areaGisConstants'
 
-/** 与设备部署页一致的 0–100 示意坐标 → 经纬度换算 */
-const LNG_PER_PERCENT = 0.0008
-const LAT_PER_PERCENT = 0.0006
+/** 示意坐标 ↔ 经纬度线性换算（GIS 地图模式下不限制 0–100 范围） */
+export const LNG_PER_PERCENT = 0.0008
+export const LAT_PER_PERCENT = 0.0006
 
 export function percentToLatLng(x: number, y: number): [number, number] {
   const lng = GIS_BASE_LNG + (x - 50) * LNG_PER_PERCENT
@@ -15,8 +15,19 @@ export function latLngToPercent(lat: number, lng: number): { x: number; y: numbe
   const x = 50 + (lng - GIS_BASE_LNG) / LNG_PER_PERCENT
   const y = 50 - (lat - GIS_BASE_LAT) / LAT_PER_PERCENT
   return {
-    x: Math.round(Math.max(0, Math.min(100, x)) * 10) / 10,
-    y: Math.round(Math.max(0, Math.min(100, y)) * 10) / 10
+    x: Math.round(x * 10) / 10,
+    y: Math.round(y * 10) / 10
+  }
+}
+
+/** 拖动时用经纬度增量换算为示意坐标增量，避免逐点 clamp 导致形变或拖不动。 */
+export function latLngDeltaToPercentDelta(
+  dLat: number,
+  dLng: number
+): { dx: number; dy: number } {
+  return {
+    dx: Math.round((dLng / LNG_PER_PERCENT) * 10) / 10,
+    dy: Math.round((-dLat / LAT_PER_PERCENT) * 10) / 10
   }
 }
 

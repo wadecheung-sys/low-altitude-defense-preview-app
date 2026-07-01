@@ -78,6 +78,89 @@ function appendIntrusionCondition(summary: string): string {
   return `${summary} 且 ${intrusion}`
 }
 
+const FLIGHT_STATUS_LABEL: Record<string, string> = {
+  speed: '飞行速度',
+  stayDuration: '逗留时间',
+  intrusionCount: '入侵次数',
+  altitude: '飞行高度',
+  swarmCount: '蜂群机数',
+  signalStrength: '信号强度',
+  locatedArea: '所处区域'
+}
+
+function formatStayDuration(seconds: number): string {
+  if (seconds <= 0) return '00:00:00'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+export function assessmentConditionsForLevel(
+  row: HistoryEventItem,
+  level: ThreatLevel
+): RuleCondition[] {
+  if (level === '无危' || level === '低危') return []
+  if (level === '中危') return MID_ASSESS_CONDITIONS
+  const matched = resolveMatchedThreatRule(row)
+  if (matched?.conditions.length && !isMonitorCatchAllRule(matched)) {
+    const conditions = [...matched.conditions]
+    if (!conditions.some((c) => c.property === 'intrusionCount')) {
+      conditions.push(INTRUSION_ASSESS_CONDITION)
+    }
+    return conditions
+  }
+  return HIGH_ASSESS_FALLBACK_CONDITIONS
+}
+
+export function buildAssessFlightStatus(
+  row: HistoryEventItem,
+  level: ThreatLevel,
+  stepIndex = 0
+): string {
+  const conditions = assessmentConditionsForLevel(row, level)
+  if (!conditions.length) return '--'
+
+  const metrics = row.assessmentMetrics
+  const speedBoost = 1 + stepIndex * 0.15
+  const stayBoost = stepIndex * 4
+
+  const parts = conditions
+    .filter((c) => c.property in FLIGHT_STATUS_LABEL)
+    .map((c) => {
+      const label = FLIGHT_STATUS_LABEL[c.property]
+      let value: string
+      switch (c.property) {
+        case 'speed':
+          value = `${(metrics.speed * speedBoost).toFixed(1)}m/s`
+          break
+        case 'stayDuration':
+          value = formatStayDuration(metrics.stayDurationSec + stayBoost)
+          break
+        case 'intrusionCount':
+          value = `${Math.max(metrics.intrusionCount, Number(c.value) || 2)}次`
+          break
+        case 'altitude':
+          value = `${metrics.altitude + stepIndex * 5}m`
+          break
+        case 'swarmCount':
+          value = `${metrics.swarmCount ?? 0}架`
+          break
+        case 'locatedArea':
+          value = row.zoneName || '--'
+          break
+        case 'signalStrength':
+          value = `${metrics.signalStrength ?? '--'}dBm`
+          break
+        default:
+          value = '--'
+      }
+      return `${label}：${value}`
+    })
+
+  return parts.length ? parts.join('； ') : '--'
+}
+
 function assessmentRuleName(row: HistoryEventItem) {
   const matched = resolveMatchedThreatRule(row)
   if (matched?.ruleName && !isMonitorCatchAllRule(matched)) return matched.ruleName
@@ -129,26 +212,16 @@ function fallbackActionName(row: HistoryEventItem) {
   return '定向驱离'
 }
 
+function resolveResultTargetKindLabel(row: HistoryEventItem): string {
+  if (row.historyTargetType === '躁扰信号-飞鸟') return '非无人机'
+  return '无人机'
+}
+
 function resolveResultEventType(row: HistoryEventItem): EventAttributeEventType {
   const text = `${row.handlingResult}${row.remark}`
   if (text.includes('迫降')) return '迫降'
   if (text.includes('打击') || text.includes('激光')) return '打击'
   return '驱离/自离'
-}
-
-function resolveBearing(row: HistoryEventItem): string {
-  const seed = row.id.charCodeAt(row.id.length - 1) % 8
-  const bearings = [
-    '正北 0°',
-    '东北 45°',
-    '正东 90°',
-    '东南 135°',
-    '正南 180°',
-    '西南 225°',
-    '正西 270°',
-    '西北 315°'
-  ]
-  return bearings[seed]
 }
 
 function hasCountermeasure(row: HistoryEventItem) {
@@ -172,8 +245,8 @@ export interface StageMessageInfo {
   messageDescription: string
 }
 
-export function formatTimelineSummary(eventName: string, messageDescription: string): string {
-  return `【${eventName}】${messageDescription}`
+export function formatTimelineSummary(messageDescription: string): string {
+  return messageDescription
 }
 
 export function buildAssessMessageInfo(
@@ -222,7 +295,7 @@ export function buildStageMessageInfo(
       const eventType = '独立发现' as const
       const device = parseDetectionDevice(row)
       return {
-        eventName: eventNameOf('设备发现', eventType),
+        eventName: eventNameOf('目标发现', eventType),
         messageDescription: fillMessageTemplate(EVENT_ATTRIBUTE_PROMPT_TEMPLATES[eventType], {
           时间: time,
           ...device
@@ -244,7 +317,7 @@ export function buildStageMessageInfo(
     case 'dispose': {
       if (options.disposeStatus === 'skipped') {
         return {
-          eventName: '处置未触发',
+          eventName: '处置执行',
           messageDescription: `${time}未命中反制预案，未下发处置指令。`
         }
       }
@@ -280,12 +353,12 @@ export function buildStageMessageInfo(
     case 'result': {
       if (row.historyTargetType === '躁扰信号-飞鸟') {
         return {
-          eventName: '躁扰虚警排除',
+          eventName: '目标结果',
           messageDescription: `${time}事件已闭环，目标判定为躁扰信号排除。`
         }
       }
       const eventType = resolveResultEventType(row)
-      const ownership = '处置结果' as const
+      const ownership = '目标结果' as const
       if (eventType === '迫降') {
         return {
           eventName: eventNameOf(ownership, eventType),
@@ -304,14 +377,15 @@ export function buildStageMessageInfo(
       return {
         eventName: eventNameOf(ownership, eventType),
         messageDescription: fillMessageTemplate(EVENT_ATTRIBUTE_PROMPT_TEMPLATES[eventType], {
-          ...base,
-          方位角: resolveBearing(row),
+          时间: time,
+          编码: row.targetId,
+          '无人机/非无人机': resolveResultTargetKindLabel(row),
           逗留时间: row.duration || row.abnormalDuration || '00:00:00'
         })
       }
     }
     default:
-      return { eventName: '系统消息', messageDescription: '' }
+      return { eventName: '', messageDescription: '' }
   }
 }
 
