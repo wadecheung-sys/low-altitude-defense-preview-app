@@ -1,9 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<svg version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1145px" height="719px" xmlns="http://www.w3.org/2000/svg">
-  <g transform="matrix(1 0 0 1 -20 -16 )">
-    <path d="M 20 16  L 1165 16  L 1165 735  L 20 735  L 20 16  " fill-rule="nonzero" fill="rgba(204, 204, 204, 1)" stroke="none" class="fill" />
-    <path d="M 70 66  L 1115 66  L 1115 685  L 70 685  L 70 66  " fill-rule="nonzero" fill="rgba(255, 255, 255, 1)" stroke="none" class="fill" />
-    <path d="M 669.325 231.7  C 639.127 231.7  615.4 207.97299999999998  615.4 177.77499999999998  C 615.4 147.577  639.127 123.85  669.325 123.85  C 699.523 123.85  723.25 147.577  723.25 177.77499999999998  C 723.25 207.97299999999998  699.523 231.7  669.325 231.7  " fill-rule="nonzero" fill="rgba(204, 204, 204, 1)" stroke="none" class="fill" />
-    <path d="M 88 667  L 88 346.34999999999997  L 340.25 200.59999999999997  L 693.4 447.3439301310044  L 895.2 288.05  L 1097 447.3439301310044  L 1097 667  L 88 667  " fill-rule="nonzero" fill="rgba(22, 155, 213, 1)" stroke="none" class="fill" />
+<svg version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="36px" height="39px" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="BGPattern" patternUnits="userSpaceOnUse" alignment="0 0" imageRepeat="None" />
+    <mask fill="white" id="Clip718">
+      <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="evenodd" />
+    </mask>
+    <mask fill="white" id="Clip719">
+      <path d="M 11.5 12  L 26.5 12  L 26.5 29  L 11.5 29  Z M 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="evenodd" />
+    </mask>
+  </defs>
+  <g>
+    <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="nonzero" fill="rgba(242, 242, 242, 1)" stroke="none" class="fill" />
+    <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " stroke-width="2" stroke-dasharray="0" stroke="rgba(121, 121, 121, 1)" fill="none" class="stroke" mask="url(#Clip718)" />
+    <path d="M 35.632598277686256 0.39801853250655594  L 0.36740172231374396 38.601981467493445  M 0.36740172231374396 0.39801853250655594  L 35.632598277686256 38.601981467493445  " stroke-width="1" stroke-dasharray="0" stroke="rgba(121, 121, 121, 1)" fill="none" class="stroke" mask="url(#Clip719)" />
   </g>
 </svg>

@@ -17,10 +17,10 @@ const HISTORY_EVENT_LINK_ID = 'u111'
 const MESSAGE_CENTER_LINK_ID = 'u177'
 
 const MAP_TARGET_BINDINGS = [
-  { iconId: 'u191', detailId: 'u199', lineId: 'u189', label: '选择无人机目标' },
-  { iconId: 'u192', detailId: 'u196', lineId: 'u186', label: '选择无人机目标' },
-  { iconId: 'u193', detailId: 'u194', lineId: 'u187', label: '选择无人机目标' },
-  { iconId: 'u184', detailId: 'u202', lineId: 'u188', label: '选择飞鸟目标' }
+  { iconId: 'u192', detailId: 'u200', lineId: 'u189', label: '选择无人机目标' },
+  { iconId: 'u193', detailId: 'u197', lineId: 'u186', label: '选择无人机目标' },
+  { iconId: 'u194', detailId: 'u195', lineId: 'u187', label: '选择无人机目标' },
+  { iconId: 'u184', detailId: 'u203', lineId: 'u188', label: '选择飞鸟目标' }
 ] as const
 
 const DETAIL_PANEL_IDS = MAP_TARGET_BINDINGS.map((item) => item.detailId)
@@ -28,10 +28,10 @@ const LINE_IDS = MAP_TARGET_BINDINGS.map((item) => item.lineId)
 const ICON_IDS = MAP_TARGET_BINDINGS.map((item) => item.iconId)
 
 const DETAIL_CLOSE_BUTTON_MAP: Record<string, string> = {
-  u199: 'u200',
-  u196: 'u197',
-  u194: 'u195',
-  u202: 'u203'
+  u200: 'u201',
+  u197: 'u198',
+  u195: 'u196',
+  u203: 'u204'
 }
 
 const CLOCK_ELEMENT_IDS = {
@@ -316,7 +316,7 @@ function bindPrototypeInteractions() {
       doc,
       closeId,
       () => clearMapTargetSelection(doc),
-      { role: 'button', ariaLabel: `关闭${detailId === 'u202' ? '飞鸟' : '无人机'}详情` }
+      { role: 'button', ariaLabel: `关闭${detailId === 'u203' ? '飞鸟' : '无人机'}详情` }
     )
     if (cleanup) cleanups.push(cleanup)
   }
