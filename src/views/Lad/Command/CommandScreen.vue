@@ -17,10 +17,10 @@ const HISTORY_EVENT_LINK_ID = 'u111'
 const MESSAGE_CENTER_LINK_ID = 'u177'
 
 const MAP_TARGET_BINDINGS = [
-  { iconId: 'u192', detailId: 'u200', lineId: 'u189', label: '选择无人机目标' },
-  { iconId: 'u193', detailId: 'u197', lineId: 'u186', label: '选择无人机目标' },
-  { iconId: 'u194', detailId: 'u195', lineId: 'u187', label: '选择无人机目标' },
-  { iconId: 'u184', detailId: 'u203', lineId: 'u188', label: '选择飞鸟目标' }
+  { iconId: 'u188', detailId: 'u196', lineId: 'u185', label: '选择无人机目标' },
+  { iconId: 'u189', detailId: 'u193', lineId: 'u183', label: '选择无人机目标' },
+  { iconId: 'u190', detailId: 'u191', lineId: 'u182', label: '选择无人机目标' },
+  { iconId: 'u180', detailId: 'u199', lineId: 'u184', label: '选择飞鸟目标' }
 ] as const
 
 const DETAIL_PANEL_IDS = MAP_TARGET_BINDINGS.map((item) => item.detailId)
@@ -28,17 +28,19 @@ const LINE_IDS = MAP_TARGET_BINDINGS.map((item) => item.lineId)
 const ICON_IDS = MAP_TARGET_BINDINGS.map((item) => item.iconId)
 
 const DETAIL_CLOSE_BUTTON_MAP: Record<string, string> = {
-  u200: 'u201',
-  u197: 'u198',
-  u195: 'u196',
-  u203: 'u204'
+  u196: 'u197',
+  u193: 'u194',
+  u191: 'u192',
+  u199: 'u200'
 }
 
 const CLOCK_ELEMENT_IDS = {
-  weekday: 'u6',
-  date: 'u7',
-  time: 'u8'
+  weekday: 'u15',
+  date: 'u16',
+  time: 'u17'
 } as const
+
+const BACKEND_ENTRY_BUTTON_ID = 'u18'
 
 const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
@@ -112,7 +114,7 @@ const normalizePrototypeSurface = () => {
 }
 
 const syncPrototypeButtonState = () => {
-  const button = iframeRef.value?.contentDocument?.getElementById('u9') as HTMLElement | null
+  const button = iframeRef.value?.contentDocument?.getElementById(BACKEND_ENTRY_BUTTON_ID) as HTMLElement | null
   if (!button) return
 
   button.style.cursor = isEnteringBackend.value ? 'wait' : 'pointer'
@@ -246,7 +248,7 @@ function bindPrototypeInteractions() {
 
   const cleanups: Cleanup[] = []
 
-  const backendButton = doc.getElementById('u9') as HTMLElement | null
+  const backendButton = doc.getElementById(BACKEND_ENTRY_BUTTON_ID) as HTMLElement | null
   if (backendButton) {
     const text = backendButton.querySelector('.text') as HTMLElement | null
     const handleClick = (event: Event) => {
@@ -316,7 +318,7 @@ function bindPrototypeInteractions() {
       doc,
       closeId,
       () => clearMapTargetSelection(doc),
-      { role: 'button', ariaLabel: `关闭${detailId === 'u203' ? '飞鸟' : '无人机'}详情` }
+      { role: 'button', ariaLabel: `关闭${detailId === 'u199' ? '飞鸟' : '无人机'}详情` }
     )
     if (cleanup) cleanups.push(cleanup)
   }
