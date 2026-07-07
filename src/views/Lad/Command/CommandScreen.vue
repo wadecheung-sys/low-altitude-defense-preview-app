@@ -5,6 +5,7 @@ import {
   LAD_BACKEND_HOME_PATH,
   LAD_MESSAGE_CENTER_PATH
 } from '@/constants/lad'
+import { createDataScreenMapEngine } from './dataScreenPrototypeEngine'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -18,32 +19,13 @@ const BACKEND_ENTRY_RESET_DELAY = 240
 
 const HISTORY_EVENT_LINK_ID = 'u116'
 const MESSAGE_CENTER_LINK_ID = 'u183'
-
-const MAP_TARGET_BINDINGS = [
-  { iconId: 'u195', detailId: 'u201', lineId: 'u190', label: '选择无人机目标' },
-  { iconId: 'u193', detailId: 'u196', lineId: 'u188', label: '选择无人机目标' },
-  { iconId: 'u194', detailId: 'u198', lineId: 'u187', label: '选择无人机目标' },
-  { iconId: 'u185', detailId: 'u204', lineId: 'u189', label: '选择飞鸟目标' }
-] as const
-
-const DETAIL_PANEL_IDS = MAP_TARGET_BINDINGS.map((item) => item.detailId)
-const LINE_IDS = MAP_TARGET_BINDINGS.map((item) => item.lineId)
-const ICON_IDS = MAP_TARGET_BINDINGS.map((item) => item.iconId)
-
-const DETAIL_CLOSE_BUTTON_MAP: Record<string, string> = {
-  u201: 'u202',
-  u196: 'u197',
-  u198: 'u199',
-  u204: 'u205'
-}
+const BACKEND_ENTRY_BUTTON_ID = 'u18'
 
 const CLOCK_ELEMENT_IDS = {
   weekday: 'u15',
   date: 'u16',
   time: 'u17'
 } as const
-
-const BACKEND_ENTRY_BUTTON_ID = 'u18'
 
 const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
@@ -147,55 +129,6 @@ const navigateFromScreen = async (path: string) => {
 
 const enterBackend = () => navigateFromScreen(LAD_BACKEND_HOME_PATH)
 
-function setElementSelected(doc: Document, id: string, selected: boolean) {
-  const element = doc.getElementById(id)
-  if (!element) return
-
-  element.classList.toggle('selected', selected)
-  doc.getElementById(`${id}_div`)?.classList.toggle('selected', selected)
-}
-
-function setElementVisible(doc: Document, id: string, visible: boolean) {
-  const element = doc.getElementById(id)
-  if (!element) return
-
-  element.style.display = visible ? '' : 'none'
-  element.style.visibility = visible ? 'visible' : 'hidden'
-  element.classList.toggle('ax_default_hidden', !visible)
-  setElementSelected(doc, id, visible)
-}
-
-function showDetailPanel(doc: Document, panelId: string | null) {
-  for (const id of DETAIL_PANEL_IDS) {
-    setElementVisible(doc, id, id === panelId)
-  }
-}
-
-function showTargetLine(doc: Document, lineId: string | null) {
-  for (const id of LINE_IDS) {
-    setElementVisible(doc, id, id === lineId)
-  }
-}
-
-function clearMapTargetSelection(doc: Document) {
-  for (const id of ICON_IDS) {
-    setElementSelected(doc, id, false)
-  }
-  showDetailPanel(doc, null)
-  showTargetLine(doc, null)
-}
-
-function selectMapTarget(
-  doc: Document,
-  binding: (typeof MAP_TARGET_BINDINGS)[number]
-) {
-  for (const item of MAP_TARGET_BINDINGS) {
-    setElementSelected(doc, item.iconId, item.iconId === binding.iconId)
-  }
-  showDetailPanel(doc, binding.detailId)
-  showTargetLine(doc, binding.lineId)
-}
-
 function bindClickableElement(
   doc: Document,
   elementId: string,
@@ -252,6 +185,10 @@ function bindPrototypeInteractions() {
   if (!doc) return false
 
   const cleanups: Cleanup[] = []
+  const mapEngine = createDataScreenMapEngine(doc)
+  if (!mapEngine) return false
+
+  cleanups.push(mapEngine.bind())
 
   const backendButton = doc.getElementById(BACKEND_ENTRY_BUTTON_ID) as HTMLElement | null
   if (backendButton) {
@@ -308,29 +245,6 @@ function bindPrototypeInteractions() {
   )
   if (messageLinkCleanup) cleanups.push(messageLinkCleanup)
 
-  for (const binding of MAP_TARGET_BINDINGS) {
-    const cleanup = bindClickableElement(
-      doc,
-      binding.iconId,
-      () => selectMapTarget(doc, binding),
-      { role: 'button', ariaLabel: binding.label }
-    )
-    if (cleanup) cleanups.push(cleanup)
-  }
-
-  for (const [detailId, closeId] of Object.entries(DETAIL_CLOSE_BUTTON_MAP)) {
-    const cleanup = bindClickableElement(
-      doc,
-      closeId,
-      () => clearMapTargetSelection(doc),
-      { role: 'button', ariaLabel: `关闭${detailId === 'u204' ? '飞鸟' : '无人机'}详情` }
-    )
-    if (cleanup) cleanups.push(cleanup)
-  }
-
-  if (!cleanups.length) return false
-
-  selectMapTarget(doc, MAP_TARGET_BINDINGS[0])
   startHeaderClock(doc)
 
   cleanupPrototypeBindings = () => {
@@ -346,14 +260,15 @@ function bindPrototypeInteractions() {
 const schedulePrototypeBinding = () => {
   window.clearTimeout(bindRetryTimer)
   bindRetryTimer = window.setTimeout(() => {
-    if (bindPrototypeInteractions()) return
+    const tryBind = () => {
+      if (bindPrototypeInteractions()) return
+      bindRetryTimer = window.setTimeout(tryBind, 160)
+    }
 
-    bindRetryTimer = window.setTimeout(() => {
-      void nextTick(() => {
-        bindPrototypeInteractions()
-      })
-    }, 160)
-  }, 0)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(tryBind)
+    })
+  }, 120)
 }
 
 const handleFrameLoad = () => {
