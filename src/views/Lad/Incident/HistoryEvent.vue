@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import {
   ElLink,
   ElMessage,
-  ElMessageBox,
   ElOption,
   ElRadio,
   ElRadioGroup,
@@ -19,12 +18,11 @@ import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import {
-  deleteHistoryEventApi,
   getHistoryEventListApi,
   updateHistoryEventListTypeApi
 } from '@/api/lad/incident'
 import { HISTORY_TARGET_TYPE_OPTIONS, historyTargetTypeTagType } from '@/api/lad/incident/historyTargetType'
-import type { HandlingStatus, HistoryEventItem } from '@/api/lad/incident/types'
+import type { HistoryEventItem } from '@/api/lad/incident/types'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import {
   exportHistoryEvents,
@@ -34,9 +32,13 @@ import {
 } from './historyEventExport'
 import { targetModelOptions } from '../shared/ladOptionConstants'
 import {
+  HANDLING_STATUS_OPTIONS,
   THREAT_LEVEL_OPTIONS,
   VERIFICATION_METHOD_OPTIONS,
   countermeasureDeviceDisplay,
+  handlingStatusDisplay,
+  handlingStatusTagType,
+  isHandlingEnded,
   threatLevelDisplay,
   threatLevelTagType,
   verificationMethodOf,
@@ -55,7 +57,6 @@ defineOptions({
 
 const { push } = useRouter()
 
-const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({})
 const confirmVisible = ref(false)
 const confirmRow = ref<HistoryEventItem>()
@@ -63,7 +64,6 @@ const exportVisible = ref(false)
 const exportRange = ref<HistoryEventExportRange>('query')
 const exportFormat = ref<HistoryEventExportFormat>('excel')
 const exportLoading = ref(false)
-const delLoading = ref(false)
 const listLoading = ref(false)
 
 const setSearchParams = (params: Recordable) => {
@@ -85,13 +85,6 @@ const setSearchParams = (params: Recordable) => {
   currentPage.value = 1
   getList()
 }
-
-const handlingStatusOptions = [
-  { label: '待处置', value: '待处置' },
-  { label: '处置中', value: '处置中' },
-  { label: '已处置', value: '已处置' },
-  { label: '已结束', value: '已结束' }
-]
 
 const countermeasureOptions = [
   { label: '干扰-01', value: '干扰-01' },
@@ -120,27 +113,13 @@ const { tableRegister, tableState, tableMethods } = useTable({
       list: res.data.list,
       total: res.data.total
     }
-  },
-  fetchDelApi: async () => {
-    const res = await deleteHistoryEventApi(unref(ids))
-    return !!res
   }
 })
 
 const { loading, dataList, total, currentPage, pageSize } = tableState
-const { getList, getElTableExpose, delList } = tableMethods
+const { getList, getElTableExpose } = tableMethods
 
 getList()
-
-const statusTagType = (status: HandlingStatus) => {
-  const map: Record<HandlingStatus, 'info' | 'warning' | 'success' | 'danger'> = {
-    待处置: 'danger',
-    处置中: 'warning',
-    已处置: 'success',
-    已结束: 'info'
-  }
-  return map[status]
-}
 
 const goDetail = (row: HistoryEventItem) => {
   push(`/lad/incident/target/${row.id}`)
@@ -232,33 +211,6 @@ const addList = async (listType: '黑名单' | '白名单') => {
     elTableExpose?.clearSelection()
   } finally {
     listLoading.value = false
-  }
-}
-
-const delData = async (row: HistoryEventItem | null) => {
-  const elTableExpose = await getElTableExpose()
-  const selected = elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined
-  const deleteIds = row ? [row.id] : selected?.map((item) => item.id) || []
-  if (!deleteIds.length) {
-    ElMessage.warning('请先勾选要删除的记录')
-    return
-  }
-  try {
-    await ElMessageBox.confirm(
-      row
-        ? `确定删除目标 ${row.targetId} 的该条历史记录吗？删除后不可恢复。`
-        : `确定批量删除已选 ${deleteIds.length} 条历史记录吗？删除后不可恢复。`,
-      '删除确认',
-      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
-    )
-    ids.value = deleteIds
-    delLoading.value = true
-    await delList(unref(ids).length).finally(() => {
-      delLoading.value = false
-    })
-    ElMessage.success('删除成功')
-  } catch {
-    // user canceled
   }
 }
 
@@ -552,13 +504,15 @@ const crudSchemas = reactive<CrudSchema[]>([
         placeholder: '请选择处置状态',
         style: { width: '100%' },
         clearable: true,
-        options: handlingStatusOptions
+        options: HANDLING_STATUS_OPTIONS
       }
     },
     table: {
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
-          <ElTag type={statusTagType(row.handlingStatus)}>{row.handlingStatus}</ElTag>
+          <ElTag type={handlingStatusTagType(row.handlingStatus)} effect="light">
+            {handlingStatusDisplay(row.handlingStatus)}
+          </ElTag>
         )
       }
     }
@@ -580,7 +534,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'action',
-    width: '320px',
+    width: '220px',
     label: '操作',
     fixed: 'right',
     search: { hidden: true },
@@ -590,18 +544,13 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
           <>
-            {!row.manualConfirmStatus.startsWith('人工-') &&
-            row.handlingStatus !== '已处置' &&
-            row.handlingStatus !== '已结束' ? (
+            {!row.manualConfirmStatus.startsWith('人工-') && !isHandlingEnded(row.handlingStatus) ? (
               <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
                 人工核查
               </BaseButton>
             ) : null}
             <BaseButton type="success" onClick={() => goDetail(row)}>
               详情
-            </BaseButton>
-            <BaseButton type="danger" onClick={() => delData(row)}>
-              删除
             </BaseButton>
           </>
         )
@@ -629,7 +578,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
         >添加至白名单</BaseButton
       >
       <BaseButton type="primary" @click="openExportDialog">导出</BaseButton>
-      <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
     </div>
 
     <Table

@@ -4,12 +4,12 @@ export type EventOwnership =
   | '威胁评估'
   | '处置执行'
   | '目标结果'
-  | '设备故障'
+  | '设备状态'
 
 export type EventAlarmLevel = '提示' | '重要' | '紧急'
 
-/** 「设备故障」归属下的事件类型 */
-export type DeviceFaultEventType = '离线' | '故障'
+/** 「设备状态」归属下的事件类型 */
+export type DeviceStatusEventType = '上线' | '离线'
 
 /** 事件属性「事件类型」（与归纳文档一致，按归属分组） */
 export type EventAttributeEventType =
@@ -24,7 +24,7 @@ export type EventAttributeEventType =
   | '驱离/自离'
   | '迫降'
   | '打击'
-  | DeviceFaultEventType
+  | DeviceStatusEventType
 
 export interface EventAttributeItem {
   id: string
@@ -71,7 +71,7 @@ export interface EventAttributeSavePayload {
 
 export type ParamValueType = 'string' | 'number' | 'boolean'
 
-export type ParamGroup = '系统' | '地图' | '数据'
+export type ParamGroup = '系统' | '地图' | '数据' | '管制' | '安全' | '模拟'
 
 export interface SystemParam {
   id: string
@@ -79,7 +79,8 @@ export interface SystemParam {
   paramName: string
   group: ParamGroup
   valueType: ParamValueType
-  paramValue: string | number | boolean
+  /** 数值类模拟参数可为 null，表示留空不触发 */
+  paramValue: string | number | boolean | null
   remark?: string
   updatedAt: string
 }
@@ -104,7 +105,7 @@ export interface SystemParamSavePayload {
   paramKey?: string
   paramName?: string
   valueType?: ParamValueType
-  paramValue: string | number | boolean
+  paramValue: string | number | boolean | null
   remark?: string
 }
 

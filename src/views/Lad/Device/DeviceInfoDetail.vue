@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { getDeviceArchiveDetailApi, getDeviceArchiveListApi } from '@/api/lad/device'
 import type { DeviceArchiveItem } from '@/api/lad/device'
+import { getAreaRegionListApi } from '@/api/lad/area'
+import type { AreaRegion } from '@/api/lad/area'
 import {
   getDeviceInfoDetailApi,
   runDeviceSelfCheckApi,
@@ -33,6 +35,7 @@ import {
   ElMessage,
   ElOption,
   ElSelect,
+  ElDivider,
   ElTabPane,
   ElTable,
   ElTableColumn,
@@ -54,6 +57,7 @@ const archiveLoading = ref(false)
 const detail = ref<DeviceInfoDetail | null>(null)
 const currentLinkedArchive = ref<DeviceLinkedArchive | null>(null)
 const archiveOptions = ref<DeviceArchiveItem[]>([])
+const areaOptions = ref<AreaRegion[]>([])
 const formRef = ref<FormInstance>()
 const metricsTab = ref<'extend' | 'map' | 'archive'>('extend')
 const extendedRows = ref<DeviceExtendedField[]>([])
@@ -79,6 +83,14 @@ const archiveSelectOptions = computed(() => {
   return archiveOptions.value.filter((item) => item.enabled || item.id === selectedArchiveId)
 })
 
+const selectedDeployArea = computed(() =>
+  areaOptions.value.find((item) => item.id === form.deployAreaId)
+)
+
+const selectedDeployAreaName = computed(
+  () => selectedDeployArea.value?.name || detail.value?.deployLocation || '—'
+)
+
 const supportsSelfCheck = computed(
   () => detail.value?.supportsSelfCheck ?? deviceSupportsSelfCheck(form.deviceType)
 )
@@ -102,6 +114,7 @@ const form = reactive({
   ipAddress: '',
   deviceName: '',
   archiveId: '',
+  deployAreaId: '',
   serialNo: '',
   deviceType: '',
   deployLocation: '',
@@ -115,7 +128,8 @@ const rules: FormRules = {
   deviceId: [{ required: true, message: '请输入设备编号', trigger: 'blur' }],
   deviceName: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
   archiveId: [{ required: true, message: '请选择基础档案', trigger: 'change' }],
-  deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }]
+  deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
+  deployAreaId: [{ required: true, message: '请选择部署区域', trigger: 'change' }]
 }
 
 let extendSeq = 0
@@ -127,7 +141,6 @@ function nextExtendId() {
 const acquisitionMethodOptions = ['采购', '赠予', '置换', '赔偿', '其他']
 
 const fixedExtendedLabels = [
-  '部署区域',
   '设备IP',
   '增加方式',
   '生产日期',
@@ -179,6 +192,10 @@ function syncCoordinateFromMap() {
 function toggleMapPlacing() {
   if (!isEditable.value) return
   mapPlacing.value = !mapPlacing.value
+}
+
+function onDeployAreaChange() {
+  void formRef.value?.validateField('deployAreaId')
 }
 
 function mapArchiveDetailToLinkedArchive(
@@ -241,6 +258,12 @@ function validateArchiveIndicatorValues() {
   return null
 }
 
+function resolveDeployAreaId(deployLocation: string) {
+  if (!deployLocation.trim()) return ''
+  const match = areaOptions.value.find((item) => item.name === deployLocation.trim())
+  return match?.id || ''
+}
+
 function applyDetail(data: DeviceInfoDetail) {
   detail.value = data
   currentLinkedArchive.value = data.linkedArchive
@@ -248,6 +271,7 @@ function applyDetail(data: DeviceInfoDetail) {
   form.ipAddress = data.ipAddress
   form.deviceName = data.deviceName
   form.archiveId = data.archiveId || ''
+  form.deployAreaId = resolveDeployAreaId(data.deployLocation)
   form.serialNo = data.serialNo
   form.deviceType = data.deviceType
   form.deployLocation = data.deployLocation
@@ -256,14 +280,15 @@ function applyDetail(data: DeviceInfoDetail) {
   form.contactPhone = data.contactPhone
   form.remark = data.remark
   deviceImageUrl.value = data.imageUrl || ''
-  const fields = data.extendedFields.map((field) => ({ ...field }))
+  const fields = data.extendedFields
+    .filter((field) => field.label.trim() !== '部署区域')
+    .map((field) => ({ ...field }))
   const appendLegacyField = (label: string, value: string) => {
     if (!fields.some((field) => field.label === label)) {
       fields.push({ id: nextExtendId(), label, value })
     }
   }
   const legacyValues: Record<string, string> = {
-    部署区域: data.deployLocation,
     设备IP: data.ipAddress,
     保管人: data.personInCharge,
     保管人电话: data.contactPhone
@@ -284,6 +309,7 @@ function resetCreate() {
   form.ipAddress = ''
   form.deviceName = ''
   form.archiveId = ''
+  form.deployAreaId = ''
   form.serialNo = ''
   form.deviceType = '无线电干扰'
   form.deployLocation = ''
@@ -299,6 +325,11 @@ function resetCreate() {
   placement.mapY = 50
   placement.controlRangeM = 500
   mapPlacing.value = false
+}
+
+async function loadAreaOptions() {
+  const res = await getAreaRegionListApi({ pageIndex: 1, pageSize: 200 })
+  areaOptions.value = res.data.list
 }
 
 async function loadArchiveOptions() {
@@ -325,7 +356,7 @@ async function syncLinkedArchive(archiveId?: string) {
 }
 
 async function fetchDetail() {
-  await loadArchiveOptions()
+  await Promise.all([loadArchiveOptions(), loadAreaOptions()])
   if (isCreateMode.value) {
     resetCreate()
     return
@@ -411,12 +442,14 @@ async function save() {
   try {
     await formRef.value?.validate()
   } catch {
+    if (!form.deployAreaId) metricsTab.value = 'map'
     return
   }
   saveLoading.value = true
   try {
     const archiveInfo =
       linkedArchive.value?.archiveName || detail.value?.archiveInfo || form.deviceName.trim()
+    const deployLocation = selectedDeployAreaName.value === '—' ? '' : selectedDeployAreaName.value
     const res = await saveDeviceInfoApi({
       id: isCreateMode.value ? undefined : recordId.value,
       deviceId: form.deviceId || undefined,
@@ -424,8 +457,8 @@ async function save() {
       archiveInfo,
       archiveId: form.archiveId || undefined,
       deviceType: form.deviceType,
-      deployLocation: extendedValue('部署区域'),
-      deployAddress: extendedValue('部署区域'),
+      deployLocation,
+      deployAddress: deployLocation,
       ipAddress: extendedValue('设备IP') || form.ipAddress,
       serialNo: form.serialNo,
       personInCharge: extendedValue('保管人'),
@@ -459,6 +492,16 @@ async function save() {
 }
 
 onMounted(fetchDetail)
+
+watch(
+  () => form.deployAreaId,
+  (areaId) => {
+    const area = areaOptions.value.find((item) => item.id === areaId)
+    if (!area) return
+    form.deployLocation = area.name
+    form.deployAddress = area.name
+  }
+)
 
 watch(
   () => form.archiveId,
@@ -561,7 +604,6 @@ watch(metricsTab, (tab) => {
 
       <section class="device-detail-panel">
         <div class="device-detail-panel__title">基本信息</div>
-        <p class="device-detail-panel__hint">设备台账核心字段，与扩展信息区分。</p>
         <ElForm
           ref="formRef"
           label-position="top"
@@ -576,34 +618,6 @@ watch(metricsTab, (tab) => {
           <ElFormItem label="设备" prop="deviceName" required>
             <ElInput v-model="form.deviceName" placeholder="请输入设备名称" clearable />
           </ElFormItem>
-          <ElFormItem label="基础档案" prop="archiveId" required>
-            <ElSelect
-              v-if="isEditable"
-              v-model="form.archiveId"
-              class="w-100%"
-              filterable
-              :loading="archiveLoading"
-              placeholder="请选择基础档案"
-            >
-              <ElOption
-                v-for="item in archiveSelectOptions"
-                :key="item.id"
-                :label="`${item.archiveName} (${item.archiveNo})`"
-                :value="item.id"
-              />
-            </ElSelect>
-            <template v-else-if="linkedArchive">
-              <ElLink type="primary" :underline="false" @click="goArchiveDetail">
-                {{ linkedArchive.archiveName }}
-              </ElLink>
-            </template>
-            <span v-else class="text-[var(--el-text-color-secondary)]">
-              {{ detail?.archiveInfo || '未关联' }}
-            </span>
-            <span v-if="linkedArchive" class="device-detail-form__sub">
-              {{ linkedArchive.archiveNo }} / {{ linkedArchive.deviceModel }}
-            </span>
-          </ElFormItem>
           <ElFormItem label="设备类型" prop="deviceType" required>
             <ElSelect v-model="form.deviceType" placeholder="请选择" class="w-100%" clearable>
               <ElOption
@@ -614,14 +628,86 @@ watch(metricsTab, (tab) => {
               />
             </ElSelect>
           </ElFormItem>
-          <ElFormItem label="厂商" required>
-            <ElInput :model-value="linkedArchive?.vendor || '--'" disabled />
-          </ElFormItem>
-          <ElFormItem label="设备型号" required>
-            <ElInput :model-value="linkedArchive?.deviceModel || '--'" disabled />
-          </ElFormItem>
           <ElFormItem label="备注">
             <ElInput v-model="form.remark" type="textarea" :rows="2" placeholder="选填" />
+          </ElFormItem>
+
+          <ElDivider content-position="left">基础档案</ElDivider>
+          <div class="device-detail-archive-section">
+            <ElFormItem label="档案选择" prop="archiveId" required>
+              <ElSelect
+                v-if="isEditable"
+                v-model="form.archiveId"
+                class="w-100%"
+                filterable
+                :loading="archiveLoading"
+                placeholder="请选择基础档案"
+              >
+                <ElOption
+                  v-for="item in archiveSelectOptions"
+                  :key="item.id"
+                  :label="`${item.archiveName} (${item.archiveNo})`"
+                  :value="item.id"
+                />
+              </ElSelect>
+              <template v-else-if="linkedArchive">
+                <ElLink type="primary" :underline="false" @click="goArchiveDetail">
+                  {{ linkedArchive.archiveName }}
+                </ElLink>
+              </template>
+              <span v-else class="text-[var(--el-text-color-secondary)]">
+                {{ detail?.archiveInfo || '未关联' }}
+              </span>
+            </ElFormItem>
+
+            <div v-if="linkedArchive" class="device-detail-archive-summary">
+              <div class="device-detail-archive-summary__title">档案基本信息</div>
+              <div class="device-detail-archive-facts">
+                <div class="device-detail-archive-fact">
+                  <span class="device-detail-archive-fact__label">档案编号</span>
+                  <span class="device-detail-archive-fact__value">{{ linkedArchive.archiveNo }}</span>
+                </div>
+                <div class="device-detail-archive-fact">
+                  <span class="device-detail-archive-fact__label">档案名称</span>
+                  <span class="device-detail-archive-fact__value">
+                    <ElLink
+                      v-if="!isEditable"
+                      type="primary"
+                      :underline="false"
+                      @click="goArchiveDetail"
+                    >
+                      {{ linkedArchive.archiveName }}
+                    </ElLink>
+                    <template v-else>{{ linkedArchive.archiveName }}</template>
+                  </span>
+                </div>
+                <div class="device-detail-archive-fact">
+                  <span class="device-detail-archive-fact__label">厂商</span>
+                  <span class="device-detail-archive-fact__value">
+                    {{ linkedArchive.vendor || '—' }}
+                  </span>
+                </div>
+                <div class="device-detail-archive-fact">
+                  <span class="device-detail-archive-fact__label">设备型号</span>
+                  <span class="device-detail-archive-fact__value">
+                    {{ linkedArchive.deviceModel || '—' }}
+                  </span>
+                </div>
+                <div class="device-detail-archive-fact">
+                  <span class="device-detail-archive-fact__label">设备类型</span>
+                  <span class="device-detail-archive-fact__value">
+                    {{ linkedArchive.deviceType || '—' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <p v-else class="device-detail-archive-empty">
+              选择档案后将展示厂商、设备型号等档案基本信息。
+            </p>
+          </div>
+
+          <ElFormItem v-show="false" prop="deployAreaId">
+            <ElInput v-model="form.deployAreaId" />
           </ElFormItem>
         </ElForm>
       </section>
@@ -758,10 +844,38 @@ watch(metricsTab, (tab) => {
           <ElTabPane label="地图" name="map">
             <div class="device-detail-map-panel">
               <div class="device-detail-map-block__head">
-                <div class="device-detail-panel__title">地图选点</div>
+                <div>
+                  <div class="device-detail-panel__title">地图选点</div>
+                  <p class="device-detail-map-block__hint">
+                    须先在下拉框中选择设备所属区域，再在地图上标注部署位置。
+                  </p>
+                </div>
                 <BaseButton v-if="isEditable" type="primary" @click="toggleMapPlacing">
                   {{ mapPlacing ? '结束选点' : '地图选点' }}
                 </BaseButton>
+              </div>
+
+              <div class="device-detail-map-area">
+                <ElFormItem label="部署区域" required class="device-detail-map-area__field">
+                  <ElSelect
+                    v-if="isEditable"
+                    v-model="form.deployAreaId"
+                    class="w-100%"
+                    filterable
+                    placeholder="请选择部署区域"
+                    @change="onDeployAreaChange"
+                  >
+                    <ElOption
+                      v-for="area in areaOptions"
+                      :key="area.id"
+                      :label="`${area.name}（${area.siteCode}）`"
+                      :value="area.id"
+                    />
+                  </ElSelect>
+                  <span v-else class="device-detail-map-area__readonly">
+                    {{ selectedDeployAreaName }}
+                  </span>
+                </ElFormItem>
               </div>
 
               <DeviceInfoGisMap
@@ -1066,6 +1180,65 @@ watch(metricsTab, (tab) => {
   color: var(--el-text-color-secondary);
 }
 
+.device-detail-archive-section {
+  padding: 12px;
+  margin-top: 4px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+
+.device-detail-archive-section :deep(.el-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+.device-detail-archive-summary {
+  margin-top: 8px;
+}
+
+.device-detail-archive-summary__title {
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+
+.device-detail-archive-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+}
+
+.device-detail-archive-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.device-detail-archive-fact__label {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--el-text-color-secondary);
+}
+
+.device-detail-archive-fact__value {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-primary);
+  word-break: break-word;
+}
+
+.device-detail-archive-empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
 .device-detail-metrics-tabs {
   :deep(.el-tabs__header) {
     margin-bottom: 12px;
@@ -1116,6 +1289,36 @@ watch(metricsTab, (tab) => {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.device-detail-map-block__hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
+.device-detail-map-area {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+
+.device-detail-map-area__field {
+  margin-bottom: 0;
+}
+
+.device-detail-map-area__field :deep(.el-form-item__label) {
+  padding-bottom: 6px;
+  font-weight: 600;
+}
+
+.device-detail-map-area__readonly {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-primary);
 }
 
 .device-detail-metrics-empty {

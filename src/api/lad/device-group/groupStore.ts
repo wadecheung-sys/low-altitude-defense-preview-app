@@ -1,4 +1,3 @@
-import { queryDeviceInfoList } from '../device-info/infoStore'
 import type {
   DeviceGroupItem,
   DeviceGroupListResult,
@@ -12,41 +11,51 @@ function formatNow() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
-function seedMemberIds(offset: number, count: number) {
-  const { list } = queryDeviceInfoList({ pageIndex: 1, pageSize: 999 })
-  return list.slice(offset, offset + count).map((item) => item.id)
+/** 主设备 + 周边监控摄像头 */
+function groupMembers(mainDeviceId: string, cameraIds: string[]) {
+  return [mainDeviceId, ...cameraIds]
 }
 
 let allGroups: DeviceGroupItem[] = [
   {
     id: 'dg-1001',
     groupCode: 'GRP-DET-01',
-    groupName: '北区探测协同组',
-    groupType: '探测组',
-    description: '用于北区空域多源探测融合与联合告警。',
-    memberIds: seedMemberIds(0, 3),
+    groupName: '北区干扰器联动',
+    groupType: '反制组',
+    description: '',
+    memberIds: groupMembers('di-10001', ['di-20001', 'di-20002', 'di-20003']),
     enabled: true,
     updatedAt: '2026-06-01 09:20:00'
   },
   {
     id: 'dg-1002',
-    groupCode: 'GRP-CM-01',
-    groupName: '核心区反制处置组',
-    groupType: '反制组',
-    description: '用于核心区入侵目标的干扰、诱骗与近距反制联动。',
-    memberIds: seedMemberIds(0, 4),
+    groupCode: 'GRP-DET-02',
+    groupName: '塔台雷达三机位',
+    groupType: '探测组',
+    description: '',
+    memberIds: groupMembers('di-10002', ['di-20004', 'di-20005']),
     enabled: true,
     updatedAt: '2026-06-01 09:35:00'
   },
   {
     id: 'dg-1003',
     groupCode: 'GRP-EO-01',
-    groupName: '南门光电观察组',
+    groupName: '南门光电周边',
     groupType: '光电协同组',
-    description: '用于南门方向目标复核、锁定与画面回传。',
-    memberIds: seedMemberIds(1, 2),
+    description: '',
+    memberIds: groupMembers('di-10003', ['di-20006', 'di-20007', 'di-20008']),
     enabled: true,
     updatedAt: '2026-06-01 10:10:00'
+  },
+  {
+    id: 'dg-1004',
+    groupCode: 'GRP-LNK-01',
+    groupName: '西区机房那组',
+    groupType: '综合联动组',
+    description: '',
+    memberIds: groupMembers('di-10004', ['di-20009', 'di-20010']),
+    enabled: true,
+    updatedAt: '2026-06-02 11:00:00'
   }
 ]
 

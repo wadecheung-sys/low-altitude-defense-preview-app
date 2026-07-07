@@ -26,6 +26,7 @@ DESKTOP_XLSX = Path(r"d:\MyFiles\Desktop\历史事件.xlsx")
 EXPORT_HEADERS = [
     "目标ID",
     "名单类型",
+    "目标类型",
     "发现时间",
     "处置时间",
     "飞手位置",
@@ -42,6 +43,7 @@ EXPORT_HEADERS = [
 SAMPLE_ROW = [
     "TG-2024-0001",
     "黑名单",
+    "黑飞无人机",
     "2024-03-04 08:00:00",
     "2024-03-04 08:00:25",
     "未定位",
@@ -51,13 +53,14 @@ SAMPLE_ROW = [
     "人工核查",
     "雷达-01 (2.4G)",
     "干扰-01",
-    "已处置",
+    "已结束",
     "多源轨迹已合并",
 ]
 
 FIELD_ROWS = [
     ("目标ID", "TG-2024-0001", "融合目标编号，与列表页目标ID一致"),
     ("名单类型", "黑名单 / 白名单 / 未知", "名单归属，与列表页名单类型一致"),
+    ("目标类型", "黑飞无人机 / 飞鸟 / 其他", "历史事件目标类型，与列表页一致"),
     ("发现时间", "2024-03-04 08:00:00", "事件首次发现时间"),
     ("处置时间", "2024-03-04 08:00:25 / --", "未完成处置时导出为 --"),
     ("飞手位置", "未定位", "当前实现统一展示未定位"),
@@ -67,11 +70,11 @@ FIELD_ROWS = [
     ("验证方式", "自动识别 / 人工核查", "自动识别或人工核查"),
     ("探测设备", "雷达-01 (2.4G)", "参与探测的设备"),
     ("反制设备", "干扰-01 / --", "参与反制的设备名称，未执行反制时为 --"),
-    ("处置状态", "待处置 / 处置中 / 已处置 / 已结束", "事件处置状态"),
+    ("处置状态", "进行中 / 已结束", "事件处置状态，与列表展示一致"),
     ("备注", "多源轨迹已合并", "补充说明；等待值守类提示不导出"),
 ]
 
-COL_WIDTHS = [14, 12, 20, 20, 12, 16, 16, 10, 12, 18, 18, 12, 20]
+COL_WIDTHS = [14, 12, 14, 20, 20, 12, 16, 16, 10, 12, 18, 18, 12, 20]
 
 
 def set_cell_shading(cell, fill: str) -> None:
@@ -173,8 +176,7 @@ def build_docx(path: Path) -> None:
 
     note = document.add_paragraph()
     note_run = note.add_run(
-        "说明：Excel 导出包含全部 18 个字段；Word 导出写入完整数据表。"
-        "字段顺序与历史事件模块当前实现保持一致。"
+        "说明：Excel / Word 导出均包含全部字段；字段顺序与历史事件列表保持一致。"
     )
     note_run.font.size = Pt(10)
     note_run.font.name = "宋体"
@@ -227,11 +229,10 @@ def build_xlsx(path: Path) -> None:
         cell.alignment = Alignment(vertical="center")
         cell.border = thin
 
-    ws.merge_cells(f"A7:{last_col}9")
-    ws["A7"] = "导出数据区（实际导出时自第 5 行起写入）"
-    ws["A7"].font = Font(name="宋体", bold=True, color="1E3A8A")
-    ws["A7"].alignment = Alignment(horizontal="center", vertical="center")
-    ws["A7"].fill = PatternFill("solid", fgColor="EFF6FF")
+    ws.merge_cells(f"A6:{last_col}6")
+    ws["A6"] = "说明：正式导出时自第 5 行起写入数据，字段顺序与历史事件列表一致。"
+    ws["A6"].font = Font(name="宋体", size=9, color="64748B")
+    ws["A6"].alignment = Alignment(horizontal="left", vertical="center")
 
     for idx, width in enumerate(COL_WIDTHS, start=1):
         ws.column_dimensions[get_column_letter(idx)].width = width

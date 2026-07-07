@@ -9,18 +9,21 @@ import {
 defineOptions({ name: 'LadDataScreen' })
 
 const PROTOTYPE_WIDTH = 1920
-const PROTOTYPE_HEIGHT = 1080
+/** 原型画布高度：主屏 1080 + 底部演示按钮区域（u263/u321 位于 y=1174，高 68） */
+const PROTOTYPE_HEIGHT = 1242
+/** 页面展示最大宽度（仅约束宽度，高度随内容完整呈现并可滚动） */
+const DISPLAY_MAX_WIDTH = 1920
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/index.html`
 const BACKEND_ENTRY_RESET_DELAY = 240
 
-const HISTORY_EVENT_LINK_ID = 'u111'
-const MESSAGE_CENTER_LINK_ID = 'u177'
+const HISTORY_EVENT_LINK_ID = 'u116'
+const MESSAGE_CENTER_LINK_ID = 'u183'
 
 const MAP_TARGET_BINDINGS = [
-  { iconId: 'u188', detailId: 'u196', lineId: 'u185', label: '选择无人机目标' },
-  { iconId: 'u189', detailId: 'u193', lineId: 'u183', label: '选择无人机目标' },
-  { iconId: 'u190', detailId: 'u191', lineId: 'u182', label: '选择无人机目标' },
-  { iconId: 'u180', detailId: 'u199', lineId: 'u184', label: '选择飞鸟目标' }
+  { iconId: 'u195', detailId: 'u201', lineId: 'u190', label: '选择无人机目标' },
+  { iconId: 'u193', detailId: 'u196', lineId: 'u188', label: '选择无人机目标' },
+  { iconId: 'u194', detailId: 'u198', lineId: 'u187', label: '选择无人机目标' },
+  { iconId: 'u185', detailId: 'u204', lineId: 'u189', label: '选择飞鸟目标' }
 ] as const
 
 const DETAIL_PANEL_IDS = MAP_TARGET_BINDINGS.map((item) => item.detailId)
@@ -28,10 +31,10 @@ const LINE_IDS = MAP_TARGET_BINDINGS.map((item) => item.lineId)
 const ICON_IDS = MAP_TARGET_BINDINGS.map((item) => item.iconId)
 
 const DETAIL_CLOSE_BUTTON_MAP: Record<string, string> = {
+  u201: 'u202',
   u196: 'u197',
-  u193: 'u194',
-  u191: 'u192',
-  u199: 'u200'
+  u198: 'u199',
+  u204: 'u205'
 }
 
 const CLOCK_ELEMENT_IDS = {
@@ -58,6 +61,7 @@ const stageScale = ref(1)
 let bindRetryTimer: number | undefined
 let resetEntryTimer: number | undefined
 let clockTimer: number | undefined
+let resizeObserver: ResizeObserver | undefined
 let backendWarmupPromise: Promise<unknown> | undefined
 let cleanupPrototypeBindings: Cleanup | undefined
 
@@ -84,9 +88,9 @@ const updateStageScale = () => {
   const container = containerRef.value
   if (!container) return
 
-  const widthScale = container.clientWidth / PROTOTYPE_WIDTH
-  const heightScale = container.clientHeight / PROTOTYPE_HEIGHT
-  const nextScale = Math.min(widthScale, heightScale, 1)
+  const availableWidth = container.clientWidth
+  const targetWidth = Math.min(availableWidth, DISPLAY_MAX_WIDTH)
+  const nextScale = targetWidth / PROTOTYPE_WIDTH
 
   if (!Number.isFinite(nextScale) || nextScale <= 0) {
     stageScale.value = 1
@@ -104,13 +108,14 @@ const normalizePrototypeSurface = () => {
   doc.body.style.overflow = 'hidden'
   doc.body.style.margin = '0'
   doc.body.style.background = '#ffffff'
+  doc.body.style.minHeight = `${PROTOTYPE_HEIGHT}px`
 
   const base = doc.getElementById('base') as HTMLElement | null
   if (!base) return
 
   base.style.width = `${PROTOTYPE_WIDTH}px`
   base.style.height = `${PROTOTYPE_HEIGHT}px`
-  base.style.overflow = 'hidden'
+  base.style.overflow = 'visible'
 }
 
 const syncPrototypeButtonState = () => {
@@ -318,7 +323,7 @@ function bindPrototypeInteractions() {
       doc,
       closeId,
       () => clearMapTargetSelection(doc),
-      { role: 'button', ariaLabel: `关闭${detailId === 'u199' ? '飞鸟' : '无人机'}详情` }
+      { role: 'button', ariaLabel: `关闭${detailId === 'u204' ? '飞鸟' : '无人机'}详情` }
     )
     if (cleanup) cleanups.push(cleanup)
   }
@@ -354,12 +359,23 @@ const schedulePrototypeBinding = () => {
 const handleFrameLoad = () => {
   frameLoaded.value = true
   normalizePrototypeSurface()
-  updateStageScale()
-  schedulePrototypeBinding()
+  void nextTick(() => {
+    updateStageScale()
+    schedulePrototypeBinding()
+  })
 }
 
 onMounted(() => {
   updateStageScale()
+
+  const container = containerRef.value
+  if (container && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => {
+      updateStageScale()
+    })
+    resizeObserver.observe(container)
+  }
+
   window.addEventListener('resize', updateStageScale)
   window.setTimeout(() => {
     void warmBackendPage()
@@ -369,6 +385,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   cleanupPrototypeBindings?.()
   cleanupPrototypeBindings = undefined
+  resizeObserver?.disconnect()
+  resizeObserver = undefined
   window.clearTimeout(bindRetryTimer)
   window.clearTimeout(resetEntryTimer)
   window.clearInterval(clockTimer)
@@ -412,12 +430,13 @@ onBeforeUnmount(() => {
 .lad-data-screen {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: 100%;
   height: 100vh;
   height: 100dvh;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: auto;
   background:
     radial-gradient(circle at top, rgba(57, 135, 218, 0.08), transparent 30%),
     linear-gradient(180deg, #f7f8fa 0%, #eef1f4 56%, #e6eaef 100%);
@@ -425,6 +444,10 @@ onBeforeUnmount(() => {
 
 .lad-data-screen__viewport {
   position: relative;
+  flex-shrink: 0;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding-bottom: 24px;
   overflow: hidden;
 }
 
@@ -435,7 +458,7 @@ onBeforeUnmount(() => {
 .lad-data-screen__frame {
   display: block;
   width: 1920px;
-  height: 1080px;
+  height: 100%;
   border: 0;
   background: #ffffff;
 }

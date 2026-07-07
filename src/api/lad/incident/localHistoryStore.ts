@@ -1,4 +1,5 @@
 import { buildDisposalTimeline } from './disposalTimeline'
+import { isHandlingEnded, normalizeHandlingStatus } from './handlingStatusUtils'
 import { BIRD_NUISANCE_DEMO_EVENT_ID, resolveHistoryTargetType } from './historyTargetType'
 import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore'
 import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
@@ -45,6 +46,12 @@ function hashSeed(id: string): number {
   return h
 }
 
+function formatSeedDatetime(ms: number) {
+  const date = new Date(ms)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
 function buildSeedList() {
   const list: HistoryEventItem[] = []
   let seq = 0
@@ -58,10 +65,10 @@ function buildSeedList() {
       const sec = String((i * 7) % 60).padStart(2, '0')
       const discovered = `2024-03-${day} ${hour}:${min}:${sec}`
       const durationSec = 20 + (i % 90)
-      const endMin = Number(min) + Math.floor(durationSec / 60)
-      const endSec = (Number(sec) + durationSec) % 60
-      const ended = `2024-03-${day} ${hour}:${String(endMin).padStart(2, '0')}:${String(endSec).padStart(2, '0')}`
-      const handled = `2024-03-${day} ${hour}:${String(endMin).padStart(2, '0')}:${String((endSec + 5) % 60).padStart(2, '0')}`
+      const discoveredMs = Date.parse(discovered.replace(/-/g, '/'))
+      const endedMs = discoveredMs + durationSec * 1000
+      const ended = formatSeedDatetime(endedMs)
+      const handled = formatSeedDatetime(endedMs + 5_000)
       const lng = (113.39 + (i % 20) * 0.01).toFixed(2)
       const lat = (23.09 + (i % 15) * 0.01).toFixed(2)
       const abnormalSec = i % 3 === 0 ? 8 + (i % 40) : 0
@@ -177,16 +184,14 @@ function buildSeedList() {
           : {}),
         handlingResult,
         handlingStatus: forceManualExecution
-          ? '已处置'
+          ? '已结束'
           : forceDisposed
-            ? '已处置'
+            ? '已结束'
             : forceEnded
               ? '已结束'
               : keepOpen
-                ? i < 2
-                  ? '待处置'
-                  : '处置中'
-                : '已处置',
+                ? '进行中'
+                : '已结束',
         manualConfirmStatus,
         listType: '未知',
         remark
@@ -244,19 +249,19 @@ function applyConfirm(
   if (result === '真实入侵') {
     row.threatLevel = threatLevel
     if (threatLevel === '低危') {
-      row.handlingStatus = '处置中'
+      row.handlingStatus = '进行中'
       row.handlingResult = '自动监控中'
       row.countermeasureDevice = '光电-01'
     } else if (threatLevel === '中危') {
-      row.handlingStatus = '已处置'
+      row.handlingStatus = '已结束'
       row.handlingResult = '驱离成功'
       row.countermeasureDevice = '干扰-01'
     } else if (threatLevel === '高危') {
-      row.handlingStatus = '已处置'
+      row.handlingStatus = '已结束'
       row.handlingResult = '激光打击成功'
       row.countermeasureDevice = '激光-01'
     } else {
-      row.handlingStatus = '待处置'
+      row.handlingStatus = '进行中'
       row.handlingResult = '待执行'
       row.countermeasureDevice = '--'
     }
@@ -300,8 +305,8 @@ function buildHistoryEventDetail(row: HistoryEventItem): HistoryEventDetail {
     })
   }
 
-  const handleProgress = row.handlingStatus === '待处置' ? 32 : 52
-  const clearProgress = row.handlingStatus === '待处置' ? 68 : 92
+  const handleProgress = isHandlingEnded(row.handlingStatus) ? 52 : 32
+  const clearProgress = isHandlingEnded(row.handlingStatus) ? 92 : 68
 
   return {
     ...row,
@@ -356,7 +361,9 @@ function filterList(params: HistoryEventQuery): HistoryEventItem[] {
     rows = rows.filter((row) => normalizeThreatLevel(row.threatLevel) === params.threatLevel)
   }
   if (params.handlingStatus) {
-    rows = rows.filter((row) => row.handlingStatus === params.handlingStatus)
+    rows = rows.filter(
+      (row) => normalizeHandlingStatus(row.handlingStatus) === params.handlingStatus
+    )
   }
   if (params.manualConfirmStatus) {
     rows = rows.filter((row) => row.manualConfirmStatus === params.manualConfirmStatus)

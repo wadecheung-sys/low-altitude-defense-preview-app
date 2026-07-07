@@ -8,7 +8,7 @@ export type ListType = '黑名单' | '白名单' | '未知'
 export type EntryMethod = '自动录入' | '人工录入' | '自动+人工校验'
 
 /**
- * 黑白名单条目（无人机主数据，非单次飞行记录）
+ * 黑白名单条目（合作式无人机主数据，须具备有效识别码）
  */
 export interface BlackWhiteListItem {
   id: string
@@ -81,7 +81,7 @@ export type BlackWhiteFormPayload = Pick<
  */
 export interface BlackWhiteTargetDetail extends BlackWhiteListItem {
   threatLevel: ThreatLevel
-  /** 汇总处置状态，界面「待处置」展示为「未处置」 */
+  /** 汇总处置状态（进行中 / 已结束） */
   handlingStatus: HandlingStatus
   /** 无人机最后已知位置（最近一次探测） */
   lastPosition: string
@@ -99,5 +99,5 @@ export interface BlackWhiteTargetDetail extends BlackWhiteListItem {
 
 export interface BlackWhiteTargetListTypePayload {
   id: string
-  listType: ListType
+  listType: '黑名单' | '白名单'
 }

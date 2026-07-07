@@ -86,8 +86,33 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <Dialog v-model="visible" title="人工核查" width="520px" max-height="auto">
-    <ElForm label-position="top" class="decision-form">
+  <Dialog v-model="visible" title="人工核查" width="920px" max-height="auto">
+    <div class="confirm-layout">
+      <section class="optical-panel">
+        <div class="optical-toolbar">
+          <span><i class="live-dot"></i>光电-01 实时画面</span>
+          <span>EO / 4K / 12.6x</span>
+        </div>
+        <div class="optical-view">
+          <div class="scan-line"></div>
+          <div class="target-box">
+            <span class="drone-shape">◎</span>
+            <span class="target-label">{{ row?.targetId }}</span>
+          </div>
+          <div class="crosshair"><i></i><b></b></div>
+          <div class="telemetry telemetry-top">TRACKING / AUTO</div>
+          <div class="telemetry telemetry-bottom">
+            AZ 126.4°&nbsp;&nbsp; EL 18.7°&nbsp;&nbsp; DIST 1.42 KM
+          </div>
+        </div>
+        <div class="target-summary">
+          <span>目标型号：{{ row?.targetModel }}</span>
+          <span>识别码：{{ row?.uavSn }}</span>
+          <span>飞手位置：未定位</span>
+        </div>
+      </section>
+
+      <ElForm label-position="top" class="decision-form">
         <ElFormItem label="验证方式">
           <div class="verification-method-hint">提交后验证方式将更新为：人工核查</div>
         </ElFormItem>
@@ -136,7 +161,8 @@ const onSubmit = async () => {
             show-word-limit
           />
         </ElFormItem>
-    </ElForm>
+      </ElForm>
+    </div>
 
     <template #footer>
       <BaseButton @click="visible = false">取消</BaseButton>
@@ -146,6 +172,164 @@ const onSubmit = async () => {
 </template>
 
 <style scoped>
+.confirm-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+  gap: 22px;
+}
+
+.optical-panel {
+  overflow: hidden;
+  border: 1px solid #273f4c;
+  border-radius: 8px;
+  background: #071318;
+  color: #bce9df;
+}
+
+.optical-toolbar,
+.target-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  font-size: 12px;
+  background: #0b2028;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #42e3b4;
+  box-shadow: 0 0 8px #42e3b4;
+}
+
+.optical-view {
+  position: relative;
+  min-height: 292px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(9, 24, 28, 0.2), rgba(9, 24, 28, 0.55)),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(151, 221, 206, 0.06) 4px),
+    radial-gradient(circle at 58% 42%, #869c91 0, #3d554e 11%, #1f3534 30%, #09191d 72%);
+}
+
+.optical-view::before,
+.optical-view::after {
+  position: absolute;
+  content: '';
+  background: rgba(164, 232, 216, 0.2);
+}
+
+.optical-view::before {
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+}
+
+.optical-view::after {
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+}
+
+.scan-line {
+  position: absolute;
+  z-index: 2;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(75, 255, 201, 0.65), transparent);
+  animation: scan 3.6s linear infinite;
+}
+
+.target-box {
+  position: absolute;
+  z-index: 3;
+  top: 35%;
+  left: 54%;
+  width: 92px;
+  height: 62px;
+  border: 1px solid #64ffd0;
+  box-shadow: 0 0 10px rgba(100, 255, 208, 0.25);
+  animation: drift 4s ease-in-out infinite;
+}
+
+.drone-shape {
+  position: absolute;
+  top: 16px;
+  left: 36px;
+  color: #d8fff3;
+  font-size: 21px;
+}
+
+.target-label {
+  position: absolute;
+  top: -20px;
+  left: -1px;
+  white-space: nowrap;
+  font: 11px monospace;
+}
+
+.crosshair {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: 38px;
+  height: 38px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(174, 255, 233, 0.7);
+  border-radius: 50%;
+}
+
+.crosshair i,
+.crosshair b {
+  position: absolute;
+  display: block;
+  background: rgba(174, 255, 233, 0.8);
+}
+
+.crosshair i {
+  top: 18px;
+  left: -9px;
+  width: 56px;
+  height: 1px;
+}
+
+.crosshair b {
+  top: -9px;
+  left: 18px;
+  width: 1px;
+  height: 56px;
+}
+
+.telemetry {
+  position: absolute;
+  z-index: 4;
+  left: 12px;
+  color: #a7e9d8;
+  font: 11px monospace;
+}
+
+.telemetry-top {
+  top: 10px;
+}
+
+.telemetry-bottom {
+  bottom: 10px;
+}
+
+.target-summary {
+  gap: 8px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  color: #8eb8ae;
+}
+
 .decision-form {
   padding-top: 4px;
 }
@@ -218,5 +402,36 @@ const onSubmit = async () => {
 
 .disposal-hint[data-level='高危'] {
   border-color: var(--el-color-danger);
+}
+
+@keyframes scan {
+  from {
+    top: -2px;
+  }
+
+  to {
+    top: 100%;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(9px, -5px);
+  }
+}
+
+@media (max-width: 760px) {
+  .confirm-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .optical-view {
+    min-height: 220px;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { onMounted, reactive, ref, unref } from 'vue'
+import { computed, onMounted, reactive, ref, unref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElDivider, ElLink, ElMessage, ElMessageBox, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
@@ -8,19 +8,16 @@ import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
+import { deleteBlackWhiteApi, getBlackWhiteListApi } from '@/api/lad/list'
 import {
-  deleteBlackWhiteApi,
-  getBlackWhiteListApi
-} from '@/api/lad/list'
-import {
-  BLACK_WHITE_TARGET_KIND_SEARCH_OPTIONS,
-  displayBlackWhiteTargetKind,
-  historyTargetTypeTagType
+  displayManagedListType,
+  displayResolvableSn,
+  type ManagedListType
 } from '@/api/lad/list/listTargetKind'
-import type { BlackWhiteListItem, ListType } from '@/api/lad/list/types'
+import type { BlackWhiteListItem } from '@/api/lad/list/types'
 import BlackWhiteFormDialog from './components/BlackWhiteFormDialog.vue'
 import ValidUntilRangeSearch from './components/ValidUntilRangeSearch.vue'
-import { targetAirframeLabel, targetAirframeOptions, targetModelOptions } from '../shared/ladOptionConstants'
+import { targetModelOptions } from '../shared/ladOptionConstants'
 import { formatValidUntilDisplay } from '@/api/lad/list/validUntilUtils'
 
 defineOptions({
@@ -36,7 +33,6 @@ const activeListTab = ref<ListTab>(
   queryListType === '白名单' || queryListType === '黑名单' ? queryListType : 'all'
 )
 
-const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({
   sn: (route.query.sn as string) || undefined,
   targetId: (route.query.targetId as string) || undefined,
@@ -52,8 +48,6 @@ const setSearchParams = (params: Recordable) => {
     targetId: params.targetId,
     sn: params.sn,
     model: params.model,
-    historyTargetType: params.historyTargetType,
-    targetType: params.targetType,
     validUntilStart: range?.[0] || undefined,
     validUntilEnd: range?.[1] || undefined
   }
@@ -71,11 +65,10 @@ const onListTabChange = (name: string | number) => {
   getList()
 }
 
-const listTypeTag = (type: ListType) => {
-  const map: Record<ListType, 'danger' | 'success' | 'info'> = {
+const listTypeTag = (type: ManagedListType) => {
+  const map: Record<ManagedListType, 'danger' | 'success'> = {
     黑名单: 'danger',
-    白名单: 'success',
-    未知: 'info'
+    白名单: 'success'
   }
   return map[type]
 }
@@ -123,49 +116,69 @@ const { tableRegister, tableState, tableMethods } = useTable({
       list: res.data.list,
       total: res.data.total
     }
-  },
-  fetchDelApi: async () => {
-    const res = await deleteBlackWhiteApi(unref(ids))
-    return !!res
   }
 })
 
 const { loading, dataList, total, currentPage, pageSize } = tableState
-const { getList, getElTableExpose, delList } = tableMethods
+const { getList, getElTableExpose } = tableMethods
 
 onMounted(async () => {
   await getList()
   tryOpenDetailFromQuery()
 })
 
-const delLoading = ref(false)
+const removeLoading = ref(false)
 
-const delData = async (row: BlackWhiteListItem | null) => {
+const removeListLabel = (listType: ManagedListType) =>
+  listType === '黑名单' ? '移出黑名单' : '移出白名单'
+
+const removeButtonType = (listType: ManagedListType) =>
+  listType === '黑名单' ? 'danger' : 'warning'
+
+const removeFromList = async (row: BlackWhiteListItem | null, listType: ManagedListType) => {
   const elTableExpose = await getElTableExpose()
   const selected = elTableExpose?.getSelectionRows() as BlackWhiteListItem[] | undefined
-  const deleteIds = row ? [row.id] : selected?.map((r) => r.id) || []
-  if (!deleteIds.length) {
-    ElMessage.warning('请先勾选要删除的记录')
+  const targetRows = row ? [row] : selected || []
+  const removeIds = targetRows.filter((item) => item.listType === listType).map((item) => item.id)
+
+  if (!targetRows.length) {
+    ElMessage.warning(`请先勾选要${removeListLabel(listType)}的记录`)
     return
   }
+  if (!removeIds.length) {
+    ElMessage.warning(`所选记录中没有${listType}设备`)
+    return
+  }
+  if (!row && removeIds.length !== targetRows.length) {
+    ElMessage.warning(`请仅勾选${listType}记录后再批量${removeListLabel(listType)}`)
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
       row
-        ? `确定删除识别码「${row.sn}」的名单记录吗？`
-        : `确定批量删除已选 ${deleteIds.length} 条记录吗？`,
-      '删除确认',
-      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+        ? `确定将识别码「${row.sn}」${removeListLabel(listType)}吗？移出后该设备将不再按${listType}规则处置。`
+        : `确定将已选 ${removeIds.length} 条${listType}记录${removeListLabel(listType)}吗？`,
+      removeListLabel(listType),
+      { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' }
     )
-    ids.value = deleteIds
-    delLoading.value = true
-    await delList(unref(ids).length).finally(() => {
-      delLoading.value = false
-    })
-    ElMessage.success('删除成功')
+    removeLoading.value = true
+    await deleteBlackWhiteApi(removeIds)
+    ElMessage.success(`${removeListLabel(listType)}成功`)
+    await getList()
+    elTableExpose?.clearSelection()
   } catch {
     // 用户取消
+  } finally {
+    removeLoading.value = false
   }
 }
+
+const batchRemoveListType = computed<ManagedListType | null>(() => {
+  if (activeListTab.value === '黑名单') return '黑名单'
+  if (activeListTab.value === '白名单') return '白名单'
+  return null
+})
 
 const crudSchemas = reactive<CrudSchema[]>([
   {
@@ -191,8 +204,8 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       slots: {
         default: ({ row }: { row: BlackWhiteListItem }) => (
-          <ElTag type={listTypeTag(row.listType)} size="small" effect="light">
-            {row.listType}
+          <ElTag type={listTypeTag(displayManagedListType(row.listType))} size="small" effect="light">
+            {displayManagedListType(row.listType)}
           </ElTag>
         )
       }
@@ -201,27 +214,10 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'historyTargetType',
     label: '目标类型',
-    minWidth: 132,
-    search: {
-      component: 'Select',
-      componentProps: {
-        placeholder: '请选择目标类型',
-        clearable: true,
-        options: BLACK_WHITE_TARGET_KIND_SEARCH_OPTIONS
-      }
-    },
-    table: {
-      slots: {
-        default: ({ row }: { row: BlackWhiteListItem }) => {
-          const kind = displayBlackWhiteTargetKind(row)
-          return (
-            <ElTag type={historyTargetTypeTagType(kind)} size="small" effect="light">
-              {kind}
-            </ElTag>
-          )
-        }
-      }
-    }
+    search: { hidden: true },
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'targetId',
@@ -297,28 +293,19 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       showOverflowTooltip: true,
       slots: {
-        default: ({ row }: { row: BlackWhiteListItem }) =>
-          row.sn === '未解析' ? (
-            <span class="text-[var(--el-text-color-secondary)]">未解析</span>
-          ) : (
-            <span>{row.sn}</span>
-          )
+        default: ({ row }: { row: BlackWhiteListItem }) => (
+          <span>{displayResolvableSn(row.sn)}</span>
+        )
       }
     }
   },
   {
     field: 'targetType',
-    label: targetAirframeLabel,
-    minWidth: 92,
-    search: {
-      component: 'Select',
-      componentProps: {
-        placeholder: `请选择${targetAirframeLabel}`,
-        clearable: true,
-        options: targetAirframeOptions
-      }
-    },
-    table: { showOverflowTooltip: true }
+    label: '目标属性',
+    search: { hidden: true },
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'validUntilRange',
@@ -378,7 +365,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'action',
-    width: '300px',
+    width: '320px',
     label: '操作',
     fixed: 'right',
     search: { hidden: true },
@@ -394,8 +381,11 @@ const crudSchemas = reactive<CrudSchema[]>([
             <BaseButton type="primary" onClick={() => openEdit(data.row)}>
               编辑
             </BaseButton>
-            <BaseButton type="danger" onClick={() => delData(data.row)}>
-              删除
+            <BaseButton
+              type={removeButtonType(displayManagedListType(data.row.listType))}
+              onClick={() => removeFromList(data.row, displayManagedListType(data.row.listType))}
+            >
+              {removeListLabel(displayManagedListType(data.row.listType))}
             </BaseButton>
           </>
         )
@@ -434,7 +424,14 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
         <div class="mb-10px">
           <BaseButton type="primary" @click="openAdd">新增</BaseButton>
-          <BaseButton :loading="delLoading" type="danger" @click="delData(null)">批量删除</BaseButton>
+          <BaseButton
+            v-if="batchRemoveListType"
+            :loading="removeLoading"
+            :type="batchRemoveListType === '黑名单' ? 'danger' : 'warning'"
+            @click="removeFromList(null, batchRemoveListType)"
+          >
+            批量{{ batchRemoveListType === '黑名单' ? '移出黑名单' : '移出白名单' }}
+          </BaseButton>
         </div>
 
         <Table

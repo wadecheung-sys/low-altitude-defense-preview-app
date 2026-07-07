@@ -14,6 +14,7 @@ import {
   resolveThreatEscalationPath
 } from './disposalTimelineMessage'
 import { resolveHistoryTargetType } from './historyTargetType'
+import { isHandlingEnded, isHandlingInProgress } from './handlingStatusUtils'
 import type { HistoryEventItem, HandlingStatus, ThreatLevel } from './types'
 
 export type DisposalTimelineNodeStatus = 'done' | 'current' | 'pending' | 'skipped'
@@ -23,6 +24,11 @@ export type DisposalTimelineStageKey = 'discover' | 'threat' | 'assess' | 'dispo
 export interface DisposalTimelineDetailItem {
   label: string
   value: string
+}
+
+export interface DisposalTimelineDetailGroup {
+  title?: string
+  items: DisposalTimelineDetailItem[]
 }
 
 export interface DisposalTimelineNode {
@@ -35,8 +41,10 @@ export interface DisposalTimelineNode {
   summary?: string
   /** 多条消息描述（如威胁评估递进） */
   summaries?: string[]
-  /** 阶段详情（空则不展示） */
+  /** 阶段详情（单组，空则不展示） */
   details?: DisposalTimelineDetailItem[]
+  /** 阶段详情（多组卡片，如威胁评估递进） */
+  detailGroups?: DisposalTimelineDetailGroup[]
   tags?: string[]
 }
 
@@ -75,13 +83,13 @@ function hasCountermeasure(row: HistoryEventItem) {
 }
 
 function disposeStatus(row: HistoryEventItem): DisposalTimelineNodeStatus {
-  if (row.handlingStatus === '待处置' || row.handlingStatus === '处置中') return 'current'
+  if (isHandlingInProgress(row.handlingStatus)) return 'current'
   if (hasCountermeasure(row)) return 'done'
   return 'skipped'
 }
 
-function resultStatus(status: HandlingStatus): DisposalTimelineNodeStatus {
-  if (status === '已处置' || status === '已结束') return 'done'
+function resultStatus(status: HandlingStatus | string): DisposalTimelineNodeStatus {
+  if (isHandlingEnded(status)) return 'done'
   return 'pending'
 }
 
@@ -121,7 +129,8 @@ function buildAssessStepDetails(
   row: HistoryEventItem,
   level: ThreatLevel,
   stepIndex: number,
-  stepTotal: number
+  stepTotal: number,
+  options?: { showOrderInItems?: boolean }
 ): DisposalTimelineDetailItem[] {
   const metricDetails: DisposalTimelineDetailItem[] = [
     { label: '威胁等级', value: level },
@@ -130,7 +139,7 @@ function buildAssessStepDetails(
     { label: '飞行状态', value: buildAssessFlightStatus(row, level, stepIndex) }
   ]
 
-  if (stepTotal > 1) {
+  if (stepTotal > 1 && options?.showOrderInItems !== false) {
     metricDetails.unshift({
       label: '评估次序',
       value: `第 ${stepIndex + 1}/${stepTotal} 次`
@@ -153,12 +162,17 @@ function buildThreatAssessmentNode(
     : resolveThreatEscalationPath(row.threatLevel)
 
   const summaries: string[] = []
-  const details: DisposalTimelineDetailItem[] = []
+  const detailGroups: DisposalTimelineDetailGroup[] = []
 
   levels.forEach((level, index) => {
     const info = buildAssessMessageInfo(row, assessStartAt, level)
     summaries.push(formatTimelineSummary(info.messageDescription))
-    details.push(...buildAssessStepDetails(row, level, index, levels.length))
+    detailGroups.push({
+      title: levels.length > 1 ? `第 ${index + 1}/${levels.length} 次` : undefined,
+      items: buildAssessStepDetails(row, level, index, levels.length, {
+        showOrderInItems: levels.length <= 1
+      })
+    })
   })
 
   return {
@@ -169,7 +183,8 @@ function buildThreatAssessmentNode(
     status: 'done',
     summary: summaries.length === 1 ? summaries[0] : undefined,
     summaries: summaries.length > 1 ? summaries : undefined,
-    details: stageDetails(details)
+    details: detailGroups.length === 1 ? detailGroups[0].items : undefined,
+    detailGroups: detailGroups.length > 1 ? detailGroups : undefined
   }
 }
 

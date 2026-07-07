@@ -22,6 +22,10 @@ export function saveSystemParamApi(data: SystemParamSavePayload): Promise<IRespo
   return request.post({ url: '/mock/lad/system/params/save', data })
 }
 
+export function restoreSystemParamDefaultsApi(): Promise<IResponse<true>> {
+  return request.post({ url: '/mock/lad/system/params/restore-defaults' })
+}
+
 export function getDictTypeListApi(params: DictTypeQuery): Promise<IResponse<DictTypeListResult>> {
   return request.get({ url: '/mock/lad/system/dict/type/list', params })
 }

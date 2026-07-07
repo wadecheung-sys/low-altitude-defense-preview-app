@@ -41,6 +41,12 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     reqModule: '3-detail',
     phaseNote: '无人机档案详情。'
   },
+  'flight-record': {
+    pageKey: 'flight-record',
+    pageType: 'map',
+    reqModule: '3-flight',
+    phaseNote: '地图化回放过往飞行记录，联动光电视频与时段列表。'
+  },
   'device-archive': {
     pageKey: 'device-archive',
     pageType: 'list',

@@ -31,9 +31,10 @@ const visible = computed({
 })
 
 const isEdit = computed(() => !!props.row?.id)
+const allowsEmptyNumber = computed(() => props.row?.group === '模拟')
 const loading = ref(false)
 const boolValue = ref(true)
-const numValue = ref(0)
+const numValue = ref<number | undefined>(undefined)
 const strValue = ref('')
 
 const form = ref({
@@ -62,8 +63,12 @@ watch(
         remark: props.row.remark || ''
       }
       if (props.row.valueType === 'boolean') boolValue.value = Boolean(value)
-      else if (props.row.valueType === 'number') numValue.value = Number(value)
-      else strValue.value = String(value ?? '')
+      else if (props.row.valueType === 'number') {
+        numValue.value =
+          value === null || value === undefined || value === ''
+            ? undefined
+            : Number(value)
+      } else strValue.value = String(value ?? '')
     } else {
       form.value = {
         paramKey: '',
@@ -72,20 +77,23 @@ watch(
         remark: ''
       }
       boolValue.value = true
-      numValue.value = 0
+      numValue.value = undefined
       strValue.value = ''
     }
   }
 )
 
-function currentParamValue(): string | number | boolean {
+function currentParamValue(): string | number | boolean | null {
   if (isEdit.value && props.row) {
     if (props.row.valueType === 'boolean') return boolValue.value
-    if (props.row.valueType === 'number') return numValue.value
+    if (props.row.valueType === 'number') {
+      if (numValue.value === undefined) return allowsEmptyNumber.value ? null : 0
+      return numValue.value
+    }
     return strValue.value
   }
   if (form.value.valueType === 'boolean') return boolValue.value
-  if (form.value.valueType === 'number') return numValue.value
+  if (form.value.valueType === 'number') return numValue.value ?? 0
   return strValue.value
 }
 
@@ -158,9 +166,11 @@ async function onSave() {
           />
           <ElInputNumber
             v-else-if="(isEdit ? row?.valueType : form.valueType) === 'number'"
-            v-model="numValue"
+            :model-value="numValue"
             class="w-full"
             controls-position="right"
+            :placeholder="allowsEmptyNumber ? '留空表示不触发' : undefined"
+            @update:model-value="numValue = $event ?? undefined"
           />
           <ElInput v-else v-model="strValue" clearable />
         </ElFormItem>

@@ -4,6 +4,8 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
+  ElInputNumber,
+  ElDivider,
   ElMessage,
   ElOption,
   ElSelect,
@@ -239,6 +241,22 @@ async function onSave() {
           mode="rule"
         />
       </ElFormItem>
+      <ElFormItem label="优先级" required>
+        <ElInputNumber
+          v-model="form.priority"
+          :min="0"
+          :max="999"
+          :step="1"
+          controls-position="right"
+          class="w-full"
+        />
+        <div class="threat-rule-form__tip">范围 0–999，数值越大优先级越高。</div>
+      </ElFormItem>
+      <ElFormItem label="状态">
+        <ElSwitch v-model="form.enabled" inline-prompt active-text="ON" inactive-text="OFF" />
+      </ElFormItem>
+
+      <ElDivider content-position="left">判级结论</ElDivider>
       <ElFormItem label="威胁等级" required>
         <ElSelect v-model="form.threatLevel" class="w-full">
           <ElOption
@@ -249,9 +267,6 @@ async function onSave() {
           />
         </ElSelect>
         <div class="threat-rule-form__tip">规则条件命中后输出的威胁等级结论。</div>
-      </ElFormItem>
-      <ElFormItem label="状态">
-        <ElSwitch v-model="form.enabled" inline-prompt active-text="ON" inactive-text="OFF" />
       </ElFormItem>
     </ElForm>
 
@@ -268,5 +283,9 @@ async function onSave() {
   font-size: 12px;
   line-height: 18px;
   color: var(--el-text-color-secondary);
+}
+
+:deep(.el-input-number) {
+  width: 100%;
 }
 </style>

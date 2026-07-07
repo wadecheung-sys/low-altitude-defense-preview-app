@@ -1,28 +1,27 @@
 import type {
-  DeviceFaultEventType,
+  DeviceStatusEventType,
   EventAlarmLevel,
   EventAttributeEventType,
   EventAttributeItem,
   EventOwnership
 } from './types'
 
-/** 六类消息事件名称（与处置五阶段 + 设备故障一致） */
+/** 六类消息事件名称（与处置五阶段 + 设备状态一致） */
 export const EVENT_OWNERSHIP_OPTIONS: EventOwnership[] = [
   '目标发现',
   '威胁识别',
   '威胁评估',
   '处置执行',
   '目标结果',
-  '设备故障'
+  '设备状态'
 ]
 
-/** 「设备故障」归属下的事件类型 */
-export const DEVICE_FAULT_EVENT_TYPES: DeviceFaultEventType[] = ['离线', '故障']
+/** 「设备状态」归属下的事件类型 */
+export const DEVICE_STATUS_EVENT_TYPES: DeviceStatusEventType[] = ['上线', '离线']
 
-export function isDeviceFaultEventType(value: string): value is DeviceFaultEventType {
-  return (DEVICE_FAULT_EVENT_TYPES as string[]).includes(value)
+export function isDeviceStatusEventType(value: string): value is DeviceStatusEventType {
+  return (DEVICE_STATUS_EVENT_TYPES as string[]).includes(value)
 }
-
 /** 各归属下可选的事件类型（内部模板键，不对外展示） */
 export const eventTypeOptionsByOwnership: Record<EventOwnership, EventAttributeEventType[]> = {
   目标发现: ['独立发现'],
@@ -30,7 +29,7 @@ export const eventTypeOptionsByOwnership: Record<EventOwnership, EventAttributeE
   威胁评估: ['无危', '低危', '中危', '高危'],
   处置执行: ['人工处置', '自动处置'],
   目标结果: ['驱离/自离', '迫降', '打击'],
-  设备故障: [...DEVICE_FAULT_EVENT_TYPES]
+  设备状态: [...DEVICE_STATUS_EVENT_TYPES]
 }
 
 /** 全部事件类型（内部模板索引） */
@@ -46,7 +45,7 @@ export function getEventTypeSearchOptions(
   return types.map((value) => ({ label: value, value }))
 }
 
-/** 事件类型 → 消息提示模板（占位符与归纳文档一致） */
+/** 事件类型 → 消息提示模板（与处置时间链五阶段摘要一致） */
 export const EVENT_ATTRIBUTE_PROMPT_TEMPLATES: Record<EventAttributeEventType, string> = {
   独立发现: '{时间}{设备类型}{设备名称}{设备ID}发现目标',
   多源融合: '{时间}根据多源数据融合成果，确认目标类型为{目标类型}',
@@ -56,12 +55,19 @@ export const EVENT_ATTRIBUTE_PROMPT_TEMPLATES: Record<EventAttributeEventType, s
   高危: '{时间}{目标型号}{目标ID}触发威胁评估原则{规则名称}，判定为高危',
   人工处置: '{时间}{目标型号}{目标ID}经由人工处置，执行{反制动作}，执行设备{设备名称}',
   自动处置: '{时间}{目标型号}{目标ID}命中预案规则{规则名称}，执行{反制动作}，执行设备{设备名称}',
-  '驱离/自离': '{时间}，编码为{编码}的{无人机/非无人机}目标消失,逗留时间为{逗留时间}',
-  迫降: '{时间}{目标型号}{目标ID}于{经纬度}迫降，请及时处理',
-  打击: '{时间}{目标型号}{目标ID}经反制打击，当前已无飞行特征信息',
-  离线: '{时间}{设备类型}{设备名称}{设备ID}发生通信故障，当前离线',
-  故障: '{时间}{设备类型}{设备名称}{设备ID}发生{故障类型}，请及时处理'
+  '驱离/自离': '{时间}编码为{编码}的无人机目标消失，逗留时间为{逗留时间}',
+  迫降: '{时间}编码为{编码}的无人机目标迫降，逗留时间为{逗留时间}',
+  打击: '{时间}编码为{编码}的无人机目标经反制打击，逗留时间为{逗留时间}',
+  上线: '{时间}{设备类型}{设备ID}发生上线',
+  离线: '{时间}{设备类型}{设备ID}发生离线'
 }
+
+/** 处置时间链特殊节点摘要（非独立事件类型，与场景说明文档一致） */
+export const DISPOSAL_STAGE_FALLBACK_TEMPLATES = {
+  disposeSkipped: '{时间}未命中反制预案，未下发处置指令。',
+  disposePending: '{时间}已形成处置建议，等待预案触发或值守人员确认。',
+  resultNuisance: '{时间}事件已闭环，目标判定为躁扰信号排除。'
+} as const
 
 interface EventAttributeSeedMeta {
   eventOwnership: EventOwnership
@@ -182,24 +188,24 @@ const EVENT_ATTRIBUTE_SEED_META: EventAttributeSeedMeta[] = [
     alarmEnabled: true
   },
   {
-    eventOwnership: '设备故障',
+    eventOwnership: '设备状态',
+    eventType: '上线',
+    eventId: 'EVT-STATUS-ON',
+    eventName: '设备状态',
+    alarmLevel: '提示',
+    priority: 190,
+    alarmEnabled: true,
+    remark: '设备恢复上线。'
+  },
+  {
+    eventOwnership: '设备状态',
     eventType: '离线',
-    eventId: 'EVT-FAULT-OFF',
-    eventName: '设备故障',
+    eventId: 'EVT-STATUS-OFF',
+    eventName: '设备状态',
     alarmLevel: '重要',
     priority: 210,
     alarmEnabled: true,
-    remark: '心跳丢失或链路中断。'
-  },
-  {
-    eventOwnership: '设备故障',
-    eventType: '故障',
-    eventId: 'EVT-FAULT-ERR',
-    eventName: '设备故障',
-    alarmLevel: '重要',
-    priority: 200,
-    alarmEnabled: true,
-    remark: '设备在线但自检失败或功能异常。'
+    remark: '设备心跳丢失或链路中断。'
   }
 ]
 

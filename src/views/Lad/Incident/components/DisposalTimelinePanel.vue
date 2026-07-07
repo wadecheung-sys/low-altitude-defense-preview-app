@@ -53,14 +53,38 @@ function statusLabel(status: DisposalTimelineNode['status']) {
         </template>
         <p v-else class="disposal-timeline__summary">{{ node.summary }}</p>
         <details
-          v-if="node.key !== 'result' && node.details?.length"
+          v-if="
+            node.key !== 'result' &&
+            (node.detailGroups?.length || node.details?.length)
+          "
           class="disposal-timeline__details"
         >
           <summary>阶段详情</summary>
-          <dl class="disposal-timeline__detail-list">
+          <div v-if="node.detailGroups?.length" class="disposal-timeline__detail-cards">
+            <div
+              v-for="(group, groupIndex) in node.detailGroups"
+              :key="`${node.nodeId}-detail-group-${groupIndex}`"
+              class="disposal-timeline__detail-card"
+            >
+              <div v-if="group.title" class="disposal-timeline__detail-card-title">
+                {{ group.title }}
+              </div>
+              <dl class="disposal-timeline__detail-list">
+                <div
+                  v-for="item in group.items"
+                  :key="`${node.nodeId}-detail-${groupIndex}-${item.label}`"
+                  class="disposal-timeline__detail-item"
+                >
+                  <dt>{{ item.label }}</dt>
+                  <dd>{{ item.value || '--' }}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+          <dl v-else class="disposal-timeline__detail-list">
             <div
               v-for="item in node.details"
-              :key="item.label"
+              :key="`${node.nodeId}-detail-${item.label}`"
               class="disposal-timeline__detail-item"
             >
               <dt>{{ item.label }}</dt>
@@ -124,11 +148,32 @@ function statusLabel(status: DisposalTimelineNode['status']) {
     }
   }
 
+  &__detail-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  &__detail-card {
+    padding: 8px 10px;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 6px;
+  }
+
+  &__detail-card-title {
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
   &__detail-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: 8px 0 0;
+    margin: 0;
   }
 
   &__detail-item {

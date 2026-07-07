@@ -7,7 +7,7 @@ import type {
 } from './types'
 
 /** 递增以清空旧版消息数据并重新生成 */
-export const MESSAGE_STORE_VERSION = 4
+export const MESSAGE_STORE_VERSION = 10
 
 let allMessages: MessageCenterItem[] = []
 

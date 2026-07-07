@@ -7,13 +7,20 @@ import { historyTargetTypeTagType, resolveHistoryTargetType } from '@/api/lad/in
 import type {
   DisposalTimelineNode,
   HistoryEventDetail,
-  HandlingStatus,
   HistoryTargetType,
   ThreatLevel
 } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
-import { listTypeTagType, threatLevelDisplay, threatLevelTagType, verificationMethodOf, countermeasureDeviceDisplay } from '../shared/ladDictHelpers'
+import {
+  handlingStatusDisplay,
+  isHandlingEnded,
+  listTypeTagType,
+  threatLevelDisplay,
+  threatLevelTagType,
+  verificationMethodOf,
+  countermeasureDeviceDisplay
+} from '../shared/ladDictHelpers'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import DisposalTimelinePanel from './components/DisposalTimelinePanel.vue'
 import TrajectoryReplay from './components/TrajectoryReplay.vue'
@@ -52,6 +59,15 @@ const normalizedTimeline = (nodes: DisposalTimelineNode[] | undefined) =>
       ...item,
       label: normalizeText(item.label),
       value: normalizeText(item.value)
+    })),
+    detailGroups: node.detailGroups?.map((group) => ({
+      ...group,
+      title: group.title ? normalizeText(group.title) : undefined,
+      items: group.items.map((item) => ({
+        ...item,
+        label: normalizeText(item.label),
+        value: normalizeText(item.value)
+      }))
     })),
     tags: node.tags?.map((tag) => normalizeText(tag))
   }))
@@ -154,27 +170,18 @@ const exportTrajectoryList = () => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `航机列表_${eventId.value || 'demo'}.csv`
+  link.download = `航迹列表_${eventId.value || 'demo'}.csv`
   link.click()
   URL.revokeObjectURL(url)
-  ElMessage.success('航机列表已导出')
+  ElMessage.success('航迹列表已导出')
 }
 
 const threatTagType = (level: ThreatLevel) => threatLevelTagType(level)
 
-const statusLabel = (status: HandlingStatus) => {
-  if (status === '待处置') return '未处置'
-  return status
-}
-
 const showManualConfirm = computed(() => {
   const row = detail.value
   if (!row) return false
-  return (
-    !row.manualConfirmStatus.startsWith('人工-') &&
-    row.handlingStatus !== '已处置' &&
-    row.handlingStatus !== '已结束'
-  )
+  return !row.manualConfirmStatus.startsWith('人工-') && !isHandlingEnded(row.handlingStatus)
 })
 
 const eoConnected = computed(() => {
@@ -301,7 +308,7 @@ onMounted(async () => {
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="处置状态" :span="3">
-              {{ statusLabel(viewDetail.handlingStatus) }}
+              {{ handlingStatusDisplay(viewDetail.handlingStatus) }}
             </ElDescriptionsItem>
 
             <ElDescriptionsItem v-if="viewDetail.remark" label="备注" :span="3">
@@ -323,6 +330,7 @@ onMounted(async () => {
           <div class="detail-eo-section__title">无人机光电</div>
           <LadVideoMonitor
             :linked="eoConnected"
+            :show-demo-badge="false"
             :channel-label="eoChannelLabel"
             :location-label="eoLocationLabel"
             camera-label="光电跟踪 / 录像回放"
@@ -340,7 +348,7 @@ onMounted(async () => {
 
       <section class="detail-source-section">
         <div class="detail-source-section__header">
-          <div class="detail-source-section__title">航机列表</div>
+          <div class="detail-source-section__title">航迹列表</div>
           <BaseButton type="primary" size="small" @click="exportTrajectoryList">导出</BaseButton>
         </div>
         <div class="detail-source-section__table-wrap">

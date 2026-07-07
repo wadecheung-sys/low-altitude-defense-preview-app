@@ -7,6 +7,7 @@ const historyEventPage = () => import('@/views/Lad/Incident/HistoryEvent.vue')
 const incidentTargetDetailPage = () => import('@/views/Lad/Incident/IncidentTargetDetail.vue')
 const blackWhiteListPage = () => import('@/views/Lad/List/BlackWhiteList.vue')
 const blackWhiteTargetDetailPage = () => import('@/views/Lad/List/BlackWhiteTargetDetail.vue')
+const flightRecordPage = () => import('@/views/Lad/FlightRecord/FlightRecord.vue')
 const deviceArchivePage = () => import('@/views/Lad/Device/DeviceArchive.vue')
 const deviceArchiveDetailPage = () => import('@/views/Lad/Device/DeviceArchiveDetail.vue')
 const deviceGroupManagementPage = () => import('@/views/Lad/Device/DeviceGroupManagement.vue')
@@ -139,6 +140,27 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
           hidden: true,
           canTo: true,
           activeMenu: '/lad/list/black-white'
+        })
+      }
+    ]
+  },
+  {
+    path: '/lad/flight-record',
+    component: Layout,
+    redirect: '/lad/flight-record/index',
+    name: 'LadFlightRecord',
+    meta: {
+      title: '飞行记录',
+      icon: 'vi-ant-design:radar-chart-outlined',
+      reqModule: '3-flight'
+    },
+    children: [
+      {
+        path: 'index',
+        name: 'LadFlightRecordIndex',
+        component: flightRecordPage,
+        meta: ladMeta('flight-record', {
+          title: '飞行记录'
         })
       }
     ]

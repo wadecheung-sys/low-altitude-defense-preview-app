@@ -1,13 +1,13 @@
 <script setup lang="tsx">
 import { reactive, ref, unref } from 'vue'
-import { ElTag } from 'element-plus'
+import { ElMessage, ElMessageBox, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { getSystemParamListApi } from '@/api/lad/system'
+import { getSystemParamListApi, restoreSystemParamDefaultsApi } from '@/api/lad/system'
 import type { ParamValueType, SystemParam } from '@/api/lad/system/types'
 import SystemParamEditDialog from './components/SystemParamEditDialog.vue'
 import { allOption } from '../shared/ladOptionConstants'
@@ -33,6 +33,7 @@ const paramValueTypeLabelMap: Record<ParamValueType, string> = {
 const searchParams = ref<Recordable>({})
 const editVisible = ref(false)
 const editRow = ref<SystemParam>()
+const restoreLoading = ref(false)
 
 const setSearchParams = (params: Recordable) => {
   const range = params.updatedAtRange as string[] | undefined
@@ -48,14 +49,23 @@ const setSearchParams = (params: Recordable) => {
   getList()
 }
 
-const openAdd = () => {
-  editRow.value = undefined
-  editVisible.value = true
-}
-
 const openEdit = (row: SystemParam) => {
   editRow.value = row
   editVisible.value = true
+}
+
+async function restoreDefaults() {
+  await ElMessageBox.confirm('确认将所有参数恢复为系统初始值吗？当前修改将被覆盖。', '恢复初始值', {
+    type: 'warning'
+  })
+  restoreLoading.value = true
+  try {
+    await restoreSystemParamDefaultsApi()
+    ElMessage.success('已恢复初始值')
+    getList()
+  } finally {
+    restoreLoading.value = false
+  }
 }
 
 const { tableRegister, tableState, tableMethods } = useTable({
@@ -135,6 +145,9 @@ const crudSchemas = reactive<CrudSchema[]>([
           if (row.valueType === 'boolean') {
             return <ElTag type={value ? 'success' : 'info'}>{value ? '是' : '否'}</ElTag>
           }
+          if (value === '' || value === null || value === undefined) {
+            return <span class="text-[var(--el-text-color-secondary)]">—</span>
+          }
           return <span>{String(value)}</span>
         }
       }
@@ -201,7 +214,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
     <div class="mb-10px">
-      <BaseButton type="primary" @click="openAdd">新增</BaseButton>
+      <BaseButton :loading="restoreLoading" @click="restoreDefaults">恢复初始值</BaseButton>
     </div>
     <Table
       v-model:pageSize="pageSize"

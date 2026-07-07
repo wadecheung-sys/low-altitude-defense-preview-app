@@ -2,7 +2,7 @@ import type { ThreatLevelLabel } from '../threat/threatLevelUtils'
 
 export type ThreatLevel = ThreatLevelLabel
 
-export type HandlingStatus = '待处置' | '处置中' | '已处置' | '已结束'
+export type HandlingStatus = '进行中' | '已结束'
 
 export type ManualConfirmResult = '真实入侵' | '躁扰告警'
 

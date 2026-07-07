@@ -1,4 +1,5 @@
 import type { ThreatLevel } from '@/api/lad/incident/types'
+import { isHandlingEnded } from '@/api/lad/incident/handlingStatusUtils'
 import type {
   BlackWhiteFormPayload,
   BlackWhiteListItem,
@@ -11,15 +12,15 @@ import type {
 } from './types'
 import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
 import {
-  displayBlackWhiteTargetKind,
-  enrichBlackWhiteListItem,
-  normalizeBlackWhiteTargetFields,
-  resolveBlackWhiteTargetKind
+  COOPERATIVE_DRONE_KIND,
+  enrichManagedBlackWhiteListItem,
+  hasResolvableSn,
+  normalizeCooperativeBlackWhiteFields
 } from './listTargetKind'
 import { matchValidUntilRange, normalizeValidUntil } from './validUntilUtils'
 
 const listTypes: ListType[] = ['黑名单', '白名单']
-const targetTypes = ['多旋翼', '固定翼', '未知', '行业级']
+const targetTypes = ['多旋翼', '固定翼', '行业级']
 const models = LAD_TARGET_MODELS.filter((item) => item !== '蜂群目标' && item !== '其他')
 const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
 const zones = ['核心保护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
@@ -31,6 +32,10 @@ const validOptions = [
   '2024-12-31 08:30:00'
 ]
 
+function buildCooperativeSn(index: number) {
+  return `1581F4${String(100000 + index * 131).padStart(6, '0')}`
+}
+
 function buildSeedList(): BlackWhiteListItem[] {
   return Array.from({ length: 56 }, (_, i) => {
     const day = String(4 + (i % 20)).padStart(2, '0')
@@ -41,33 +46,30 @@ function buildSeedList(): BlackWhiteListItem[] {
     const updatedMin = (Number(min) + 3) % 60
     const updated = `2024-03-${day} ${hour}:${String(updatedMin).padStart(2, '0')}:${String((Number(sec) + 8) % 60).padStart(2, '0')}`
     const durationSec = 15 + (i % 120)
-    const hasSn = i % 5 !== 0
-    const sn = hasSn ? `1581F4${String(100000 + i * 131).slice(0, 6)}` : '未解析'
-    const historyTargetType = resolveBlackWhiteTargetKind(sn)
 
-    return normalizeBlackWhiteTargetFields({
+    return normalizeCooperativeBlackWhiteFields({
       id: `bw-${10001 + i}`,
       targetId: `TG-2024-${String((i % 24) + 1).padStart(4, '0')}`,
-      listType: historyTargetType === '黑飞无人机' ? '未知' : listTypes[i % listTypes.length],
-      historyTargetType,
+      listType: listTypes[i % listTypes.length],
+      historyTargetType: COOPERATIVE_DRONE_KIND,
       targetType: targetTypes[i % targetTypes.length],
       validUntil: normalizeValidUntil(validOptions[i % validOptions.length]),
       discoveredAt: discovered,
       updatedAt: updated,
       duration: `00:${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`,
-      model: hasSn ? models[i % models.length] : '未知型号',
-      frequency: hasSn ? frequencies[i % frequencies.length] : '--',
-      sn,
+      model: models[i % models.length],
+      frequency: frequencies[i % frequencies.length],
+      sn: buildCooperativeSn(i),
       zoneName: zones[i % zones.length],
       longitude: Number((113.38 + (i % 30) * 0.008).toFixed(4)),
       latitude: Number((23.08 + (i % 25) * 0.006).toFixed(4)),
       entryMethod: entryMethods[i % entryMethods.length],
       remark: i % 8 === 0 ? '历史事件自动同步' : ''
     })
-  })
+  }).filter((row) => hasResolvableSn(row.sn))
 }
 
-export const BLACK_WHITE_STORE_VERSION = 2
+export const BLACK_WHITE_STORE_VERSION = 5
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladBlackWhiteStoreVer?: number }
@@ -77,7 +79,9 @@ function ensureStoreVersion() {
 }
 
 function migrateAllRows() {
-  allList = allList.map((row) => enrichBlackWhiteListItem(row))
+  allList = allList
+    .map((row) => enrichManagedBlackWhiteListItem(row))
+    .filter((row): row is BlackWhiteListItem => row !== null && hasResolvableSn(row.sn))
 }
 
 let allList: BlackWhiteListItem[] = buildSeedList()
@@ -99,31 +103,31 @@ function hashSeed(id: string): number {
 
 function buildTargetDetail(row: BlackWhiteListItem): BlackWhiteTargetDetail {
   const seed = hashSeed(row.id)
-  const threatByList: Record<ListType, ThreatLevel> = {
+  const threatByList: Record<'黑名单' | '白名单', ThreatLevel> = {
     黑名单: '高危',
-    白名单: '低危',
-    未知: seed % 2 === 0 ? '中危' : '无危'
+    白名单: '低危'
   }
+  const listType = row.listType === '白名单' ? '白名单' : '黑名单'
   const alt = 80 + (seed % 80)
   const pilotLocated = seed % 5 !== 0
   const lng = row.longitude.toFixed(4)
   const lat = row.latitude.toFixed(4)
-  const handlingStatus = row.listType === '白名单' ? '已关闭' : seed % 3 === 0 ? '待处置' : '处置中'
+  const handlingStatus = listType === '白名单' ? '已结束' : '进行中'
 
   let disposalDetail = ''
-  if (handlingStatus !== '待处置') {
+  if (isHandlingEnded(handlingStatus)) {
     disposalDetail =
       row.remark ||
-      (row.listType === '白名单'
+      (listType === '白名单'
         ? '白名单目标，探测后自动过滤告警'
-        : row.listType === '黑名单'
-          ? '黑名单重点监控，待联动处置'
-          : '—')
+        : '黑名单重点监控，待联动处置')
   }
 
   return {
     ...row,
-    threatLevel: threatByList[row.listType],
+    listType,
+    historyTargetType: COOPERATIVE_DRONE_KIND,
+    threatLevel: threatByList[listType],
     handlingStatus,
     lastPosition: `E:${lng}，N:${lat}（海拔${alt}m）`,
     pilotLocation: pilotLocated
@@ -138,7 +142,9 @@ function buildTargetDetail(row: BlackWhiteListItem): BlackWhiteTargetDetail {
 }
 
 function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
-  let rows = [...allList]
+  let rows = allList
+    .map((row) => enrichManagedBlackWhiteListItem(row))
+    .filter((row): row is BlackWhiteListItem => row !== null && hasResolvableSn(row.sn))
   if (params.listType) {
     rows = rows.filter((r) => r.listType === params.listType)
   }
@@ -152,18 +158,6 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
   if (params.model?.trim()) {
     const kw = params.model.trim().toLowerCase()
     rows = rows.filter((r) => r.model.toLowerCase().includes(kw))
-  }
-  if (params.historyTargetType) {
-    if (params.historyTargetType === '躁扰信号-飞鸟') {
-      rows = []
-    } else {
-      rows = rows.filter(
-        (r) => displayBlackWhiteTargetKind(r) === params.historyTargetType
-      )
-    }
-  }
-  if (params.targetType) {
-    rows = rows.filter((r) => r.targetType === params.targetType)
   }
   if (params.zoneName) {
     rows = rows.filter((r) => r.zoneName === params.zoneName)
@@ -182,7 +176,7 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
       matchValidUntilRange(r.validUntil, params.validUntilStart, params.validUntilEnd)
     )
   }
-  return rows.map((row) => enrichBlackWhiteListItem(row))
+  return rows
 }
 
 export function queryLocalBlackWhiteList(params: BlackWhiteListQuery): BlackWhiteListResult {
@@ -202,7 +196,8 @@ export function getLocalBlackWhiteDetail(id: string): BlackWhiteTargetDetail | n
   ensureStoreVersion()
   migrateAllRows()
   const row = allList.find((item) => item.id === id)
-  return row ? buildTargetDetail(enrichBlackWhiteListItem(row)) : null
+  const managed = row ? enrichManagedBlackWhiteListItem(row) : null
+  return managed ? buildTargetDetail(managed) : null
 }
 
 export function deleteLocalBlackWhite(ids: string[]) {
@@ -215,8 +210,10 @@ export function updateLocalBlackWhiteListType(
 ): BlackWhiteTargetDetail | null {
   const idx = allList.findIndex((row) => row.id === payload.id)
   if (idx < 0) return null
-  if (displayBlackWhiteTargetKind(allList[idx]) === '黑飞无人机') {
-    return buildTargetDetail(allList[idx])
+  const managed = enrichManagedBlackWhiteListItem(allList[idx])
+  if (!managed) return null
+  if (payload.listType !== '黑名单' && payload.listType !== '白名单') {
+    return null
   }
   allList[idx] = {
     ...allList[idx],
@@ -232,32 +229,34 @@ export function syncLocalBlackWhiteListType(
 ) {
   const ts = formatTimestamp(new Date())
   targets.forEach((target) => {
-    const isBlackFly = target.uavSn === '未解析'
+    if (!hasResolvableSn(target.uavSn)) return
+
     const rows = allList.filter(
-      (row) =>
-        row.targetId === target.targetId || (!isBlackFly && row.sn === target.uavSn)
+      (row) => row.targetId === target.targetId || row.sn === target.uavSn.trim()
     )
     if (rows.length) {
       rows.forEach((row) => {
-        if (row.historyTargetType === '黑飞无人机') return
+        const managed = enrichManagedBlackWhiteListItem(row)
+        if (!managed) return
         row.listType = listType
+        row.historyTargetType = COOPERATIVE_DRONE_KIND
         row.updatedAt = ts
       })
       return
     }
 
-    const base = normalizeBlackWhiteTargetFields({
+    const base = normalizeCooperativeBlackWhiteFields({
       targetId: target.targetId,
-      listType: isBlackFly ? '未知' : listType,
-      historyTargetType: resolveBlackWhiteTargetKind(target.uavSn),
+      listType,
+      historyTargetType: COOPERATIVE_DRONE_KIND,
       targetType: '多旋翼',
       validUntil: '永久',
       discoveredAt: ts,
       updatedAt: ts,
       duration: '00:00:00',
-      model: isBlackFly ? '未知型号' : target.targetModel,
-      frequency: isBlackFly ? '--' : '未知',
-      sn: target.uavSn,
+      model: target.targetModel,
+      frequency: '2.4GHz',
+      sn: target.uavSn.trim(),
       zoneName: '',
       longitude: 0,
       latitude: 0,
@@ -274,10 +273,15 @@ export function syncLocalBlackWhiteListType(
 
 export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteListItem {
   const ts = formatTimestamp(new Date())
-  const normalized = normalizeBlackWhiteTargetFields({
+  const normalized = normalizeCooperativeBlackWhiteFields({
     ...payload,
+    historyTargetType: COOPERATIVE_DRONE_KIND,
     validUntil: normalizeValidUntil(payload.validUntil || '永久')
   })
+
+  if (!normalized.sn || normalized.sn === '未解析') {
+    throw new Error('请填写有效识别码')
+  }
 
   if (payload.id) {
     const idx = allList.findIndex((row) => row.id === payload.id)

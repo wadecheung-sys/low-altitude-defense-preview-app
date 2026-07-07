@@ -120,12 +120,42 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         ]
       },
       {
+        id: 'pm-flight-record',
+        parentId: 'pm-root',
+        name: '飞行记录',
+        permCode: 'lad:flight-record',
+        nodeType: 'menu',
+        path: '/lad/flight-record/index',
+        sort: 3,
+        status: 'enabled',
+        children: [
+          {
+            id: 'pm-flight-record-view',
+            parentId: 'pm-flight-record',
+            name: '查看',
+            permCode: 'lad:flight-record:view',
+            nodeType: 'button',
+            sort: 1,
+            status: 'enabled'
+          },
+          {
+            id: 'pm-flight-record-playback',
+            parentId: 'pm-flight-record',
+            name: '回放演示',
+            permCode: 'lad:flight-record:playback',
+            nodeType: 'button',
+            sort: 2,
+            status: 'enabled'
+          }
+        ]
+      },
+      {
         id: 'pm-device',
         parentId: 'pm-root',
         name: '设备管理',
         permCode: 'lad:device',
         nodeType: 'directory',
-        sort: 3,
+        sort: 4,
         status: 'enabled',
         children: [
           {
@@ -227,7 +257,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         permCode: 'lad:area',
         nodeType: 'menu',
         path: '/lad/area/list',
-        sort: 4,
+        sort: 5,
         status: 'enabled',
         children: [
           {
@@ -257,7 +287,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         permCode: 'lad:threat',
         nodeType: 'menu',
         path: '/lad/threat/index',
-        sort: 5,
+        sort: 6,
         status: 'enabled',
         children: [
           {
@@ -287,7 +317,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         permCode: 'lad:plan',
         nodeType: 'menu',
         path: '/lad/plan/index',
-        sort: 6,
+        sort: 7,
         status: 'enabled',
         children: [
           {
@@ -317,7 +347,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         permCode: 'lad:message',
         nodeType: 'menu',
         path: '/lad/message/index',
-        sort: 7,
+        sort: 8,
         status: 'enabled',
         children: [
           {
@@ -346,7 +376,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         name: '系统管理',
         permCode: 'lad:system',
         nodeType: 'directory',
-        sort: 8,
+        sort: 9,
         status: 'enabled',
         children: [
           {
@@ -441,7 +471,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         name: '权限管理',
         permCode: 'lad:auth',
         nodeType: 'directory',
-        sort: 9,
+        sort: 10,
         status: 'enabled',
         children: [
           {
@@ -546,7 +576,7 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         permCode: 'lad:integration',
         nodeType: 'menu',
         path: '/lad/integration/index',
-        sort: 10,
+        sort: 11,
         status: 'enabled',
         children: [
           {

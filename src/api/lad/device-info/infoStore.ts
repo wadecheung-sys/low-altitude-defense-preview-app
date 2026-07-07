@@ -239,8 +239,143 @@ const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
   }
 ]
 
+/** 设备组演示：主设备周边监控摄像头 */
+const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
+  {
+    deviceId: 'CAM-N-E01',
+    deviceName: '北区干扰器-东向监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '核心区',
+    ipAddress: '192.168.1.101',
+    serialNo: 'CAM-2025-N01',
+    lastHeartbeat: '2026-05-20 14:32:18',
+    personInCharge: '张工',
+    updatedAt: '2026-05-20 14:32:18'
+  },
+  {
+    deviceId: 'CAM-N-S01',
+    deviceName: '北区干扰器-南向监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '核心区',
+    ipAddress: '192.168.1.102',
+    serialNo: 'CAM-2025-N02',
+    lastHeartbeat: '2026-05-20 14:32:18',
+    personInCharge: '张工',
+    updatedAt: '2026-05-20 14:32:18'
+  },
+  {
+    deviceId: 'CAM-N-W01',
+    deviceName: '北区干扰器-西向监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '核心区',
+    ipAddress: '192.168.1.103',
+    serialNo: 'CAM-2025-N03',
+    lastHeartbeat: '2026-05-20 14:32:18',
+    personInCharge: '张工',
+    updatedAt: '2026-05-20 14:32:18'
+  },
+  {
+    deviceId: 'CAM-R-N01',
+    deviceName: '核心区雷达-北侧监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '塔台B座',
+    ipAddress: '192.168.1.201',
+    serialNo: 'CAM-2025-R01',
+    lastHeartbeat: '2026-05-20 14:28:05',
+    personInCharge: '李工',
+    updatedAt: '2026-05-20 14:28:05'
+  },
+  {
+    deviceId: 'CAM-R-S01',
+    deviceName: '核心区雷达-南侧监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '塔台B座',
+    ipAddress: '192.168.1.202',
+    serialNo: 'CAM-2025-R02',
+    lastHeartbeat: '2026-05-20 14:28:05',
+    personInCharge: '李工',
+    updatedAt: '2026-05-20 14:28:05'
+  },
+  {
+    deviceId: 'CAM-EO-E01',
+    deviceName: '南门光电-东侧监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '南门岗哨',
+    ipAddress: '192.168.2.101',
+    serialNo: 'CAM-2025-E01',
+    lastHeartbeat: '2026-05-20 13:55:40',
+    personInCharge: '王工',
+    updatedAt: '2026-05-20 13:55:40'
+  },
+  {
+    deviceId: 'CAM-EO-W01',
+    deviceName: '南门光电-西侧监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '南门岗哨',
+    ipAddress: '192.168.2.102',
+    serialNo: 'CAM-2025-E02',
+    lastHeartbeat: '2026-05-20 13:55:40',
+    personInCharge: '王工',
+    updatedAt: '2026-05-20 13:55:40'
+  },
+  {
+    deviceId: 'CAM-EO-G01',
+    deviceName: '南门光电-岗哨全景监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '南门岗哨',
+    ipAddress: '192.168.2.103',
+    serialNo: 'CAM-2025-E03',
+    lastHeartbeat: '2026-05-20 13:55:40',
+    personInCharge: '王工',
+    updatedAt: '2026-05-20 13:55:40'
+  },
+  {
+    deviceId: 'CAM-W-N01',
+    deviceName: '西区诱骗-机房入口监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '西区机房',
+    ipAddress: '192.168.3.101',
+    serialNo: 'CAM-2025-W01',
+    lastHeartbeat: '2026-05-20 12:10:22',
+    personInCharge: '赵工',
+    updatedAt: '2026-05-20 12:10:22'
+  },
+  {
+    deviceId: 'CAM-W-O01',
+    deviceName: '西区诱骗-外围监控',
+    archiveInfo: '固定监控摄像头档案',
+    archiveId: 'da-10003',
+    deviceType: '监控摄像头',
+    deployLocation: '西区机房',
+    ipAddress: '192.168.3.102',
+    serialNo: 'CAM-2025-W02',
+    lastHeartbeat: '2026-05-20 12:10:22',
+    personInCharge: '赵工',
+    updatedAt: '2026-05-20 12:10:22'
+  }
+]
+
 let allList: DeviceInfoItem[] = [
   ...seedRows.map((r, i) => ({ ...r, id: `di-${10001 + i}` })),
+  ...peripheralCameraSeedRows.map((r, i) => ({ ...r, id: `di-${20001 + i}` })),
   ...Array.from({ length: 20 }, (_, i) => {
     const types = [
       '无线电干扰',

@@ -8,7 +8,7 @@ import {
   saveDictEntry,
   saveDictType
 } from '@/api/lad/system/dictStore'
-import { querySystemParamList, saveSystemParam } from '@/api/lad/system/paramStore'
+import { querySystemParamList, restoreSystemParamsToDefaults, saveSystemParam } from '@/api/lad/system/paramStore'
 import type { DictEntryQuery, DictTypeQuery, SystemParamQuery } from '@/api/lad/system/types'
 
 const timeout = 300
@@ -34,6 +34,15 @@ export default [
         return { code: 500, message: e instanceof Error ? e.message : '保存失败' }
       }
     }
+  },
+  {
+    url: '/mock/lad/system/params/restore-defaults',
+    method: 'post',
+    timeout,
+    response: () => ({
+      code: SUCCESS_CODE,
+      data: restoreSystemParamsToDefaults()
+    })
   },
   {
     url: '/mock/lad/system/dict/type/list',

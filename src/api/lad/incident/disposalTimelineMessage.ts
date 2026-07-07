@@ -1,13 +1,16 @@
 import { formatThreatConditionSummary } from '@/api/lad/threat/threatStore'
 import type { RuleCondition } from '@/api/lad/threat/types'
-import { isMonitorCatchAllRule } from '@/api/lad/threat/threatFallback'
-import { EVENT_ATTRIBUTE_PROMPT_TEMPLATES, suggestEventAttributeName } from '@/api/lad/system/eventAttributeMessageAlign'
+import {
+  DISPOSAL_STAGE_FALLBACK_TEMPLATES,
+  EVENT_ATTRIBUTE_PROMPT_TEMPLATES,
+  suggestEventAttributeName
+} from '@/api/lad/system/eventAttributeMessageAlign'
 import type { EventAttributeEventType, EventOwnership } from '@/api/lad/system/types'
 import {
   resolvePlanDisplayName,
   resolvePlanTriggerAction
 } from './planTriggerHitDetails'
-import { resolveMatchedThreatRule } from './threatAssessmentHitDetails'
+import { isHandlingInProgress } from './handlingStatusUtils'
 import type { DisposalExecutionSource, HistoryEventItem, ThreatLevel } from './types'
 
 export type DisposalTimelineStageKey = 'discover' | 'threat' | 'assess' | 'dispose' | 'result'
@@ -71,13 +74,6 @@ const HIGH_ASSESS_FALLBACK_CONDITIONS: RuleCondition[] = [
   INTRUSION_ASSESS_CONDITION
 ]
 
-function appendIntrusionCondition(summary: string): string {
-  if (summary.includes('入侵次数')) return summary
-  const intrusion = formatThreatConditionSummary([INTRUSION_ASSESS_CONDITION])
-  if (!summary || summary === '无（任意场景）') return intrusion
-  return `${summary} 且 ${intrusion}`
-}
-
 const FLIGHT_STATUS_LABEL: Record<string, string> = {
   speed: '飞行速度',
   stayDuration: '逗留时间',
@@ -102,14 +98,6 @@ export function assessmentConditionsForLevel(
 ): RuleCondition[] {
   if (level === '无危' || level === '低危') return []
   if (level === '中危') return MID_ASSESS_CONDITIONS
-  const matched = resolveMatchedThreatRule(row)
-  if (matched?.conditions.length && !isMonitorCatchAllRule(matched)) {
-    const conditions = [...matched.conditions]
-    if (!conditions.some((c) => c.property === 'intrusionCount')) {
-      conditions.push(INTRUSION_ASSESS_CONDITION)
-    }
-    return conditions
-  }
   return HIGH_ASSESS_FALLBACK_CONDITIONS
 }
 
@@ -161,23 +149,18 @@ export function buildAssessFlightStatus(
   return parts.length ? parts.join('； ') : '--'
 }
 
-function assessmentRuleName(row: HistoryEventItem) {
-  const matched = resolveMatchedThreatRule(row)
-  if (matched?.ruleName && !isMonitorCatchAllRule(matched)) return matched.ruleName
+function escalationHighAssessRuleName(row: HistoryEventItem): string {
   const isCore = row.zoneName.includes('核心') || row.zoneName.includes('管制')
-  if (row.historyTargetType === '躁扰信号-飞鸟') return '目标机型排除规则'
   if (row.listType === '黑名单') return isCore ? '黑名单目标进入重点区域' : '黑名单目标活动'
-  if (row.listType === '白名单') return '白名单目标授权通行'
   if (row.uavSn === '未解析') return isCore ? '非合作式目标进入重点区域' : '非合作式目标活动'
-  if (row.threatLevel === '高危') return '高威胁目标处置规则'
-  return '常规无人机目标评估规则'
+  return '高威胁目标处置规则'
 }
 
 export function assessmentRuleNameForLevel(row: HistoryEventItem, level: ThreatLevel): string {
   if (level === '无危') return '白名单通行规则'
   if (level === '低危') return FALLBACK_ASSESS_RULE_NAME
   if (level === '中危') return INTERMEDIATE_ASSESS_RULE_NAME
-  return assessmentRuleName(row)
+  return escalationHighAssessRuleName(row)
 }
 
 export function assessmentReasonForLevel(row: HistoryEventItem, level: ThreatLevel): string {
@@ -191,10 +174,6 @@ export function assessmentReasonForLevel(row: HistoryEventItem, level: ThreatLev
     return formatThreatConditionSummary(MID_ASSESS_CONDITIONS)
   }
 
-  const matched = resolveMatchedThreatRule(row)
-  if (matched?.conditionSummary && !isMonitorCatchAllRule(matched)) {
-    return appendIntrusionCondition(matched.conditionSummary)
-  }
   return formatThreatConditionSummary(HIGH_ASSESS_FALLBACK_CONDITIONS)
 }
 
@@ -212,11 +191,6 @@ function fallbackActionName(row: HistoryEventItem) {
   return '定向驱离'
 }
 
-function resolveResultTargetKindLabel(row: HistoryEventItem): string {
-  if (row.historyTargetType === '躁扰信号-飞鸟') return '非无人机'
-  return '无人机'
-}
-
 function resolveResultEventType(row: HistoryEventItem): EventAttributeEventType {
   const text = `${row.handlingResult}${row.remark}`
   if (text.includes('迫降')) return '迫降'
@@ -230,7 +204,7 @@ function hasCountermeasure(row: HistoryEventItem) {
 
 function resolveDisposalExecutionSource(row: HistoryEventItem): DisposalExecutionSource {
   if (row.disposalExecutionSource) return row.disposalExecutionSource
-  if (!hasCountermeasure(row) || row.handlingStatus === '待处置') return 'none'
+  if (!hasCountermeasure(row)) return 'none'
   return 'plan'
 }
 
@@ -318,13 +292,19 @@ export function buildStageMessageInfo(
       if (options.disposeStatus === 'skipped') {
         return {
           eventName: '处置执行',
-          messageDescription: `${time}未命中反制预案，未下发处置指令。`
+          messageDescription: fillMessageTemplate(
+            DISPOSAL_STAGE_FALLBACK_TEMPLATES.disposeSkipped,
+            { 时间: time }
+          )
         }
       }
-      if (row.handlingStatus === '待处置') {
+      if (isHandlingInProgress(row.handlingStatus) && !hasCountermeasure(row)) {
         return {
           eventName: eventNameOf('处置执行', '人工处置'),
-          messageDescription: `${time}已形成处置建议，等待预案触发或值守人员确认。`
+          messageDescription: fillMessageTemplate(
+            DISPOSAL_STAGE_FALLBACK_TEMPLATES.disposePending,
+            { 时间: time }
+          )
         }
       }
       const deviceName = countermeasureDeviceDisplay(row.countermeasureDevice)
@@ -354,32 +334,19 @@ export function buildStageMessageInfo(
       if (row.historyTargetType === '躁扰信号-飞鸟') {
         return {
           eventName: '目标结果',
-          messageDescription: `${time}事件已闭环，目标判定为躁扰信号排除。`
+          messageDescription: fillMessageTemplate(
+            DISPOSAL_STAGE_FALLBACK_TEMPLATES.resultNuisance,
+            { 时间: time }
+          )
         }
       }
       const eventType = resolveResultEventType(row)
       const ownership = '目标结果' as const
-      if (eventType === '迫降') {
-        return {
-          eventName: eventNameOf(ownership, eventType),
-          messageDescription: fillMessageTemplate(EVENT_ATTRIBUTE_PROMPT_TEMPLATES[eventType], {
-            ...base,
-            经纬度: row.targetLocation || 'E:--，N:--'
-          })
-        }
-      }
-      if (eventType === '打击') {
-        return {
-          eventName: eventNameOf(ownership, eventType),
-          messageDescription: fillMessageTemplate(EVENT_ATTRIBUTE_PROMPT_TEMPLATES[eventType], base)
-        }
-      }
       return {
         eventName: eventNameOf(ownership, eventType),
         messageDescription: fillMessageTemplate(EVENT_ATTRIBUTE_PROMPT_TEMPLATES[eventType], {
           时间: time,
           编码: row.targetId,
-          '无人机/非无人机': resolveResultTargetKindLabel(row),
           逗留时间: row.duration || row.abnormalDuration || '00:00:00'
         })
       }

@@ -25,6 +25,10 @@ const props = withDefaults(
     screenshotNamePrefix?: string
     /** 快进 / 快退步长（秒） */
     seekStepSec?: number
+    /** 紧凑模式：隐藏页脚并精简控制区 */
+    compact?: boolean
+    /** 是否显示「演示录像」角标（未接入设备时） */
+    showDemoBadge?: boolean
   }>(),
   {
     channelLabel: '光电-01',
@@ -36,7 +40,9 @@ const props = withDefaults(
     linked: true,
     aspectRatio: '4 / 3',
     screenshotNamePrefix: '光电录像截图',
-    seekStepSec: 10
+    seekStepSec: 10,
+    compact: false,
+    showDemoBadge: true
   }
 )
 
@@ -55,6 +61,8 @@ const progressDuration = computed(() => resolveRecordDurationSec(props.recordSta
 const statusTag = computed(() => (props.linked ? 'REPLAY' : 'DEMO'))
 
 const statusLabel = computed(() => (props.linked ? '可回放' : '演示回放'))
+
+const displayDemoBadge = computed(() => props.showDemoBadge && !props.linked)
 
 const recordRangeLabel = computed(() => {
   if (props.recordStart && props.recordEnd) {
@@ -148,6 +156,29 @@ watch(
 
 onBeforeUnmount(() => stopTick())
 
+function pause() {
+  playing.value = false
+}
+
+function play() {
+  if (progressCurrent.value >= progressDuration.value) {
+    progressCurrent.value = 0
+  }
+  playing.value = true
+}
+
+function setPlaybackRate(rate: number) {
+  playbackRate.value = rate
+}
+
+defineExpose({
+  seekTo,
+  pause,
+  play,
+  setPlaybackRate,
+  progressCurrent
+})
+
 const togglePlayback = () => {
   if (progressCurrent.value >= progressDuration.value) {
     progressCurrent.value = 0
@@ -227,8 +258,8 @@ const captureScreenshot = async () => {
 </script>
 
 <template>
-  <div class="lad-video-monitor">
-    <div class="lad-video-monitor__topbar">
+  <div class="lad-video-monitor" :class="{ 'is-compact': compact }">
+    <div v-if="!compact" class="lad-video-monitor__topbar">
       <span>
         <i class="lad-video-monitor__replay-dot" :class="{ 'is-demo': !linked }"></i>
         {{ statusTag }} · {{ channelLabel }}
@@ -247,23 +278,23 @@ const captureScreenshot = async () => {
       />
       <div class="lad-video-monitor__grain" :class="{ 'is-paused': !playing }"></div>
       <div class="lad-video-monitor__camera-label">{{ cameraLabel }}</div>
-      <div v-if="!linked" class="lad-video-monitor__demo-badge">演示录像</div>
+      <div v-if="displayDemoBadge" class="lad-video-monitor__demo-badge">演示录像</div>
       <div v-if="!playing" class="lad-video-monitor__paused-mask">已暂停</div>
     </div>
 
     <div class="lad-video-monitor__controls">
-      <div class="lad-video-monitor__controls-title">录像回放控制</div>
+      <div v-if="!compact" class="lad-video-monitor__controls-title">录像回放控制</div>
       <div class="lad-video-monitor__controls-row">
         <span class="lad-video-monitor__time">{{ timeLabel }}</span>
 
-        <ElTooltip content="回到开始" placement="top">
+        <ElTooltip v-if="!compact" content="回到开始" placement="top">
           <button type="button" class="lad-video-monitor__action-btn" @click="seekStart">
             <Icon icon="vi-ep:d-arrow-left" :size="16" />
             <span>开始</span>
           </button>
         </ElTooltip>
 
-        <ElTooltip :content="`快退 ${seekStepSec} 秒`" placement="top">
+        <ElTooltip v-if="!compact" :content="`快退 ${seekStepSec} 秒`" placement="top">
           <button type="button" class="lad-video-monitor__action-btn" @click="rewind">
             <Icon icon="vi-ep:back" :size="16" />
             <span>快退</span>
@@ -273,18 +304,18 @@ const captureScreenshot = async () => {
         <ElTooltip :content="playbackLabel" placement="top">
           <button type="button" class="lad-video-monitor__action-btn" @click="togglePlayback">
             <Icon :icon="playbackIcon" :size="16" />
-            <span>{{ playbackLabel }}</span>
+            <span>{{ compact ? '' : playbackLabel }}</span>
           </button>
         </ElTooltip>
 
-        <ElTooltip :content="`快进 ${seekStepSec} 秒`" placement="top">
+        <ElTooltip v-if="!compact" :content="`快进 ${seekStepSec} 秒`" placement="top">
           <button type="button" class="lad-video-monitor__action-btn" @click="forward">
             <Icon icon="vi-ep:right" :size="16" />
             <span>快进</span>
           </button>
         </ElTooltip>
 
-        <ElTooltip content="跳到结束并暂停" placement="top">
+        <ElTooltip v-if="!compact" content="跳到结束并暂停" placement="top">
           <button type="button" class="lad-video-monitor__action-btn" @click="seekEnd">
             <Icon icon="vi-ep:d-arrow-right" :size="16" />
             <span>结束</span>
@@ -292,7 +323,7 @@ const captureScreenshot = async () => {
         </ElTooltip>
 
         <div class="lad-video-monitor__rate">
-          <span class="lad-video-monitor__rate-label">速率</span>
+          <span v-if="!compact" class="lad-video-monitor__rate-label">速率</span>
           <ElSelect
             :model-value="playbackRate"
             size="small"
@@ -308,7 +339,7 @@ const captureScreenshot = async () => {
           </ElSelect>
         </div>
 
-        <ElTooltip content="截图" placement="top">
+        <ElTooltip v-if="!compact" content="截图" placement="top">
           <button
             type="button"
             class="lad-video-monitor__action-btn"
@@ -322,7 +353,7 @@ const captureScreenshot = async () => {
       </div>
     </div>
 
-    <div class="lad-video-monitor__footer">
+    <div v-if="!compact" class="lad-video-monitor__footer">
       <span>通道：{{ channelLabel }}</span>
       <span>录像时段：{{ recordRangeLabel }}</span>
       <span>状态：{{ statusLabel }}</span>
@@ -339,6 +370,24 @@ const captureScreenshot = async () => {
   border-radius: 8px;
   background: #09151a;
   color: #bce7dc;
+
+  &.is-compact {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+
+    .lad-video-monitor__controls {
+      padding: 6px 8px;
+    }
+
+    .lad-video-monitor__controls-row {
+      gap: 6px;
+    }
+
+    .lad-video-monitor__action-btn {
+      padding: 4px 6px;
+    }
+  }
 
   &__topbar,
   &__footer {

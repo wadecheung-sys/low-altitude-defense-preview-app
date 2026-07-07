@@ -109,3 +109,11 @@ export function countermeasureDeviceDisplay(value?: string): string {
   if (!text || text === '--') return text || '--'
   return text.replace(/\s*\([^)]*\)\s*$/u, '').trim() || text
 }
+
+export {
+  HANDLING_STATUS_OPTIONS,
+  normalizeHandlingStatus as handlingStatusDisplay,
+  isHandlingEnded,
+  isHandlingInProgress,
+  handlingStatusTagType
+} from '@/api/lad/incident/handlingStatusUtils'
