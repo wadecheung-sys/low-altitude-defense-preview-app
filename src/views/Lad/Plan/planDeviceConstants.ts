@@ -6,6 +6,9 @@ export {
   resolveDeviceFunction,
   functionLabel,
   countermeasureActionLabel,
+  countermeasureActionDeviceHint,
+  resolveCountermeasureDeviceBinding,
   dictEntriesToPlanFunctionOptions,
-  type PlanDeviceFunctionOption
+  type PlanDeviceFunctionOption,
+  type CountermeasureDeviceBinding
 } from '@/api/lad/plan/planDeviceCatalog'

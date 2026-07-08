@@ -135,7 +135,7 @@ const legacyCountermeasureFunctionMap: Record<string, string> = {
   radar_track: 'radio_jamming',
   fusion_monitor_report: 'sound_light_expulsion',
   hpm_suppression: 'microwave_strike',
-  forced_landing: 'sound_light_expulsion',
+  forced_landing: 'navigation_spoofing',
   link_disruption: 'radio_jamming',
   protocol_takeover: 'navigation_spoofing'
 }

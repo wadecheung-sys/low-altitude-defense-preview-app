@@ -4,6 +4,7 @@ import type { DeviceInfoItem } from './types'
 export const DEVICE_SELF_CHECK_TYPES = new Set([
   '雷达',
   '无线电侦测',
+  'Remote-ID 监视',
   '无线电干扰',
   '导航诱骗',
   '激光打击',
@@ -80,6 +81,22 @@ function buildItems(row: DeviceInfoItem, online: boolean): DeviceSelfCheckItem[]
         name: '控制与通信',
         status: pickStatus(online, online ? 'pass' : 'fail'),
         detail: online ? '平台链路可用' : '设备离线'
+      }
+    ]
+  }
+  if (type === 'Remote-ID 监视') {
+    return [
+      { name: 'RID 报文解析', status: pickStatus(online, 'pass'), detail: '2.4G/5.8G 广播解析正常' },
+      { name: '多目标跟踪', status: pickStatus(online, 'pass'), detail: '轨迹刷新 ≤1s' },
+      {
+        name: '上报链路',
+        status: pickStatus(online, online ? 'pass' : 'warn'),
+        detail: online ? '平台上报正常' : '上报延迟'
+      },
+      {
+        name: '控制与通信',
+        status: pickStatus(online, online ? 'pass' : 'fail'),
+        detail: online ? '设备在线' : '设备离线'
       }
     ]
   }

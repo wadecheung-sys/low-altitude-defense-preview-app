@@ -8,6 +8,7 @@ export const CAMERA_DEVICE_TYPE = '监控摄像头'
 export const MASTER_DEVICE_TYPES = [
   '雷达',
   '无线电侦测',
+  'Remote-ID 监视',
   '无线电干扰',
   '导航诱骗',
   '激光打击',
@@ -15,16 +16,25 @@ export const MASTER_DEVICE_TYPES = [
   '光电跟踪'
 ] as const
 
+/** 周边设备：不可作为设备组主设备 */
+export const PERIPHERAL_DEVICE_TYPES = ['监控摄像头', 'ADS-B 监视'] as const
+
 export function isCameraDevice(device: Pick<DeviceInfoItem, 'deviceType'>): boolean {
   return device.deviceType === CAMERA_DEVICE_TYPE
 }
 
+export function isPeripheralDevice(device: Pick<DeviceInfoItem, 'deviceType'>): boolean {
+  return (PERIPHERAL_DEVICE_TYPES as readonly string[]).includes(device.deviceType)
+}
+
 export function isMasterDevice(device: Pick<DeviceInfoItem, 'deviceType'>): boolean {
-  return !isCameraDevice(device)
+  return !isCameraDevice(device) && !isPeripheralDevice(device)
 }
 
 export function deriveGroupType(deviceType: string): DeviceGroupType {
-  if (deviceType === '雷达' || deviceType === '无线电侦测') return '探测组'
+  if (deviceType === '雷达' || deviceType === '无线电侦测' || deviceType === 'Remote-ID 监视') {
+    return '探测组'
+  }
   if (
     deviceType === '无线电干扰' ||
     deviceType === '导航诱骗' ||

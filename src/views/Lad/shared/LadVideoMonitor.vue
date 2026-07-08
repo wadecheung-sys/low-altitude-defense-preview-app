@@ -60,7 +60,7 @@ const progressDuration = computed(() => resolveRecordDurationSec(props.recordSta
 
 const statusTag = computed(() => (props.linked ? 'REPLAY' : 'DEMO'))
 
-const statusLabel = computed(() => (props.linked ? '可回放' : '演示回放'))
+const statusLabel = computed(() => (props.linked ? '可回放' : '待接入'))
 
 const displayDemoBadge = computed(() => props.showDemoBadge && !props.linked)
 
@@ -278,7 +278,7 @@ const captureScreenshot = async () => {
       />
       <div class="lad-video-monitor__grain" :class="{ 'is-paused': !playing }"></div>
       <div class="lad-video-monitor__camera-label">{{ cameraLabel }}</div>
-      <div v-if="displayDemoBadge" class="lad-video-monitor__demo-badge">演示录像</div>
+      <div v-if="displayDemoBadge" class="lad-video-monitor__demo-badge">暂无录像</div>
       <div v-if="!playing" class="lad-video-monitor__paused-mask">已暂停</div>
     </div>
 

@@ -12,6 +12,12 @@ export interface DeviceMonitorMetrics {
   handleCount: number
 }
 
+/** 按型号展示的实时状态字段（只读演示） */
+export interface DeviceMonitorStatusField {
+  label: string
+  value: string
+}
+
 export interface DeviceMonitorItem {
   id: string
   deviceId: string
@@ -24,6 +30,8 @@ export interface DeviceMonitorItem {
   /** 连续运行时长展示 HH:mm:ss */
   runtimeText: string
   metrics: DeviceMonitorMetrics
+  /** 型号相关的运行态字段（步骤 4） */
+  runtimeStatus: DeviceMonitorStatusField[]
   manufacturer: string
   deviceModel: string
   personInCharge: string

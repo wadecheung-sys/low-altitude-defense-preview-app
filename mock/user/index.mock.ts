@@ -113,7 +113,7 @@ export default [
       return {
         code: SUCCESS_CODE,
         data: {
-          message: `验证码已发送（演示码：${MOCK_SMS_CODE}）`
+          message: `验证码已发送（验证码：${MOCK_SMS_CODE}）`
         }
       }
     }

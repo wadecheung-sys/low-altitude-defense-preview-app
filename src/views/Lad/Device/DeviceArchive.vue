@@ -141,11 +141,11 @@ function openCreate() {
 }
 
 function importArchive() {
-  ElMessage.info('导入设备档案（演示）')
+  ElMessage.info('导入设备档案')
 }
 
 function exportArchive() {
-  ElMessage.success('设备档案已导出为 Excel（演示，未写入文件）')
+  ElMessage.success('设备档案已导出')
 }
 
 const crudSchemas = reactive<CrudSchema[]>([

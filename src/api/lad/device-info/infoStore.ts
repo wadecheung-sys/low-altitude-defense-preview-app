@@ -1,6 +1,11 @@
 import { deviceSupportsSelfCheck, runDeviceSelfCheck } from './deviceSelfCheck'
 import type { DeviceSelfCheckResult } from './deviceSelfCheck'
-import { queryDeviceArchiveDetail } from '../device/archiveStore'
+import {
+  DEVICE_ARCHIVE_ID_BY_MODEL,
+  DEVICE_CAMERA_ARCHIVE_ID,
+  queryDeviceArchiveDetail
+} from '../device/archiveStore'
+import { CONFIRMED_DEVICES, PENDING_DEVICES } from '@/constants/deviceCatalog'
 import type {
   DeviceExtendedField,
   DeviceInfoDeployment,
@@ -39,9 +44,18 @@ function nextExtendId() {
   return `ext-${Date.now()}-${extendSeq}`
 }
 
+function resolveCatalogVendor(row: DeviceInfoItem): string {
+  const entry =
+    CONFIRMED_DEVICES.find((d) => d.demo.deviceId === row.deviceId) ??
+    PENDING_DEVICES.find((d) => d.demo.deviceId === row.deviceId)
+  if (entry) return entry.vendor
+  if (row.deviceType === '监控摄像头') return '通用'
+  return '凡双科技'
+}
+
 function defaultExtendedFields(row: DeviceInfoItem, index: number): DeviceExtendedField[] {
   const acquisitionMethods = ['采购', '赠予', '置换', '赔偿', '其他'] as const
-  const vendors = ['中电科', '航天长峰', '北方智感', '中科低空', '凌云防务']
+  const vendor = resolveCatalogVendor(row)
   const contacts = ['张工', '李工', '王工', '赵工', '周工']
   const years = ['2023-03-15', '2023-07-20', '2024-01-12', '2024-04-08', '2024-09-18']
   return [
@@ -59,7 +73,7 @@ function defaultExtendedFields(row: DeviceInfoItem, index: number): DeviceExtend
     { id: nextExtendId(), label: '保管机构', value: '低空防御保障中心' },
     { id: nextExtendId(), label: '保管人', value: row.personInCharge },
     { id: nextExtendId(), label: '保管人电话', value: `138${String(10000000 + index).slice(-8)}` },
-    { id: nextExtendId(), label: '供应商', value: vendors[index % vendors.length] },
+    { id: nextExtendId(), label: '供应商', value: vendor },
     { id: nextExtendId(), label: '供应商联系人', value: contacts[index % contacts.length] },
     {
       id: nextExtendId(),
@@ -125,19 +139,33 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
     latitude: o.lat,
     mapX: o.mapX,
     mapY: o.mapY,
-    deviceIcon: row.deviceType.includes('雷达')
+    deviceIcon: row.deviceType.includes('雷达') || row.deviceType.includes('Remote-ID')
       ? 'radar'
       : row.deviceType.includes('光电')
         ? 'eo'
-        : 'jammer',
+        : row.deviceType.includes('ADS-B')
+          ? 'radar'
+          : row.deviceType.includes('干扰')
+            ? 'jammer'
+            : 'counter',
     controlRangeM:
       row.deviceType === '雷达'
         ? 800
-        : row.deviceType === '高功率微波'
-          ? 1200
-          : row.deviceType === '光电跟踪'
-            ? 600
-            : 500,
+        : row.deviceType === 'Remote-ID 监视'
+          ? 2500
+          : row.deviceType === 'ADS-B 监视'
+            ? 50000
+            : row.deviceType === '无线电侦测'
+              ? 5000
+              : row.deviceType === '无线电干扰'
+                ? 3000
+                : row.deviceType === '导航诱骗'
+                  ? 800
+                  : row.deviceType === '高功率微波'
+                    ? 1200
+                    : row.deviceType === '光电跟踪'
+                      ? 600
+                      : 500,
     contactPhone: `138${String(10000000 + index).slice(-8)}`,
     extendedFields: [],
     archiveIndicatorValues: {}
@@ -171,83 +199,52 @@ function mergeExt(body: DeviceInfoSavePayload, prev?: DeviceInfoExt): DeviceInfo
   }
 }
 
-const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
-  {
-    deviceId: 'DEV-R-01',
-    deviceName: '北区无线电干扰器',
-    archiveInfo: '核心区无线电干扰设备档案',
-    archiveId: 'da-10004',
-    deviceType: '无线电干扰',
-    deployLocation: '核心区',
-    ipAddress: '192.168.1.10',
-    serialNo: 'RD-2025-X01',
+function catalogSeedRow(
+  model: string,
+  overrides?: Partial<Omit<DeviceInfoItem, 'id'>>
+): Omit<DeviceInfoItem, 'id'> {
+  const entry =
+    CONFIRMED_DEVICES.find((d) => d.model === model) ??
+    PENDING_DEVICES.find((d) => d.model === model)
+  if (!entry) throw new Error(`Unknown catalog model: ${model}`)
+  const archiveId = DEVICE_ARCHIVE_ID_BY_MODEL[model]
+  return {
+    deviceId: entry.demo.deviceId,
+    deviceName: entry.demo.deviceName,
+    archiveInfo: entry.archiveName,
+    archiveId,
+    deviceType: entry.deviceType,
+    deployLocation: entry.demo.deployLocation,
+    ipAddress: entry.demo.ipAddress,
+    serialNo: entry.demo.serialNo,
     lastHeartbeat: '2026-05-20 14:32:18',
-    personInCharge: '张工',
-    updatedAt: '2026-05-20 14:32:18'
-  },
-  {
-    deviceId: 'DEV-RAD-02',
-    deviceName: '核心区雷达站',
-    archiveInfo: '北区低空监视雷达档案',
-    archiveId: 'da-10001',
-    deviceType: '雷达',
-    deployLocation: '塔台B座',
-    ipAddress: '192.168.1.21',
-    serialNo: 'LD-2025-A02',
-    lastHeartbeat: '2026-05-20 14:28:05',
-    personInCharge: '李工',
-    updatedAt: '2026-05-20 14:28:05'
-  },
-  {
-    deviceId: 'DEV-EO-03',
-    deviceName: '南门光电跟踪球',
-    archiveInfo: '南门光电跟踪转台档案',
-    archiveId: 'da-10003',
-    deviceType: '光电跟踪',
-    deployLocation: '南门岗哨',
-    ipAddress: '192.168.2.15',
-    serialNo: 'EO-2025-C11',
-    lastHeartbeat: '2026-05-20 13:55:40',
-    personInCharge: '王工',
-    updatedAt: '2026-05-20 13:55:40'
-  },
-  {
-    deviceId: 'DEV-S-04',
-    deviceName: '西区导航诱骗设备',
-    archiveInfo: '西区导航诱骗设备档案',
-    archiveId: 'da-10005',
-    deviceType: '导航诱骗',
-    deployLocation: '西区机房',
-    ipAddress: '192.168.3.8',
-    serialNo: 'SP-2025-D04',
-    lastHeartbeat: '2026-05-20 12:10:22',
-    personInCharge: '赵工',
-    updatedAt: '2026-05-20 12:10:22'
-  },
-  {
-    deviceId: 'DEV-RF-05',
-    deviceName: '东侧无线电侦测',
-    archiveInfo: '东侧无线电侦测站档案',
-    archiveId: 'da-10002',
-    deviceType: '无线电侦测',
-    deployLocation: '东侧瞭望台',
-    ipAddress: '192.168.1.45',
-    serialNo: 'RF-2025-E05',
-    lastHeartbeat: '2026-05-19 22:18:00',
-    personInCharge: '周工',
-    updatedAt: '2026-05-19 22:18:00'
+    personInCharge: entry.demo.personInCharge,
+    updatedAt: '2026-05-20 14:32:18',
+    ...overrides
   }
+}
+
+const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
+  catalogSeedRow('FG310F'),
+  catalogSeedRow('PL671F', { lastHeartbeat: '2026-05-20 14:28:05', updatedAt: '2026-05-20 14:28:05' }),
+  catalogSeedRow('TBD-EO', { lastHeartbeat: '2026-05-20 13:55:40', updatedAt: '2026-05-20 13:55:40' }),
+  catalogSeedRow('DY506F', { lastHeartbeat: '2026-05-20 12:10:22', updatedAt: '2026-05-20 12:10:22' }),
+  catalogSeedRow('RDS200', { lastHeartbeat: '2026-05-20 14:30:00', updatedAt: '2026-05-20 14:30:00' }),
+  catalogSeedRow('EXD55-LS', { lastHeartbeat: '2026-05-20 11:20:00', updatedAt: '2026-05-20 11:20:00' }),
+  catalogSeedRow('TBD-RAD', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
+  catalogSeedRow('TBD-LSR', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
+  catalogSeedRow('TBD-HPM', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' })
 ]
 
 /** 设备组演示：主设备周边监控摄像头 */
 const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   {
     deviceId: 'CAM-N-E01',
-    deviceName: '北区干扰器-东向监控',
+    deviceName: 'FG310F压制-东向监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
-    deployLocation: '核心区',
+    deployLocation: '核心区制高点',
     ipAddress: '192.168.1.101',
     serialNo: 'CAM-2025-N01',
     lastHeartbeat: '2026-05-20 14:32:18',
@@ -256,11 +253,11 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   },
   {
     deviceId: 'CAM-N-S01',
-    deviceName: '北区干扰器-南向监控',
+    deviceName: 'FG310F压制-南向监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
-    deployLocation: '核心区',
+    deployLocation: '核心区制高点',
     ipAddress: '192.168.1.102',
     serialNo: 'CAM-2025-N02',
     lastHeartbeat: '2026-05-20 14:32:18',
@@ -269,11 +266,11 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   },
   {
     deviceId: 'CAM-N-W01',
-    deviceName: '北区干扰器-西向监控',
+    deviceName: 'FG310F压制-西向监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
-    deployLocation: '核心区',
+    deployLocation: '核心区制高点',
     ipAddress: '192.168.1.103',
     serialNo: 'CAM-2025-N03',
     lastHeartbeat: '2026-05-20 14:32:18',
@@ -282,35 +279,35 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   },
   {
     deviceId: 'CAM-R-N01',
-    deviceName: '核心区雷达-北侧监控',
+    deviceName: 'PL671F侦测-北侧监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
-    deployLocation: '塔台B座',
+    deployLocation: '东侧瞭望台',
     ipAddress: '192.168.1.201',
     serialNo: 'CAM-2025-R01',
     lastHeartbeat: '2026-05-20 14:28:05',
-    personInCharge: '李工',
+    personInCharge: '周工',
     updatedAt: '2026-05-20 14:28:05'
   },
   {
     deviceId: 'CAM-R-S01',
-    deviceName: '核心区雷达-南侧监控',
+    deviceName: 'PL671F侦测-南侧监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
-    deployLocation: '塔台B座',
+    deployLocation: '东侧瞭望台',
     ipAddress: '192.168.1.202',
     serialNo: 'CAM-2025-R02',
     lastHeartbeat: '2026-05-20 14:28:05',
-    personInCharge: '李工',
+    personInCharge: '周工',
     updatedAt: '2026-05-20 14:28:05'
   },
   {
     deviceId: 'CAM-EO-E01',
-    deviceName: '南门光电-东侧监控',
+    deviceName: '光电跟踪-东侧监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
     deployLocation: '南门岗哨',
     ipAddress: '192.168.2.101',
@@ -321,9 +318,9 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   },
   {
     deviceId: 'CAM-EO-W01',
-    deviceName: '南门光电-西侧监控',
+    deviceName: '光电跟踪-西侧监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
     deployLocation: '南门岗哨',
     ipAddress: '192.168.2.102',
@@ -334,9 +331,9 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   },
   {
     deviceId: 'CAM-EO-G01',
-    deviceName: '南门光电-岗哨全景监控',
+    deviceName: '光电跟踪-岗哨全景监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
     deployLocation: '南门岗哨',
     ipAddress: '192.168.2.103',
@@ -347,9 +344,9 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   },
   {
     deviceId: 'CAM-W-N01',
-    deviceName: '西区诱骗-机房入口监控',
+    deviceName: 'DY506F诱骗-机房入口监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
     deployLocation: '西区机房',
     ipAddress: '192.168.3.101',
@@ -360,9 +357,9 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   },
   {
     deviceId: 'CAM-W-O01',
-    deviceName: '西区诱骗-外围监控',
+    deviceName: 'DY506F诱骗-外围监控',
     archiveInfo: '固定监控摄像头档案',
-    archiveId: 'da-10003',
+    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
     deviceType: '监控摄像头',
     deployLocation: '西区机房',
     ipAddress: '192.168.3.102',
@@ -375,35 +372,7 @@ const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
 
 let allList: DeviceInfoItem[] = [
   ...seedRows.map((r, i) => ({ ...r, id: `di-${10001 + i}` })),
-  ...peripheralCameraSeedRows.map((r, i) => ({ ...r, id: `di-${20001 + i}` })),
-  ...Array.from({ length: 20 }, (_, i) => {
-    const types = [
-      '无线电干扰',
-      '雷达',
-      '光电跟踪',
-      '导航诱骗',
-      '无线电侦测',
-      '激光打击',
-      '高功率微波'
-    ] as const
-    const type = types[i % types.length]
-    const seq = String(i + 6).padStart(2, '0')
-    const day = String(18 + (i % 3)).padStart(2, '0')
-    const archiveLabel = `${type}档案-${seq}`
-    return {
-      id: `di-${10006 + i}`,
-      deviceId: `DEV-${type.slice(0, 2).toUpperCase()}-${seq}`,
-      deviceName: `演示设备-${seq}`,
-      archiveInfo: archiveLabel,
-      deviceType: type,
-      deployLocation: `部署点-${seq}`,
-      ipAddress: `192.168.${1 + (i % 3)}.${10 + i}`,
-      serialNo: `SN-2025-${seq}`,
-      lastHeartbeat: `2026-05-${day} ${String(8 + (i % 10)).padStart(2, '0')}:15:00`,
-      personInCharge: ['张工', '李工', '王工', '赵工'][i % 4],
-      updatedAt: `2026-05-${day} ${String(8 + (i % 10)).padStart(2, '0')}:15:00`
-    }
-  })
+  ...peripheralCameraSeedRows.map((r, i) => ({ ...r, id: `di-${20001 + i}` }))
 ]
 
 // 初始化扩展部署信息与扩展字段
@@ -417,8 +386,12 @@ allList.forEach((row, i) => {
     detailExt[row.id]!.extendedFields = defaultExtendedFields(row, i)
   }
   if (!row.archiveId) {
-    const genIndex = Number.parseInt(row.id.replace(/^di-/, ''), 10) - 10006
-    row.archiveId = genIndex >= 0 ? `da-${10006 + (genIndex % 30)}` : `da-${10001 + (i % 5)}`
+    const modelEntry =
+      CONFIRMED_DEVICES.find((d) => d.demo.deviceId === row.deviceId) ??
+      PENDING_DEVICES.find((d) => d.demo.deviceId === row.deviceId)
+    if (modelEntry) {
+      row.archiveId = DEVICE_ARCHIVE_ID_BY_MODEL[modelEntry.model]
+    }
   }
 })
 

@@ -36,7 +36,8 @@ import {
 import { UI } from '../planConstants'
 import {
   listCountermeasureActions,
-  resolveCountermeasureFunction
+  resolveCountermeasureFunction,
+  countermeasureActionDeviceHint
 } from '../planDeviceConstants'
 import {
   buildPlanAreaCascaderOptions,
@@ -500,6 +501,12 @@ async function onSave() {
                       :value="option.value"
                     />
                   </ElSelect>
+                  <p
+                    v-if="countermeasureActionDeviceHint(rule.deviceFunction)"
+                    class="trigger-rule-form__device-hint"
+                  >
+                    {{ countermeasureActionDeviceHint(rule.deviceFunction) }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -583,6 +590,13 @@ async function onSave() {
   font-size: 12px;
   line-height: 18px;
   color: var(--el-text-color-regular);
+}
+
+.trigger-rule-form__device-hint {
+  margin: 6px 0 0;
+  color: var(--el-color-primary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 @media (max-width: 768px) {

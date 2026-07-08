@@ -18,7 +18,9 @@ import type {
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import { deviceInfoTypeOptions } from './deviceInfoConstants'
+import { isPeripheralDevice } from '@/api/lad/device-group/deviceGroupCatalog'
 import DeviceInfoGisMap from './components/DeviceInfoGisMap.vue'
+import DeviceRemoteControlPanel from '../shared/DeviceRemoteControlPanel.vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
   ElAlert,
@@ -94,6 +96,22 @@ const selectedDeployAreaName = computed(
 const supportsSelfCheck = computed(
   () => detail.value?.supportsSelfCheck ?? deviceSupportsSelfCheck(form.deviceType)
 )
+
+const deviceModel = computed(
+  () => linkedArchive.value?.deviceModel || detail.value?.linkedArchive?.deviceModel || ''
+)
+
+const showRemoteControlPanel = computed(() => {
+  if (isCreateMode.value || !detail.value) return false
+  return !isPeripheralDevice({ deviceType: form.deviceType || detail.value.deviceType })
+})
+
+const deviceOnline = computed(() => {
+  if (!detail.value?.lastHeartbeat) return true
+  const t = new Date(detail.value.lastHeartbeat.replace(/-/g, '/')).getTime()
+  if (Number.isNaN(t)) return true
+  return Date.now() - t < 48 * 3600 * 1000
+})
 
 const selfCheckOverallTag = computed(() => {
   const overall = selfCheckResult.value?.overall
@@ -892,6 +910,17 @@ watch(metricsTab, (tab) => {
       </section>
     </div>
 
+    <section v-if="showRemoteControlPanel" class="device-detail-control-wrap">
+      <DeviceRemoteControlPanel
+        :device-record-id="recordId"
+        :device-name="form.deviceName || detail?.deviceName"
+        :device-type="form.deviceType || detail?.deviceType"
+        :device-model="deviceModel"
+        :device-code="form.deviceId || detail?.deviceId"
+        :online="deviceOnline"
+      />
+    </section>
+
     <ElDialog v-model="selfCheckVisible" title="设备自检结果" width="520px" destroy-on-close>
       <template v-if="selfCheckResult">
         <ElAlert
@@ -956,6 +985,10 @@ watch(metricsTab, (tab) => {
   .device-detail-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.device-detail-control-wrap {
+  margin-top: 16px;
 }
 
 .device-detail-panel {

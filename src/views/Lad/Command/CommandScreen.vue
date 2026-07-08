@@ -5,6 +5,7 @@ import {
   LAD_BACKEND_HOME_PATH,
   LAD_MESSAGE_CENTER_PATH
 } from '@/constants/lad'
+import { bindDataScreenDeviceSync } from './dataScreenDeviceSync'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -143,6 +144,8 @@ function bindPrototypeInteractions() {
   )
   if (!messageLinkCleanup) return false
   cleanups.push(messageLinkCleanup)
+
+  cleanups.push(bindDataScreenDeviceSync(doc))
 
   cleanupPrototypeBindings = () => {
     cleanups.forEach((cleanup) => cleanup())

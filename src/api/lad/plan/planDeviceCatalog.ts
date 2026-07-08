@@ -104,3 +104,58 @@ export function countermeasureActionLabel(functionValue: string): string {
 export function functionLabel(_deviceGroupType: string, functionValue: string): string {
   return countermeasureActionLabel(functionValue)
 }
+
+/** 反制动作 → 推荐执行设备（选型 v2） */
+export interface CountermeasureDeviceBinding {
+  deviceType: string
+  model: string
+  effect: string
+}
+
+const countermeasureDeviceBindings: Record<string, CountermeasureDeviceBinding> = {
+  navigation_spoofing: {
+    deviceType: '导航诱骗',
+    model: 'DY506F',
+    effect: '迫降 / 禁飞 / 驱离'
+  },
+  radio_jamming: {
+    deviceType: '无线电干扰',
+    model: 'FG310F',
+    effect: '压制 / 可能触发自动返航'
+  },
+  sound_light_expulsion: {
+    deviceType: '声光',
+    model: '—',
+    effect: '声光驱离'
+  },
+  microwave_strike: {
+    deviceType: '高功率微波',
+    model: 'TBD-HPM',
+    effect: '微波打击'
+  },
+  laser_strike: {
+    deviceType: '激光打击',
+    model: 'TBD-LSR',
+    effect: '激光打击'
+  },
+  forced_landing: {
+    deviceType: '导航诱骗',
+    model: 'DY506F',
+    effect: '迫降（legacy → DY506F）'
+  }
+}
+
+export function resolveCountermeasureDeviceBinding(
+  functionValue: string
+): CountermeasureDeviceBinding | undefined {
+  return countermeasureDeviceBindings[functionValue]
+}
+
+export function countermeasureActionDeviceHint(functionValue: string): string {
+  const hit = resolveCountermeasureDeviceBinding(functionValue)
+  if (!hit) return ''
+  if (hit.model === '—' || hit.model.startsWith('TBD-')) {
+    return `${hit.deviceType} · ${hit.effect}`
+  }
+  return `推荐设备：${hit.model}（${hit.deviceType}）· ${hit.effect}`
+}

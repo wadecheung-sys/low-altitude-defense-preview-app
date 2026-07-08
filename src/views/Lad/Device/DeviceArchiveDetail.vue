@@ -141,7 +141,7 @@ function resetCreateState() {
   form.archiveNo = ''
   form.archiveName = ''
   form.deviceType = '雷达'
-  form.vendor = '同方威视'
+  form.vendor = '凡双科技'
   form.deviceModel = ''
   form.remark = ''
   enabledState.value = true

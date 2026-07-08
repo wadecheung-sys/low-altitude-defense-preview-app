@@ -1,6 +1,11 @@
 /**
  * 设备档案内存数据（列表 / 详情 / Mock 共用）
  */
+import {
+  ALL_CATALOG_DEVICES,
+  catalogCategoryFromDeviceType,
+  type DeviceCatalogEntry
+} from '@/constants/deviceCatalog'
 import type {
   DeviceArchiveCategory,
   DeviceArchiveDetail,
@@ -27,14 +32,49 @@ const categoryPrefixes: Record<Exclude<DeviceArchiveCategory, 'all'>, string> = 
   eo: 'D-LAD-EO'
 }
 
-const vendors = ['同方威视']
-const models = [
-  'LAD-RADAR-X2',
-  'LAD-RF-SCAN',
-  'LAD-JAM-A1',
-  'LAD-SPOOF-G2',
-  'LAD-LSR-Z3',
-  'LAD-EO-360'
+const CAMERA_ARCHIVE: Omit<DeviceArchiveItem, 'id'> = {
+  archiveNo: 'D-LAD-CAM0001',
+  archiveName: '固定监控摄像头档案',
+  deviceType: '监控摄像头',
+  vendor: '通用',
+  deviceModel: 'IPC-通用',
+  enabled: true,
+  category: 'eo',
+  updatedAt: '2026-03-16 11:10:00'
+}
+
+function buildIndicators(entry: DeviceCatalogEntry, archiveId: string): DeviceArchiveIndicator[] {
+  return entry.indicators.map((indicator, index) => ({
+    ...indicator,
+    id: `${archiveId}-${index + 1}`,
+    config: indicator.config ? { ...indicator.config } : undefined
+  }))
+}
+
+function catalogToArchiveRow(entry: DeviceCatalogEntry, id: string): DeviceArchiveItem {
+  return {
+    id,
+    archiveNo: entry.archiveNo,
+    archiveName: entry.archiveName,
+    deviceType: entry.deviceType,
+    vendor: entry.vendor,
+    deviceModel: entry.model,
+    enabled: entry.tier !== 'pending',
+    category: catalogCategoryFromDeviceType(entry.deviceType),
+    updatedAt: '2026-03-18 10:20:00'
+  }
+}
+
+const catalogArchiveIds = [
+  'da-10001',
+  'da-10002',
+  'da-10003',
+  'da-10004',
+  'da-10005',
+  'da-10006',
+  'da-10007',
+  'da-10008',
+  'da-10009'
 ]
 
 const detailExt: Record<
@@ -42,119 +82,36 @@ const detailExt: Record<
   { remark: string; imageUrl: string | null; indicators: DeviceArchiveIndicator[] }
 > = {}
 
-function defaultIndicators(id: string, deviceType: string): DeviceArchiveIndicator[] {
-  return [
+ALL_CATALOG_DEVICES.forEach((entry, index) => {
+  const id = catalogArchiveIds[index]!
+  detailExt[id] = {
+    remark:
+      entry.tier === 'pending'
+        ? `${entry.deviceType}（${entry.model}）档案，技术参数待完善。`
+        : `${entry.deviceType}（${entry.model}）档案，指标摘自产品说明书。`,
+    imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
+    indicators: buildIndicators(entry, id)
+  }
+})
+
+detailExt['da-10010'] = {
+  remark: '周边监控摄像头通用档案。',
+  imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
+  indicators: [
     {
-      id: `${id}-1`,
-      item: '设备重量',
-      unit: 'kg',
-      dataType: 'number',
-      config: { integerDigits: 3, decimalPlaces: 1 },
-      value: deviceType === '雷达' ? '55' : deviceType === '高功率微波' ? '86' : '42'
-    },
-    {
-      id: `${id}-2`,
-      item: '额定电压',
-      unit: 'V',
-      dataType: 'number',
-      config: { integerDigits: 3, decimalPlaces: 0 },
-      value: '220'
-    },
-    {
-      id: `${id}-3`,
-      item: '工作频段',
-      unit: 'GHz',
+      id: 'da-10010-1',
+      item: '分辨率',
+      unit: '',
       dataType: 'text',
       config: { maxLength: 32 },
-      value: '2.4 / 5.8'
+      value: '1080P'
     }
   ]
 }
 
-const seedRows: Omit<DeviceArchiveItem, 'id'>[] = [
-  {
-    archiveNo: 'D-LAD-RAD0001',
-    archiveName: '北区低空监视雷达档案',
-    deviceType: '雷达',
-    vendor: '同方威视',
-    deviceModel: 'LAD-RADAR-X2',
-    enabled: true,
-    category: 'radar',
-    updatedAt: '2026-03-18 10:20:00'
-  },
-  {
-    archiveNo: 'D-LAD-RF0001',
-    archiveName: '东侧无线电侦测站档案',
-    deviceType: '无线电侦测',
-    vendor: '同方威视',
-    deviceModel: 'LAD-RF-SCAN',
-    enabled: true,
-    category: 'radio',
-    updatedAt: '2026-03-17 15:40:00'
-  },
-  {
-    archiveNo: 'D-LAD-EO0001',
-    archiveName: '南门光电跟踪转台档案',
-    deviceType: '光电跟踪',
-    vendor: '同方威视',
-    deviceModel: 'LAD-EO-360',
-    enabled: true,
-    category: 'eo',
-    updatedAt: '2026-03-16 11:10:00'
-  },
-  {
-    archiveNo: 'D-LAD-CM0001',
-    archiveName: '核心区无线电干扰设备档案',
-    deviceType: '无线电干扰',
-    vendor: '同方威视',
-    deviceModel: 'LAD-JAM-A1',
-    enabled: true,
-    category: 'counter',
-    updatedAt: '2026-03-16 09:40:00'
-  },
-  {
-    archiveNo: 'D-LAD-CM0002',
-    archiveName: '西区导航诱骗设备档案',
-    deviceType: '导航诱骗',
-    vendor: '同方威视',
-    deviceModel: 'LAD-SPOOF-G2',
-    enabled: true,
-    category: 'counter',
-    updatedAt: '2026-03-17 15:40:00'
-  }
-]
-
 let allList: DeviceArchiveItem[] = [
-  ...seedRows.map((r, i) => ({
-    ...r,
-    id: `da-${10001 + i}`
-  })),
-  ...Array.from({ length: 30 }, (_, i) => {
-    const typePool = [
-      '雷达',
-      '无线电侦测',
-      '无线电干扰',
-      '导航诱骗',
-      '激光打击',
-      '高功率微波',
-      '光电跟踪'
-    ]
-    const deviceType = typePool[i % typePool.length]
-    const cat = categoryFromDeviceType(deviceType)
-    const seq = String(i + 3).padStart(4, '0')
-    const day = String(10 + (i % 18)).padStart(2, '0')
-    return {
-      id: `da-${10006 + i}`,
-      archiveNo: `${categoryPrefixes[cat]}${seq}`,
-      archiveName: `${vendors[i % vendors.length]}-${deviceType}${seq}档案`,
-      deviceType,
-      vendor: vendors[i % vendors.length],
-      deviceModel: models[i % models.length],
-      enabled: i % 4 !== 1,
-      category: cat,
-      updatedAt: `2026-03-${day} ${String(9 + (i % 8)).padStart(2, '0')}:30:00`
-    }
-  })
+  ...ALL_CATALOG_DEVICES.map((entry, index) => catalogToArchiveRow(entry, catalogArchiveIds[index]!)),
+  { ...CAMERA_ARCHIVE, id: 'da-10010' }
 ]
 
 function filterList(params: DeviceArchiveQuery): DeviceArchiveItem[] {
@@ -191,9 +148,9 @@ function filterList(params: DeviceArchiveQuery): DeviceArchiveItem[] {
 
 export function buildDeviceArchiveDetail(row: DeviceArchiveItem): DeviceArchiveDetail {
   const ext = detailExt[row.id] ?? {
-    remark: `${row.deviceType}档案，供部署、联动与维护演示使用。`,
+    remark: `${row.deviceType}档案，供部署、联动与维护使用。`,
     imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
-    indicators: defaultIndicators(row.id, row.deviceType)
+    indicators: []
   }
   if (!detailExt[row.id]) {
     detailExt[row.id] = {
@@ -248,10 +205,7 @@ function formatNow() {
 }
 
 function categoryFromDeviceType(deviceType: string): Exclude<DeviceArchiveCategory, 'all'> {
-  if (deviceType === '雷达') return 'radar'
-  if (deviceType === '无线电侦测') return 'radio'
-  if (deviceType === '光电跟踪') return 'eo'
-  return 'counter'
+  return catalogCategoryFromDeviceType(deviceType)
 }
 
 function nextArchiveId() {
@@ -314,3 +268,10 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
   }
   return row
 }
+
+/** 型号 → 档案 ID（与 ALL_CATALOG_DEVICES 顺序一致，避免双维护错位） */
+export const DEVICE_ARCHIVE_ID_BY_MODEL: Record<string, string> = Object.fromEntries(
+  ALL_CATALOG_DEVICES.map((entry, index) => [entry.model, catalogArchiveIds[index]!])
+)
+
+export const DEVICE_CAMERA_ARCHIVE_ID = 'da-10010'

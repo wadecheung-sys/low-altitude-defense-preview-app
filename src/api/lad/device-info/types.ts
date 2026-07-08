@@ -4,6 +4,8 @@ import type { DeviceArchiveIndicator } from '../device/types'
 export type DeviceInfoKind =
   | '雷达'
   | '无线电侦测'
+  | 'Remote-ID 监视'
+  | 'ADS-B 监视'
   | '无线电干扰'
   | '导航诱骗'
   | '激光打击'

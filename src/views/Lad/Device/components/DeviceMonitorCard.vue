@@ -144,6 +144,12 @@ watch(
           <span>连续运行时长：</span>
           <strong>{{ item.runtimeText }}</strong>
         </div>
+        <ul v-if="item.runtimeStatus.length" class="device-monitor-card__status">
+          <li v-for="field in item.runtimeStatus" :key="field.label">
+            <span>{{ field.label }}</span>
+            <strong>{{ field.value }}</strong>
+          </li>
+        </ul>
         <dl class="device-monitor-card__info">
           <div
             ><dt>设备编号：</dt><dd>{{ item.deviceId }}</dd></div
@@ -386,6 +392,40 @@ watch(
       font:
         700 12px 'JetBrains Mono',
         monospace;
+    }
+  }
+
+  &__status {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 8px;
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+    font-size: 11px;
+
+    li {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: #f3f7f9;
+    }
+
+    span {
+      color: var(--el-text-color-secondary);
+    }
+
+    strong {
+      overflow: hidden;
+      color: #1f4f63;
+      font:
+        600 11px 'JetBrains Mono',
+        monospace;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 

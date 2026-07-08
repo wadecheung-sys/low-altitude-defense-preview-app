@@ -38,12 +38,12 @@ let allGroups: DeviceGroupItem[] = [
   buildStoredRow(
     {
       masterDeviceId: 'di-10001',
-      deviceName: '北区无线电干扰器',
-      deviceCode: 'DEV-R-01',
+      deviceName: '核心区转台压制-FG310F',
+      deviceCode: 'DEV-FG310-01',
       deviceType: '无线电干扰',
-      deployArea: '核心区',
+      deployArea: '核心区制高点',
       linkedDeviceIds: ['di-20001', 'di-20002', 'di-20003'],
-      linkedChain: '北区干扰器-东向监控、北区干扰器-南向监控、北区干扰器-西向监控',
+      linkedChain: 'FG310F压制-东向监控、FG310F压制-南向监控、FG310F压制-西向监控',
       enabled: true
     },
     'dg-1001',
@@ -52,12 +52,12 @@ let allGroups: DeviceGroupItem[] = [
   buildStoredRow(
     {
       masterDeviceId: 'di-10002',
-      deviceName: '核心区雷达站',
-      deviceCode: 'DEV-RAD-02',
-      deviceType: '雷达',
-      deployArea: '塔台B座',
+      deviceName: '东侧频谱侦测-PL671F',
+      deviceCode: 'DEV-PL671-01',
+      deviceType: '无线电侦测',
+      deployArea: '东侧瞭望台',
       linkedDeviceIds: ['di-20004', 'di-20005'],
-      linkedChain: '核心区雷达-北侧监控、核心区雷达-南侧监控',
+      linkedChain: 'PL671F侦测-北侧监控、PL671F侦测-南侧监控',
       enabled: true
     },
     'dg-1002',
@@ -66,12 +66,12 @@ let allGroups: DeviceGroupItem[] = [
   buildStoredRow(
     {
       masterDeviceId: 'di-10003',
-      deviceName: '南门光电跟踪球',
-      deviceCode: 'DEV-EO-03',
+      deviceName: '1#光电-GD',
+      deviceCode: 'DEV-EO-01',
       deviceType: '光电跟踪',
       deployArea: '南门岗哨',
       linkedDeviceIds: ['di-20006', 'di-20007', 'di-20008'],
-      linkedChain: '南门光电-东侧监控、南门光电-西侧监控、南门光电-岗哨全景监控',
+      linkedChain: '光电跟踪-东侧监控、光电跟踪-西侧监控、光电跟踪-岗哨全景监控',
       enabled: true
     },
     'dg-1003',
@@ -80,24 +80,87 @@ let allGroups: DeviceGroupItem[] = [
   buildStoredRow(
     {
       masterDeviceId: 'di-10004',
-      deviceName: '西区导航诱骗设备',
-      deviceCode: 'DEV-S-04',
+      deviceName: '西区导航诱骗-DY506F',
+      deviceCode: 'DEV-DY506-01',
       deviceType: '导航诱骗',
       deployArea: '西区机房',
       linkedDeviceIds: ['di-20009', 'di-20010'],
-      linkedChain: '西区诱骗-机房入口监控、西区诱骗-外围监控',
+      linkedChain: 'DY506F诱骗-机房入口监控、DY506F诱骗-外围监控',
       enabled: true
     },
     'dg-1004',
     'GRP-CM-02'
+  ),
+  buildStoredRow(
+    {
+      masterDeviceId: 'di-10005',
+      deviceName: '北侧Remote-ID监视-RDS200',
+      deviceCode: 'DEV-RDS200-01',
+      deviceType: 'Remote-ID 监视',
+      deployArea: '北侧制高点',
+      linkedDeviceIds: [],
+      linkedChain: '',
+      enabled: true
+    },
+    'dg-1005',
+    'GRP-RID-01'
+  ),
+  buildStoredRow(
+    {
+      masterDeviceId: 'di-10007',
+      deviceName: '1#雷达-LD',
+      deviceCode: 'DEV-RAD-01',
+      deviceType: '雷达',
+      deployArea: '待部署',
+      linkedDeviceIds: [],
+      linkedChain: '',
+      enabled: true
+    },
+    'dg-1006',
+    'GRP-RAD-TBD'
+  ),
+  buildStoredRow(
+    {
+      masterDeviceId: 'di-10008',
+      deviceName: '1#激光-JG',
+      deviceCode: 'DEV-LSR-01',
+      deviceType: '激光打击',
+      deployArea: '待部署',
+      linkedDeviceIds: [],
+      linkedChain: '',
+      enabled: true
+    },
+    'dg-1007',
+    'GRP-LSR-TBD'
+  ),
+  buildStoredRow(
+    {
+      masterDeviceId: 'di-10009',
+      deviceName: '1#微波-WB',
+      deviceCode: 'DEV-HPM-01',
+      deviceType: '高功率微波',
+      deployArea: '待部署',
+      linkedDeviceIds: [],
+      linkedChain: '',
+      enabled: true
+    },
+    'dg-1008',
+    'GRP-HPM-TBD'
   )
 ]
 
 allGroups = allGroups.map((item, index) => ({
   ...item,
-  updatedAt: ['2026-06-01 09:20:00', '2026-06-01 09:35:00', '2026-06-01 10:10:00', '2026-06-02 11:00:00'][
-    index
-  ]
+  updatedAt: [
+    '2026-06-01 09:20:00',
+    '2026-06-01 09:35:00',
+    '2026-06-01 10:10:00',
+    '2026-06-02 11:00:00',
+    '2026-06-02 14:00:00',
+    '2026-06-03 09:00:00',
+    '2026-06-03 10:30:00',
+    '2026-06-03 11:45:00'
+  ][index]
 }))
 
 function nextGroupId() {
