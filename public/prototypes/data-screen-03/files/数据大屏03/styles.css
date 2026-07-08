@@ -6571,7 +6571,7 @@
 }
 #u170.mouseOver {
 }
-#u170_div.selected {
+#u170_div.mouseDown {
   border-width:0px;
   position:absolute;
   left:0px;
@@ -6579,14 +6579,18 @@
   width:67px;
   height:27px;
   background:inherit;
-  background-color:rgba(0, 143, 224, 1);
+  background-color:rgba(2, 167, 240, 1);
+  box-sizing:border-box;
+  border-width:1px;
+  border-style:solid;
+  border-color:rgba(121, 121, 121, 1);
   border-radius:5px;
   filter:drop-shadow(none);
   transition:none;
 }
-#u170.selected {
+#u170.mouseDown {
 }
-#u170_div.mouseOver.selected {
+#u170_div.mouseOver.mouseDown {
   border-width:0px;
   position:absolute;
   left:0px;
@@ -6594,12 +6598,16 @@
   width:67px;
   height:27px;
   background:inherit;
-  background-color:rgba(0, 143, 224, 1);
+  background-color:rgba(2, 167, 240, 1);
+  box-sizing:border-box;
+  border-width:1px;
+  border-style:solid;
+  border-color:rgba(2, 167, 240, 1);
   border-radius:5px;
   filter:drop-shadow(none);
   transition:none;
 }
-#u170.mouseOver.selected {
+#u170.mouseOver.mouseDown {
 }
 #u170_text {
   border-width:0px;
@@ -25388,7 +25396,7 @@
 }
 #u563 {
   position:absolute;
-  left:503px;
+  left:488px;
   top:222px;
   touch-action:none;
   visibility:hidden;
