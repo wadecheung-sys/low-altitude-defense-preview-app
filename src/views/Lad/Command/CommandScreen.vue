@@ -15,6 +15,7 @@ const PROTOTYPE_HEIGHT = 1242
 const DISPLAY_MAX_WIDTH = 1920
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/index.html`
 
+const BACKEND_ENTRY_BUTTON_ID = 'u18'
 const HISTORY_EVENT_LINK_ID = 'u103'
 /** 消息区右侧「更多」，非设备列表区的「查看更多」(u170) */
 const MESSAGE_CENTER_LINK_ID = 'u206'
@@ -109,6 +110,17 @@ function bindPrototypeInteractions() {
   if (!doc) return false
 
   const cleanups: Cleanup[] = []
+
+  const backendEntryCleanup = bindClickableElement(
+    doc,
+    BACKEND_ENTRY_BUTTON_ID,
+    () => {
+      void router.push(LAD_BACKEND_HOME_PATH)
+    },
+    { role: 'button', ariaLabel: '进入控制台' }
+  )
+  if (!backendEntryCleanup) return false
+  cleanups.push(backendEntryCleanup)
 
   const historyLinkCleanup = bindClickableElement(
     doc,
