@@ -120,36 +120,6 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
         ]
       },
       {
-        id: 'pm-flight-record',
-        parentId: 'pm-root',
-        name: '飞行记录',
-        permCode: 'lad:flight-record',
-        nodeType: 'menu',
-        path: '/lad/flight-record/index',
-        sort: 3,
-        status: 'enabled',
-        children: [
-          {
-            id: 'pm-flight-record-view',
-            parentId: 'pm-flight-record',
-            name: '查看',
-            permCode: 'lad:flight-record:view',
-            nodeType: 'button',
-            sort: 1,
-            status: 'enabled'
-          },
-          {
-            id: 'pm-flight-record-playback',
-            parentId: 'pm-flight-record',
-            name: '回放演示',
-            permCode: 'lad:flight-record:playback',
-            nodeType: 'button',
-            sort: 2,
-            status: 'enabled'
-          }
-        ]
-      },
-      {
         id: 'pm-device',
         parentId: 'pm-root',
         name: '设备管理',

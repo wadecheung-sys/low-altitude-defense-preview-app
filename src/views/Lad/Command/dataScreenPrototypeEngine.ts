@@ -1,6 +1,6 @@
 /**
  * 数据大屏原型交互引擎：从 Axure 导出 HTML 的 selectiongroup / data-label 自动发现槽位，
- * 并实现空飘物列表、地图图标、连线、详情面板之间的互选联动。
+ * 并实现目标列表、地图图标、连线、详情面板之间的互选联动。
  */
 
 export type DataScreenSlot = {
@@ -23,18 +23,25 @@ const LINE_GROUP = '线'
 const DETAIL_GROUP = '无人机详情'
 const ICON_GROUP = '无人机icon'
 
-const BIRD_ICON_ID = 'u185'
-const MAP_LINE_GROUP_ID = 'u186'
-const MAP_TARGET_GROUP_ID = 'u191'
+const MAP_LINE_GROUP_ID = 'u173'
+const MAP_TARGET_GROUP_ID = 'u178'
 
-const DETAIL_CLOSE_BUTTONS = ['u202', 'u197', 'u199', 'u205'] as const
+const DETAIL_CLOSE_BUTTONS = ['u184', 'u186', 'u189', 'u192'] as const
 
-/** 连线组 < 地图目标组 < 详情面板，避免被后续设备控制图层遮挡 */
+/** 设备控制/详情弹层根节点，需高于地图目标层 */
+const DEVICE_CONTROL_ROOT_ID = 'u298'
+const DEVICE_CONTROL_OVERLAY_ID = 'u299'
+const DEVICE_DETAIL_MODAL_ID = 'u563'
+const DEVICE_LIST_VIEW_MORE_BUTTON_ID = 'u170'
+
+/** 连线组 < 地图目标组 < 详情面板 < 设备控制弹层 */
 const MAP_LINE_GROUP_Z_INDEX = 180
 const MAP_TARGET_GROUP_Z_INDEX = 200
 const MAP_LINE_Z_INDEX = 10
 const MAP_ICON_Z_INDEX = 25
 const MAP_DETAIL_Z_INDEX = 50
+const DEVICE_CONTROL_STACK_Z_INDEX = 300
+const DEVICE_DETAIL_MODAL_Z_INDEX = 310
 
 type Cleanup = () => void
 
@@ -132,18 +139,9 @@ function mapIconsToSlots(doc: Document, slots: Omit<DataScreenSlot, 'iconIds'>[]
     iconSlotMap.set(icon.id, bestIndex)
   }
 
-  const bird = doc.getElementById(BIRD_ICON_ID)
-  const birdSlot = slots.find((slot) => slot.detailId === 'u204')?.index ?? slots.at(-1)?.index
-  if (bird && birdSlot != null) {
-    iconSlotMap.set(BIRD_ICON_ID, birdSlot)
-  }
-
   return slots.map((slot) => ({
     ...slot,
-    iconIds: [
-      ...icons.filter((icon) => iconSlotMap.get(icon.id) === slot.index).map((icon) => icon.id),
-      ...(bird && birdSlot === slot.index ? [BIRD_ICON_ID] : [])
-    ]
+    iconIds: icons.filter((icon) => iconSlotMap.get(icon.id) === slot.index).map((icon) => icon.id)
   }))
 }
 
@@ -154,6 +152,86 @@ function detectIconSlotFromMarkup(icon: HTMLElement): number | null {
   if (markup.includes('rgba(2, 167, 240')) return 2
   if (markup.includes('rgba(127, 127, 127')) return 3
   return null
+}
+
+function isAxurePanelVisible(el: HTMLElement | null): boolean {
+  if (!el) return false
+  if (el.style.display === 'none' || el.style.visibility === 'hidden') return false
+  if (el.classList.contains('ax_default_hidden')) {
+    return el.style.visibility === 'visible' || el.style.display === 'block' || el.style.display === 'flex'
+  }
+  return true
+}
+
+function syncDeviceControlLayerStack(doc: Document) {
+  const root = doc.getElementById(DEVICE_CONTROL_ROOT_ID)
+  if (!root) return
+
+  const overlay = doc.getElementById(DEVICE_CONTROL_OVERLAY_ID)
+  const modal = doc.getElementById(DEVICE_DETAIL_MODAL_ID)
+  const shouldElevate = isAxurePanelVisible(overlay) || isAxurePanelVisible(modal)
+
+  if (shouldElevate) {
+    root.style.zIndex = String(DEVICE_CONTROL_STACK_Z_INDEX)
+    if (modal) {
+      modal.style.zIndex = String(DEVICE_DETAIL_MODAL_Z_INDEX)
+      modal.style.pointerEvents = 'auto'
+    }
+    return
+  }
+
+  root.style.removeProperty('z-index')
+  modal?.style.removeProperty('z-index')
+}
+
+/** 设备详情弹窗弹出时置顶，避免被地图目标层遮挡 */
+export function bindDeviceControlLayerStack(doc: Document): Cleanup {
+  syncDeviceControlLayerStack(doc)
+
+  const watched = [DEVICE_CONTROL_OVERLAY_ID, DEVICE_DETAIL_MODAL_ID]
+    .map((id) => doc.getElementById(id))
+    .filter(Boolean) as HTMLElement[]
+
+  if (!watched.length) return () => {}
+
+  const observer = new MutationObserver(() => syncDeviceControlLayerStack(doc))
+  for (const element of watched) {
+    observer.observe(element, { attributes: true, attributeFilter: ['class', 'style'] })
+  }
+
+  return () => observer.disconnect()
+}
+
+/** 设备列表「查看更多」仅作展开，点击后取消 Axure 选中高亮 */
+export function bindDeviceListViewMoreButton(doc: Document): Cleanup {
+  const button = doc.getElementById(DEVICE_LIST_VIEW_MORE_BUTTON_ID)
+  if (!button) return () => {}
+
+  const div = doc.getElementById(`${DEVICE_LIST_VIEW_MORE_BUTTON_ID}_div`)
+
+  const clearSelected = () => {
+    const hasSelected =
+      button.classList.contains('selected') || div?.classList.contains('selected') === true
+    if (!hasSelected) return
+
+    setElementSelected(doc, DEVICE_LIST_VIEW_MORE_BUTTON_ID, false)
+    button.classList.remove('mouseOver')
+    div?.classList.remove('mouseOver')
+  }
+
+  const observer = new MutationObserver(clearSelected)
+  observer.observe(button, { attributes: true, attributeFilter: ['class'] })
+  if (div) observer.observe(div, { attributes: true, attributeFilter: ['class'] })
+
+  const handleClick = () => {
+    window.setTimeout(clearSelected, 0)
+  }
+  button.addEventListener('click', handleClick)
+
+  return () => {
+    observer.disconnect()
+    button.removeEventListener('click', handleClick)
+  }
 }
 
 function elevateMapTargetStack(doc: Document) {

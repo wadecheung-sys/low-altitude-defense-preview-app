@@ -5,7 +5,11 @@ import {
   LAD_BACKEND_HOME_PATH,
   LAD_MESSAGE_CENTER_PATH
 } from '@/constants/lad'
-import { createDataScreenMapEngine } from './dataScreenPrototypeEngine'
+import {
+  bindDeviceControlLayerStack,
+  bindDeviceListViewMoreButton,
+  createDataScreenMapEngine
+} from './dataScreenPrototypeEngine'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -17,8 +21,9 @@ const DISPLAY_MAX_WIDTH = 1920
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/index.html`
 const BACKEND_ENTRY_RESET_DELAY = 240
 
-const HISTORY_EVENT_LINK_ID = 'u116'
-const MESSAGE_CENTER_LINK_ID = 'u183'
+const HISTORY_EVENT_LINK_ID = 'u103'
+/** 消息区右侧「更多」，非设备列表区的「查看更多」(u170) */
+const MESSAGE_CENTER_LINK_ID = 'u206'
 const BACKEND_ENTRY_BUTTON_ID = 'u18'
 
 const CLOCK_ELEMENT_IDS = {
@@ -189,6 +194,8 @@ function bindPrototypeInteractions() {
   if (!mapEngine) return false
 
   cleanups.push(mapEngine.bind())
+  cleanups.push(bindDeviceControlLayerStack(doc))
+  cleanups.push(bindDeviceListViewMoreButton(doc))
 
   const backendButton = doc.getElementById(BACKEND_ENTRY_BUTTON_ID) as HTMLElement | null
   if (backendButton) {

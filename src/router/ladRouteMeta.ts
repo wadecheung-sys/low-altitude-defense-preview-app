@@ -41,12 +41,6 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     reqModule: '3-detail',
     phaseNote: '无人机档案详情。'
   },
-  'flight-record': {
-    pageKey: 'flight-record',
-    pageType: 'map',
-    reqModule: '3-flight',
-    phaseNote: '地图化回放过往飞行记录，联动光电视频与时段列表。'
-  },
   'device-archive': {
     pageKey: 'device-archive',
     pageType: 'list',
@@ -69,7 +63,7 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     pageKey: 'device-group',
     pageType: 'list',
     reqModule: '4-分组',
-    phaseNote: '设备分组管理。'
+    phaseNote: '侦测反制主设备与周边监控摄像头联动配置。'
   },
   'device-monitor': {
     pageKey: 'device-monitor',

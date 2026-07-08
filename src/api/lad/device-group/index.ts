@@ -1,6 +1,15 @@
 import request from '@/axios'
 import { SUCCESS_CODE } from '@/constants'
 import { deleteDeviceGroupRecords, queryDeviceGroupList, saveDeviceGroupRecord } from './groupStore'
+
+export { getDeviceGroupsByRefIds, getLinkageByMasterDeviceId } from './groupStore'
+export {
+  buildLinkedChain,
+  deriveGroupType,
+  isCameraDevice,
+  isMasterDevice,
+  resolveMasterDevice
+} from './deviceGroupCatalog'
 import type {
   DeviceGroupItem,
   DeviceGroupListResult,

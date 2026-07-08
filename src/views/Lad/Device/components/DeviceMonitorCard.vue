@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import type { DeviceMonitorItem } from '@/api/lad/device-monitor/types'
-import { getDeviceInfoDetailApi } from '@/api/lad/device-info'
+import {
+  buildMonitorVideoChannels,
+  findLinkageByMasterDeviceId,
+  type DeviceMonitorVideoChannel
+} from '@/api/lad/device-monitor/videoChannels'
+import { getDeviceGroupListApi } from '@/api/lad/device-group'
+import { getDeviceInfoDetailApi, getDeviceInfoListApi } from '@/api/lad/device-info'
 import type { DeviceLinkedArchive } from '@/api/lad/device-info/types'
 import { DEVICE_ARCHIVE_PLACEHOLDER } from '../constants'
 import productImage from '@/assets/imgs/counter-uas-device.png'
 import deviceSiteCctv from '@/assets/imgs/device-site-cctv.png'
 import { BaseButton } from '@/components/Button'
-import { Icon } from '@/components/Icon'
-import { ElCard, ElDialog, ElImage, ElPopover, ElTooltip } from 'element-plus'
+import { Link, TopRight, View } from '@element-plus/icons-vue'
+import { ElCard, ElDialog, ElIcon, ElImage, ElOption, ElPopover, ElSelect, ElTooltip } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{
@@ -19,8 +25,21 @@ const emit = defineEmits<{
 }>()
 
 const videoVisible = ref(false)
+const videoLoading = ref(false)
+const videoChannels = ref<DeviceMonitorVideoChannel[]>([])
+const activeChannelId = ref('')
 const archiveLoading = ref(false)
 const linkedArchiveDetail = ref<DeviceLinkedArchive | null>(null)
+
+const activeChannel = computed(
+  () => videoChannels.value.find((item) => item.id === activeChannelId.value) ?? null
+)
+
+const liveStatusClass = computed(() => {
+  if (!activeChannel.value?.online) return 'is-offline'
+  if (props.item.onlineStatus === '异常') return 'is-warning'
+  return 'is-live'
+})
 
 const displayImage = computed(() => {
   const image = props.item.imageUrl
@@ -57,6 +76,33 @@ function onPopoverHide() {
   linkedArchiveDetail.value = null
 }
 
+async function loadVideoChannels() {
+  videoLoading.value = true
+  try {
+    const [groupRes, infoRes] = await Promise.all([
+      getDeviceGroupListApi({ pageIndex: 1, pageSize: 999 }),
+      getDeviceInfoListApi({ pageIndex: 1, pageSize: 999 })
+    ])
+    const linkage = findLinkageByMasterDeviceId(groupRes.data.list, props.item.id)
+    videoChannels.value = buildMonitorVideoChannels(props.item, linkage, infoRes.data.list)
+    activeChannelId.value = videoChannels.value[0]?.id ?? ''
+  } finally {
+    videoLoading.value = false
+  }
+}
+
+async function openVideoMonitor() {
+  videoVisible.value = true
+  await loadVideoChannels()
+}
+
+watch(videoVisible, (visible) => {
+  if (!visible) {
+    videoChannels.value = []
+    activeChannelId.value = ''
+  }
+})
+
 watch(
   () => props.item.id,
   () => {
@@ -73,7 +119,7 @@ watch(
       </button>
       <ElTooltip :content="connectionLabel" placement="top">
         <span class="device-monitor-card__connection" :class="`is-${item.onlineStatus}`">
-          <Icon icon="vi-ep:link" :size="18" />
+          <ElIcon :size="18"><Link /></ElIcon>
         </span>
       </ElTooltip>
     </header>
@@ -86,9 +132,9 @@ watch(
             type="button"
             class="device-monitor-card__eye"
             aria-label="查看视频监控"
-            @click="videoVisible = true"
+            @click="openVideoMonitor"
           >
-            <Icon icon="vi-ep:view" :size="18" />
+            <ElIcon :size="18"><View /></ElIcon>
           </button>
         </ElTooltip>
       </div>
@@ -134,7 +180,7 @@ watch(
             class="device-monitor-card__expand-button"
             aria-label="展开档案指标"
           >
-            <Icon icon="vi-ep:top-right" :size="17" />
+            <ElIcon :size="17"><TopRight /></ElIcon>
           </button>
         </template>
 
@@ -180,26 +226,52 @@ watch(
     <ElDialog
       v-model="videoVisible"
       :title="`${item.deviceName} · 视频监控`"
-      width="760px"
+      width="820px"
       append-to-body
       destroy-on-close
     >
-      <div class="device-video-monitor">
-        <div class="device-video-monitor__topbar">
-          <span><i></i> LIVE · CAMERA 01</span>
-          <span>{{ item.deployLocation || '设备安装区域' }}</span>
+      <div v-loading="videoLoading" class="device-video-monitor">
+        <div class="device-video-monitor__switcher">
+          <span class="device-video-monitor__switcher-label">监控机位</span>
+          <ElSelect
+            v-model="activeChannelId"
+            class="device-video-monitor__switcher-select"
+            placeholder="请选择监控机位"
+            :disabled="!videoChannels.length"
+          >
+            <ElOption
+              v-for="channel in videoChannels"
+              :key="channel.id"
+              :label="channel.label"
+              :value="channel.id"
+            />
+          </ElSelect>
+          <span v-if="!videoLoading && !videoChannels.length" class="device-video-monitor__switcher-hint">
+            未配置关联摄像头，请前往设备组管理配置
+          </span>
         </div>
-        <div class="device-video-monitor__view">
-          <ElImage :src="deviceSiteCctv" fit="cover" class="device-video-monitor__image" />
-          <div class="device-video-monitor__grain"></div>
-          <div class="device-video-monitor__camera-label">设备周边监控 / 固定机位</div>
-          <div class="device-video-monitor__timestamp">{{ item.lastHeartbeat }}</div>
-        </div>
-        <div class="device-video-monitor__footer">
-          <span>通道：园区监控-01</span>
-          <span>画面状态：正常</span>
-          <span>录像：持续存储</span>
-        </div>
+
+        <template v-if="activeChannel">
+          <div class="device-video-monitor__topbar">
+            <span :class="liveStatusClass">
+              <i></i>
+              {{ activeChannel.online ? 'LIVE' : 'OFFLINE' }} · {{ activeChannel.deviceCode }}
+            </span>
+            <span>{{ activeChannel.deployLocation }}</span>
+          </div>
+          <div class="device-video-monitor__view">
+            <ElImage :src="deviceSiteCctv" fit="cover" class="device-video-monitor__image" />
+            <div class="device-video-monitor__grain"></div>
+            <div class="device-video-monitor__camera-label">{{ activeChannel.deviceName }}</div>
+            <div class="device-video-monitor__timestamp">{{ activeChannel.lastHeartbeat }}</div>
+          </div>
+          <div class="device-video-monitor__footer">
+            <span>通道：{{ activeChannel.deviceName }}</span>
+            <span>编号：{{ activeChannel.deviceCode }}</span>
+            <span>画面状态：{{ activeChannel.online ? '正常' : '无信号' }}</span>
+          </div>
+        </template>
+        <p v-else-if="!videoLoading" class="device-video-monitor__empty">暂无可切换的监控机位</p>
       </div>
     </ElDialog>
   </ElCard>
@@ -439,6 +511,40 @@ watch(
   background: #09151a;
   color: #bce7dc;
 
+  &__switcher {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #0b1a21;
+    border-bottom: 1px solid #1a333d;
+  }
+
+  &__switcher-label {
+    flex-shrink: 0;
+    color: #8fb5ac;
+    font-size: 12px;
+  }
+
+  &__switcher-select {
+    flex: 1;
+    min-width: 0;
+    max-width: 420px;
+  }
+
+  &__switcher-hint {
+    color: #e6a23c;
+    font-size: 12px;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 28px 16px;
+    color: #8fb5ac;
+    font-size: 13px;
+    text-align: center;
+  }
+
   &__topbar,
   &__footer {
     display: flex;
@@ -456,8 +562,33 @@ watch(
     height: 7px;
     margin-right: 5px;
     border-radius: 50%;
+  }
+
+  &__topbar .is-live i {
     background: #42e3b4;
     box-shadow: 0 0 8px #42e3b4;
+  }
+
+  &__topbar .is-warning i {
+    background: #e6a23c;
+    box-shadow: 0 0 8px #e6a23c;
+  }
+
+  &__topbar .is-offline i {
+    background: #7a8790;
+    box-shadow: none;
+  }
+
+  &__topbar .is-live {
+    color: #d4f4ea;
+  }
+
+  &__topbar .is-warning {
+    color: #f3d19e;
+  }
+
+  &__topbar .is-offline {
+    color: #9aa8b0;
   }
 
   &__view {
