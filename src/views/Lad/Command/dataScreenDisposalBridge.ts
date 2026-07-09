@@ -7,7 +7,6 @@ type DisposalKey = 'radio' | 'nav' | 'sound' | 'laser' | 'microwave'
 type PendingAction =
   | { type: 'activate'; key: DisposalKey }
   | { type: 'deactivate'; key: DisposalKey }
-  | { type: 'release-all' }
 
 interface DisposalButton {
   key: DisposalKey
@@ -49,6 +48,8 @@ const BUTTON = {
   laserStrike: 'u140',
   release: 'u138'
 } as const
+
+const RELEASE_BUTTON_LABEL = '解除反制（交互）'
 
 function bindClickableElement(
   doc: Document,
@@ -120,14 +121,26 @@ function setLaserPanelActive(doc: Document, active: boolean) {
   if (running) {
     running.style.visibility = active ? 'visible' : 'hidden'
     running.style.display = active ? 'block' : 'none'
-    running.classList.toggle('lad-laser-active', active)
+    running.classList.remove('lad-laser-active')
+    if (active) running.classList.add('lad-laser-active')
   }
+}
+
+function resolveReleaseButton(doc: Document) {
+  return (
+    (doc.querySelector(`[data-label="${RELEASE_BUTTON_LABEL}"]`) as HTMLElement | null) ??
+    doc.getElementById(BUTTON.release)
+  )
 }
 
 export function bindDataScreenDisposalBridge(doc: Document): DataScreenDisposalBridgeCleanup {
   injectStyles(doc)
 
-  let activeKey: DisposalKey | null = null
+  const activeKeyRef = { current: null as DisposalKey | null }
+  const getActiveKey = () => activeKeyRef.current
+  const setActiveKey = (key: DisposalKey | null) => {
+    activeKeyRef.current = key
+  }
   let pendingAction: PendingAction | null = null
   let countdownTimer: number | undefined
   let hintTimer: number | undefined
@@ -206,35 +219,23 @@ export function bindDataScreenDisposalBridge(doc: Document): DataScreenDisposalB
   }
 
   const deactivate = (key: DisposalKey) => {
-    if (activeKey !== key) return
-    activeKey = null
+    if (getActiveKey() !== key) return
+    setActiveKey(null)
     applyActiveVisual(null)
   }
 
   const activate = (key: DisposalKey) => {
-    if (activeKey && activeKey !== key) {
-      setButtonSelected(doc, buttonByKey[activeKey].elementId, false)
+    const previous = getActiveKey()
+    if (previous && previous !== key) {
+      setButtonSelected(doc, buttonByKey[previous].elementId, false)
     }
-    activeKey = key
+    setActiveKey(key)
     applyActiveVisual(key)
   }
 
-  const releaseAll = () => {
-    activeKey = null
-    pendingAction = null
-    applyActiveVisual(null)
-    hideAllDialogs()
-    showSystemHint('反制处置已全部解除')
-  }
-
-  const showConfirmOffDialog = (action: PendingAction) => {
+  const showConfirmOffDialog = (action: Extract<PendingAction, { type: 'deactivate' }>) => {
     pendingAction = action
-    const label =
-      action.type === 'release-all'
-        ? activeKey
-          ? buttonByKey[activeKey].label
-          : '当前反制'
-        : buttonByKey[action.key].label
+    const label = buttonByKey[action.key].label
     setLabelHtml(
       doc,
       BUTTON.confirmOffText,
@@ -274,11 +275,7 @@ export function bindDataScreenDisposalBridge(doc: Document): DataScreenDisposalB
   }
 
   const confirmPendingOff = () => {
-    if (!pendingAction) return
-    if (pendingAction.type === 'release-all') {
-      releaseAll()
-      return
-    }
+    if (!pendingAction || pendingAction.type !== 'deactivate') return
     deactivate(pendingAction.key)
     hideAllDialogs()
     showSystemHint(`${buttonByKey[pendingAction.key].label}已关闭`)
@@ -300,11 +297,11 @@ export function bindDataScreenDisposalBridge(doc: Document): DataScreenDisposalB
   const handleDisposalButtonClick = (key: DisposalKey) => {
     hideAllDialogs()
     if (key === 'laser') {
-      if (activeKey === 'laser') {
+      if (getActiveKey() === 'laser') {
         showConfirmOffDialog({ type: 'deactivate', key: 'laser' })
         return
       }
-      if (activeKey) {
+      if (getActiveKey()) {
         showSystemHint('请先解除当前反制后再执行激光打击')
         return
       }
@@ -312,11 +309,11 @@ export function bindDataScreenDisposalBridge(doc: Document): DataScreenDisposalB
       return
     }
 
-    if (activeKey === key) {
+    if (getActiveKey() === key) {
       showConfirmOffDialog({ type: 'deactivate', key })
       return
     }
-    if (activeKey) {
+    if (getActiveKey()) {
       showSystemHint('请先解除当前反制后再切换处置方式')
       return
     }
@@ -325,11 +322,8 @@ export function bindDataScreenDisposalBridge(doc: Document): DataScreenDisposalB
 
   const handleReleaseClick = () => {
     hideAllDialogs()
-    if (!activeKey) {
-      showSystemHint('当前无进行中的反制处置')
-      return
-    }
-    showConfirmOffDialog({ type: 'release-all' })
+    setActiveKey(null)
+    applyActiveVisual(null)
   }
 
   const cleanups: DataScreenDisposalBridgeCleanup[] = []
@@ -342,10 +336,20 @@ export function bindDataScreenDisposalBridge(doc: Document): DataScreenDisposalB
   )
   if (laserCleanup) cleanups.push(laserCleanup)
 
-  const releaseCleanup = bindClickableElement(doc, BUTTON.release, handleReleaseClick, {
-    ariaLabel: '解除反制'
-  })
-  if (releaseCleanup) cleanups.push(releaseCleanup)
+  const releaseElement = resolveReleaseButton(doc)
+  if (releaseElement) {
+    releaseElement.style.cursor = 'pointer'
+    releaseElement.setAttribute('role', 'button')
+    releaseElement.setAttribute('aria-label', RELEASE_BUTTON_LABEL)
+    const handleRelease = (event: Event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      handleReleaseClick()
+    }
+    releaseElement.addEventListener('click', handleRelease, true)
+    cleanups.push(() => releaseElement.removeEventListener('click', handleRelease, true))
+  }
 
   DISPOSAL_BUTTONS.filter((item) => item.key !== 'laser').forEach((item) => {
     const cleanup = bindClickableElement(
