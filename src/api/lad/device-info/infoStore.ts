@@ -5,7 +5,7 @@ import {
   DEVICE_CAMERA_ARCHIVE_ID,
   queryDeviceArchiveDetail
 } from '../device/archiveStore'
-import { CONFIRMED_DEVICES, PENDING_DEVICES } from '@/constants/deviceCatalog'
+import { ALL_DEVICE_CAPABILITY_CATALOG } from '@/constants/deviceCatalog'
 import type {
   DeviceExtendedField,
   DeviceInfoDeployment,
@@ -45,9 +45,7 @@ function nextExtendId() {
 }
 
 function resolveCatalogVendor(row: DeviceInfoItem): string {
-  const entry =
-    CONFIRMED_DEVICES.find((d) => d.demo.deviceId === row.deviceId) ??
-    PENDING_DEVICES.find((d) => d.demo.deviceId === row.deviceId)
+  const entry = ALL_DEVICE_CAPABILITY_CATALOG.find((d) => d.demo.deviceId === row.deviceId)
   if (entry) return entry.vendor
   if (row.deviceType === '监控摄像头') return '通用'
   return '凡双科技'
@@ -202,8 +200,7 @@ function catalogSeedRow(
   overrides?: Partial<Omit<DeviceInfoItem, 'id'>>
 ): Omit<DeviceInfoItem, 'id'> {
   const entry =
-    CONFIRMED_DEVICES.find((d) => d.model === model) ??
-    PENDING_DEVICES.find((d) => d.model === model)
+    ALL_DEVICE_CAPABILITY_CATALOG.find((d) => d.model === model)
   if (!entry) throw new Error(`Unknown catalog model: ${model}`)
   const archiveId = DEVICE_ARCHIVE_ID_BY_MODEL[model]
   return {
@@ -231,7 +228,8 @@ const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
   catalogSeedRow('EXD55-LS', { lastHeartbeat: '2026-05-20 11:20:00', updatedAt: '2026-05-20 11:20:00' }),
   catalogSeedRow('TBD-RAD', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
   catalogSeedRow('TBD-LSR', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
-  catalogSeedRow('TBD-HPM', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' })
+  catalogSeedRow('TBD-HPM', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
+  catalogSeedRow('TBD-SLA', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' })
 ]
 
 /** 设备组演示：主设备周边监控摄像头 */
@@ -384,9 +382,7 @@ allList.forEach((row, i) => {
     detailExt[row.id]!.extendedFields = defaultExtendedFields(row, i)
   }
   if (!row.archiveId) {
-    const modelEntry =
-      CONFIRMED_DEVICES.find((d) => d.demo.deviceId === row.deviceId) ??
-      PENDING_DEVICES.find((d) => d.demo.deviceId === row.deviceId)
+    const modelEntry = ALL_DEVICE_CAPABILITY_CATALOG.find((d) => d.demo.deviceId === row.deviceId)
     if (modelEntry) {
       row.archiveId = DEVICE_ARCHIVE_ID_BY_MODEL[modelEntry.model]
     }

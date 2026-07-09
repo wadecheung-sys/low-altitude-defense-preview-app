@@ -36,33 +36,64 @@ const autoMode = ref(true)
 const powered = ref(true)
 const pendingActionKey = ref('')
 
-const panelMode = computed<'counter' | 'detect' | 'readonly' | 'pending'>(() => {
+const panelMode = computed<
+  'counter' | 'detect' | 'radar' | 'eo' | 'strike' | 'hpm' | 'sound_light' | 'readonly'
+>(() => {
   const model = props.deviceModel
   if (model === 'FG310F' || props.deviceType === '无线电干扰') return 'counter'
   if (model === 'DY506F' || props.deviceType === '导航诱骗') return 'counter'
   if (
     model === 'PL671F' ||
     model === 'RDS200' ||
+    model === 'EXD55-LS' ||
     props.deviceType === '无线电侦测' ||
-    props.deviceType === 'Remote-ID 监视'
+    props.deviceType === 'Remote-ID 监视' ||
+    props.deviceType === 'ADS-B 监视'
   ) {
     return 'detect'
   }
-  if (
-    model.startsWith('TBD-') ||
-    props.deviceType === '雷达' ||
-    props.deviceType === '光电跟踪' ||
-    props.deviceType === '激光打击' ||
-    props.deviceType === '高功率微波'
-  ) {
-    return 'pending'
-  }
+  if (model === 'TBD-RAD' || props.deviceType === '雷达') return 'radar'
+  if (model === 'TBD-EO' || props.deviceType === '光电跟踪') return 'eo'
+  if (model === 'TBD-LSR' || props.deviceType === '激光打击') return 'strike'
+  if (model === 'TBD-HPM' || props.deviceType === '高功率微波') return 'hpm'
+  if (model === 'TBD-SLA' || props.deviceType === '声光驱离') return 'sound_light'
   return 'readonly'
 })
 
 const actions = computed<DeviceOperationAction[]>(() => {
-  if (panelMode.value === 'pending') {
-    return [{ key: 'pending', label: '暂无可用操作', disabled: true }]
+  if (panelMode.value === 'radar') {
+    return [
+      { key: 'scan_start', label: '启动扫描', type: 'primary' },
+      { key: 'scan_stop', label: '停止扫描' },
+      { key: 'target_track', label: '目标跟踪' }
+    ]
+  }
+  if (panelMode.value === 'eo') {
+    return [
+      { key: 'track_auto', label: '自动跟踪', type: 'primary' },
+      { key: 'track_manual', label: '手动跟踪' },
+      { key: 'reset_turret', label: '转台复位' }
+    ]
+  }
+  if (panelMode.value === 'strike') {
+    return [
+      { key: 'aim_target', label: '瞄准目标', type: 'primary' },
+      { key: 'laser_ready', label: '出光准备' },
+      { key: 'laser_stop', label: '停止出光', type: 'danger' }
+    ]
+  }
+  if (panelMode.value === 'hpm') {
+    return [
+      { key: 'hpm_work_mode', label: '切换工作模式', type: 'primary' },
+      { key: 'servo_unlock', label: '伺服解锁' },
+      { key: 'hpm_ready', label: '发射准备' }
+    ]
+  }
+  if (panelMode.value === 'sound_light') {
+    return [
+      { key: 'sla_on', label: '启动声光警示', type: 'primary' },
+      { key: 'sla_off', label: '停止警示' }
+    ]
   }
   if (panelMode.value === 'detect') {
     return [
@@ -92,7 +123,11 @@ const actions = computed<DeviceOperationAction[]>(() => {
 })
 
 const panelHint = computed(() => {
-  if (panelMode.value === 'pending') return '该设备暂无可下发操作项。'
+  if (panelMode.value === 'radar') return '雷达监视链路正常，扫描与跟踪指令经平台上报链路转发。'
+  if (panelMode.value === 'eo') return '光电转台支持自动/手动跟踪切换，实时角度同步至监测数据。'
+  if (panelMode.value === 'strike') return '激光打击需完成安全联锁复核后方可出光，请谨慎操作。'
+  if (panelMode.value === 'hpm') return '高功率微波设备需确认伺服状态与工作模式后再执行发射准备。'
+  if (panelMode.value === 'sound_light') return '声光警示用于近距驱离，请确认警戒区域内无无关人员。'
   if (panelMode.value === 'detect') return '探测类设备以监视为主，指令经供应商平台上报链路转发。'
   if (props.deviceModel === 'DY506F') return '导航诱骗：迫降 / 禁飞 / 驱离对应 DY506F 上位机能力。'
   if (props.deviceModel === 'FG310F') return '无线电压制：压制效果可能触发目标自动返航；转台方位/俯仰请在指挥大屏实时控制。'
@@ -104,8 +139,8 @@ async function dispatchCommand(
   actionLabel: string,
   payload?: Record<string, unknown>
 ) {
-  if (!props.deviceRecordId) {
-    ElMessage.warning('缺少设备记录，无法下发指令')
+  if (!props.deviceRecordId && !props.deviceCode) {
+    ElMessage.warning('缺少设备标识，无法下发指令')
     return
   }
   if (pendingActionKey.value) return
@@ -113,7 +148,7 @@ async function dispatchCommand(
   pendingActionKey.value = actionKey
   try {
     const res = await postDeviceCommandApi({
-      deviceRecordId: props.deviceRecordId,
+      deviceRecordId: props.deviceRecordId || props.deviceCode,
       deviceCode: props.deviceCode,
       deviceModel: props.deviceModel,
       deviceName: props.deviceName,

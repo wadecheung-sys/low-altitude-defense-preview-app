@@ -5,7 +5,10 @@ import {
   LAD_BACKEND_HOME_PATH,
   LAD_MESSAGE_CENTER_PATH
 } from '@/constants/lad'
-import { bindDataScreenDeviceSync } from './dataScreenDeviceSync'
+import DataScreenDeviceDetailModal from './DataScreenDeviceDetailModal.vue'
+import { bindDataScreenDeviceBridge } from './dataScreenDeviceBridge'
+import { bindDataScreenDisposalBridge } from './dataScreenDisposalBridge'
+import { bindDataScreenLinkageBridge } from './dataScreenLinkageBridge'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -29,6 +32,8 @@ const containerRef = ref<HTMLElement>()
 const iframeRef = ref<HTMLIFrameElement>()
 const frameLoaded = ref(false)
 const stageScale = ref(1)
+const deviceDetailVisible = ref(false)
+const deviceDetailModel = ref('')
 
 let bindRetryTimer: number | undefined
 let resizeObserver: ResizeObserver | undefined
@@ -145,7 +150,15 @@ function bindPrototypeInteractions() {
   if (!messageLinkCleanup) return false
   cleanups.push(messageLinkCleanup)
 
-  cleanups.push(bindDataScreenDeviceSync(doc))
+  cleanups.push(
+    bindDataScreenDeviceBridge(doc, (model) => {
+      deviceDetailModel.value = model
+      deviceDetailVisible.value = true
+    })
+  )
+
+  cleanups.push(bindDataScreenLinkageBridge(doc))
+  cleanups.push(bindDataScreenDisposalBridge(doc))
 
   cleanupPrototypeBindings = () => {
     cleanups.forEach((cleanup) => cleanup())
@@ -219,6 +232,11 @@ onBeforeUnmount(() => {
       <span class="lad-data-screen__loading-ring"></span>
       <p>数据大屏加载中...</p>
     </div>
+
+    <DataScreenDeviceDetailModal
+      v-model="deviceDetailVisible"
+      :device-model="deviceDetailModel"
+    />
   </section>
 </template>
 

@@ -4,10 +4,8 @@ import { BIRD_NUISANCE_DEMO_EVENT_ID, resolveHistoryTargetType } from './history
 import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore'
 import { resolveCountermeasureActionValue } from '@/constants/deviceCatalog'
 import { normalizeThreatLevel } from '@/api/lad/threat/threatLevelUtils'
-import {
-  LAD_TARGET_PROFILES,
-  type LadTargetProfile
-} from '@/api/lad/shared/targetProfiles'
+import { LAD_TARGET_PROFILES } from '@/api/lad/shared/targetProfiles'
+import type { LadTargetProfile } from '@/api/lad/shared/targetProfiles'
 import type {
   HistoryEventDetail,
   HistoryEventItem,

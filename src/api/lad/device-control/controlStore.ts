@@ -23,7 +23,7 @@ function buildMessage(req: DeviceCommandRequest): string {
 
 function buildPrecheckMessage(req: DeviceCommandRequest): string {
   const name = req.deviceName || req.deviceModel || req.deviceRecordId
-  return `设备「${name}」暂未开放演示指令下发`
+  return `设备「${name}」指令预检未通过，请检查设备链路与安全联锁状态`
 }
 
 export function dispatchDeviceCommand(req: DeviceCommandRequest): DeviceCommandResult {

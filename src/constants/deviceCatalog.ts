@@ -290,7 +290,12 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
       ind('探测距离', 'km', '≥8'),
       ind('备注', '', '北区主雷达站')
     ],
-    configurableItems: [],
+    configurableItems: [
+      cfg('scan_mode', '扫描模式', '', 'device', '扇扫 / 圆桌', '扇扫'),
+      cfg('target_filter', '目标过滤等级', '', 'device', '低 / 中 / 高', '中'),
+      cfg('alarm_threshold', '告警触发阈值', '架', 'device', '1~20', '3'),
+      cfg('link_eo_track', '联动光电跟踪', '', 'device', '开 / 关', '开')
+    ],
     demo: {
       deviceId: 'DEV-RAD-01',
       deviceName: '1#雷达-LD',
@@ -348,7 +353,12 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
       ind('激光功率', 'W', '—'),
       ind('备注', '', '西区反制激光站')
     ],
-    configurableItems: [],
+    configurableItems: [
+      cfg('safety_interlock', '安全联锁', '', 'device', '启用 / 关闭', '启用'),
+      cfg('max_exposure', '最大出光时长', 's', 'device', '1~30', '10'),
+      cfg('fire_confirm', '出光二次确认', '', 'device', '开 / 关', '开'),
+      cfg('link_radar_aim', '雷达引导瞄准', '', 'device', '开 / 关', '开')
+    ],
     demo: {
       deviceId: 'DEV-LSR-01',
       deviceName: '1#激光-JG',
@@ -374,7 +384,12 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
       ind('输出峰值', 'kW', '—'),
       ind('备注', '', '核心区微波压制')
     ],
-    configurableItems: [],
+    configurableItems: [
+      cfg('work_mode', '工作模式', '', 'device', '待机 / 发射准备', '待机'),
+      cfg('target_hold_time', '目标锁定保持', 's', 'device', '3~60', '15'),
+      cfg('emission_confirm', '发射二次确认', '', 'device', '开 / 关', '开'),
+      cfg('link_track_mode', '联动跟踪模式', '', 'device', '自动 / 手动', '自动')
+    ],
     demo: {
       deviceId: 'DEV-HPM-01',
       deviceName: '1#微波-WB',
@@ -392,26 +407,31 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
 export const INTERNAL_PLACEHOLDER_DEVICES: DeviceCatalogEntry[] = [
   {
     model: 'TBD-SLA',
-    vendor: '声光设备待接入',
+    vendor: '警翼科技',
     deviceType: '声光驱离',
     tier: 'pending',
     groupMasterEligible: false,
     dataScreenVisible: false,
-    archiveName: '声光驱离设备占位档案',
+    archiveName: '声光驱离设备档案',
     archiveNo: 'D-LAD-SLA0001',
     specifications: [
-      ind('声压级', 'dB', '—'),
-      ind('警示灯', '', '—'),
-      ind('备注', '', '内部能力占位，不进入演示台账')
+      ind('声压级', 'dB', '≥120'),
+      ind('警示灯', '', '红蓝频闪'),
+      ind('备注', '', '南区声光警示站')
     ],
-    configurableItems: [],
+    configurableItems: [
+      cfg('warning_level', '警示等级', '', 'device', '低 / 中 / 高', '中'),
+      cfg('auto_trigger', '告警自动触发', '', 'device', '开 / 关', '开'),
+      cfg('volume_level', '音量档位', '', 'device', '低 / 中 / 高', '中'),
+      cfg('light_pattern', '灯光模式', '', 'device', '常亮 / 频闪', '频闪')
+    ],
     demo: {
       deviceId: 'DEV-SLA-01',
-      deviceName: '声光驱离占位-SLA',
-      deployLocation: '内部能力占位',
-      ipAddress: '0.0.0.0',
-      serialNo: 'SLA-PENDING-001',
-      personInCharge: '值班员',
+      deviceName: '1#声光-SG',
+      deployLocation: '南区警示塔',
+      ipAddress: '192.168.8.95',
+      serialNo: 'SG-SLA-2025-001',
+      personInCharge: '马工',
       controlRangeM: 300,
       deviceIcon: 'counter'
     }
@@ -529,5 +549,10 @@ export function countermeasureResultEventType(
 export function isDemoExecutableDeviceModel(model?: string): boolean {
   if (!model) return true
   const binding = Object.values(COUNTERMEASURE_DEVICE_BINDINGS).find((item) => item.model === model)
-  return binding ? binding.demoExecutable : !model.startsWith('TBD-')
+  if (binding) return binding.demoExecutable
+  // 大屏可见的扩展型号在 mock 阶段允许指令下发，前台呈现与在网设备一致
+  const pending = PENDING_DEVICES.find((item) => item.model === model)
+  if (pending?.dataScreenVisible) return true
+  if (model === 'TBD-SLA') return true
+  return !model.startsWith('TBD-')
 }

@@ -4,8 +4,9 @@
 import {
   ALL_CATALOG_DEVICES,
   catalogCategoryFromDeviceType,
-  type DeviceCatalogEntry
+  INTERNAL_PLACEHOLDER_DEVICES
 } from '@/constants/deviceCatalog'
+import type { DeviceCatalogEntry } from '@/constants/deviceCatalog'
 import type {
   DeviceArchiveCategory,
   DeviceArchiveConfigurableItem,
@@ -117,6 +118,11 @@ ALL_CATALOG_DEVICES.forEach((entry, index) => {
   detailExt[id] = buildArchiveDetailExt(entry, id)
 })
 
+const slaCatalogEntry = INTERNAL_PLACEHOLDER_DEVICES.find((entry) => entry.model === 'TBD-SLA')
+if (slaCatalogEntry) {
+  detailExt['da-10011'] = buildArchiveDetailExt(slaCatalogEntry, 'da-10011')
+}
+
 detailExt['da-10010'] = {
   remark: '周边监控摄像头通用档案。',
   imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
@@ -132,7 +138,10 @@ detailExt['da-10010'] = {
 }
 
 let allList: DeviceArchiveItem[] = [
-  ...ALL_CATALOG_DEVICES.map((entry, index) => catalogToArchiveRow(entry, catalogArchiveIds[index]!)),
+  ...ALL_CATALOG_DEVICES.map((entry, index) =>
+    catalogToArchiveRow(entry, catalogArchiveIds[index]!)
+  ),
+  ...(slaCatalogEntry ? [catalogToArchiveRow(slaCatalogEntry, 'da-10011')] : []),
   { ...CAMERA_ARCHIVE, id: 'da-10010' }
 ]
 
@@ -297,8 +306,11 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
 }
 
 /** 型号 → 档案 ID（与 ALL_CATALOG_DEVICES 顺序一致，避免双维护错位） */
-export const DEVICE_ARCHIVE_ID_BY_MODEL: Record<string, string> = Object.fromEntries(
-  ALL_CATALOG_DEVICES.map((entry, index) => [entry.model, catalogArchiveIds[index]!])
-)
+export const DEVICE_ARCHIVE_ID_BY_MODEL: Record<string, string> = {
+  ...Object.fromEntries(
+    ALL_CATALOG_DEVICES.map((entry, index) => [entry.model, catalogArchiveIds[index]!])
+  ),
+  'TBD-SLA': 'da-10011'
+}
 
 export const DEVICE_CAMERA_ARCHIVE_ID = 'da-10010'

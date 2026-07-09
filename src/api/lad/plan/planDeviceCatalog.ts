@@ -5,9 +5,9 @@ import { queryDictEntriesByCode } from '@/api/lad/system/dictStore'
 import {
   COUNTERMEASURE_DEVICE_BINDINGS,
   countermeasureActionLabelFromValue,
-  resolveCountermeasureActionValue,
-  type CountermeasureDeviceBinding
+  resolveCountermeasureActionValue
 } from '@/constants/deviceCatalog'
+import type { CountermeasureDeviceBinding } from '@/constants/deviceCatalog'
 
 export const COUNTERMEASURE_ACTION_DICT_CODE = 'countermeasure_action'
 
