@@ -15,6 +15,10 @@ import {
 } from './disposalTimelineMessage'
 import { resolveHistoryTargetType } from './historyTargetType'
 import { isHandlingEnded, isHandlingInProgress } from './handlingStatusUtils'
+import {
+  countermeasureTimelineLabel,
+  resolveCountermeasureActionValue
+} from '@/constants/deviceCatalog'
 import type { HistoryEventItem, HandlingStatus, ThreatLevel } from './types'
 
 export type DisposalTimelineNodeStatus = 'done' | 'current' | 'pending' | 'skipped'
@@ -111,6 +115,12 @@ function planName(row: HistoryEventItem) {
 }
 
 function actionName(row: HistoryEventItem) {
+  const actionValue =
+    row.disposalAction ??
+    resolveCountermeasureActionValue(row.manualDisposalAction) ??
+    resolveCountermeasureActionValue(row.countermeasureDevice) ??
+    resolveCountermeasureActionValue(row.handlingResult)
+  if (actionValue) return countermeasureTimelineLabel(actionValue)
   if (row.handlingResult.includes('迫降')) return '迫降处置'
   if (row.handlingResult.includes('压制')) return '无线电压制'
   if (row.handlingResult.includes('激光')) return '激光打击'
@@ -149,7 +159,9 @@ function buildAssessStepDetails(
   return metricDetails
 }
 
-function stageDetails(items: DisposalTimelineDetailItem[]): DisposalTimelineDetailItem[] | undefined {
+function stageDetails(
+  items: DisposalTimelineDetailItem[]
+): DisposalTimelineDetailItem[] | undefined {
   return items.length ? items : undefined
 }
 
@@ -193,7 +205,10 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
   const discovered = row.discoveredAt
   const identifyAt = addSeconds(discovered, 8 + (seed % 12))
   const assessAt = addSeconds(identifyAt, 5 + (seed % 8))
-  const lastAssessAt = addSeconds(assessAt, Math.max(0, resolveThreatEscalationPath(row.threatLevel).length - 1) * 8)
+  const lastAssessAt = addSeconds(
+    assessAt,
+    Math.max(0, resolveThreatEscalationPath(row.threatLevel).length - 1) * 8
+  )
   const disposeAt =
     row.handledAt && row.handledAt !== '--' ? row.handledAt : addSeconds(lastAssessAt, 12)
   const resultAt = row.endedAt && row.endedAt !== '--' ? row.endedAt : addSeconds(disposeAt, 20)

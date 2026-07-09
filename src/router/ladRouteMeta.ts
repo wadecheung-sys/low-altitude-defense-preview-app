@@ -63,6 +63,12 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     pageKey: 'device-group',
     pageType: 'list',
     reqModule: '4-分组',
+    phaseNote: '设备协同编组与成员管理。'
+  },
+  'device-association': {
+    pageKey: 'device-association',
+    pageType: 'list',
+    reqModule: '4-关联',
     phaseNote: '侦测反制主设备与周边监控摄像头联动配置。'
   },
   'device-monitor': {

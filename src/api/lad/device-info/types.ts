@@ -1,4 +1,7 @@
-import type { DeviceArchiveIndicator } from '../device/types'
+import type {
+  DeviceArchiveConfigurableItem,
+  DeviceArchiveIndicator
+} from '../device/types'
 
 /** 设备类型（筛选项 / 列表展示） */
 export type DeviceInfoKind =
@@ -71,7 +74,7 @@ export interface DeviceExtendedField {
   value: string
 }
 
-/** 关联设备档案摘要（档案指标只读来源） */
+/** 关联设备档案摘要（设备规格与可配置项定义） */
 export interface DeviceLinkedArchive {
   id: string
   archiveNo: string
@@ -80,13 +83,18 @@ export interface DeviceLinkedArchive {
   vendor: string
   deviceModel: string
   imageUrl: string | null
-  indicators: DeviceArchiveIndicator[]
+  specifications: DeviceArchiveIndicator[]
+  configurableItems: DeviceArchiveConfigurableItem[]
 }
+
+/** 设备级可配置项当前值（key → value） */
+export type DeviceConfigValues = Record<string, string>
 
 export interface DeviceInfoDetail extends DeviceInfoItem, DeviceInfoDeployment {
   remark: string
   linkedArchive: DeviceLinkedArchive | null
   extendedFields: DeviceExtendedField[]
+  deviceConfigValues?: DeviceConfigValues
   /** 是否支持设备自检 */
   supportsSelfCheck?: boolean
 }
@@ -120,6 +128,6 @@ export interface DeviceInfoSavePayload {
   controlRangeM?: number
   remark?: string
   extendedFields?: DeviceExtendedField[]
-  /** 当前设备基于基础档案填写的实际指标值。 */
-  archiveIndicatorValues?: Record<string, string>
+  /** 设备级可配置项取值 */
+  deviceConfigValues?: DeviceConfigValues
 }

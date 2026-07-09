@@ -2,8 +2,16 @@
 
 import type { DictEntryItem } from '@/api/lad/system/types'
 import { queryDictEntriesByCode } from '@/api/lad/system/dictStore'
+import {
+  COUNTERMEASURE_DEVICE_BINDINGS,
+  countermeasureActionLabelFromValue,
+  resolveCountermeasureActionValue,
+  type CountermeasureDeviceBinding
+} from '@/constants/deviceCatalog'
 
 export const COUNTERMEASURE_ACTION_DICT_CODE = 'countermeasure_action'
+
+export type { CountermeasureDeviceBinding } from '@/constants/deviceCatalog'
 
 export interface PlanDeviceFunctionOption {
   label: string
@@ -36,9 +44,7 @@ const planDeviceGroupTypeFunctionMap: Record<string, PlanDeviceFunctionOption[]>
 }
 
 const legacyCountermeasureLabels: Record<string, string> = {
-  hpm_suppression: '微波打击',
   forced_landing: '迫降',
-  link_disruption: '链路阻断',
   protocol_takeover: '协议接管'
 }
 
@@ -75,7 +81,9 @@ export function resolveCountermeasureFunction(
   functionValue: string,
   countermeasureEntries?: DictEntryItem[]
 ): PlanDeviceFunctionOption | undefined {
-  return listCountermeasureActions(countermeasureEntries).find((item) => item.value === functionValue)
+  return listCountermeasureActions(countermeasureEntries).find(
+    (item) => item.value === functionValue
+  )
 }
 
 export function resolveDeviceFunction(
@@ -98,63 +106,26 @@ export function countermeasureActionLabel(functionValue: string): string {
     (entry) => entry.value === functionValue
   )
   if (hit) return hit.label
-  return legacyCountermeasureLabels[functionValue] || functionValue
+  return (
+    legacyCountermeasureLabels[functionValue] || countermeasureActionLabelFromValue(functionValue)
+  )
 }
 
 export function functionLabel(_deviceGroupType: string, functionValue: string): string {
   return countermeasureActionLabel(functionValue)
 }
 
-/** 反制动作 → 推荐执行设备（选型 v2） */
-export interface CountermeasureDeviceBinding {
-  deviceType: string
-  model: string
-  effect: string
-}
-
-const countermeasureDeviceBindings: Record<string, CountermeasureDeviceBinding> = {
-  navigation_spoofing: {
-    deviceType: '导航诱骗',
-    model: 'DY506F',
-    effect: '迫降 / 禁飞 / 驱离'
-  },
-  radio_jamming: {
-    deviceType: '无线电干扰',
-    model: 'FG310F',
-    effect: '压制 / 可能触发自动返航'
-  },
-  sound_light_expulsion: {
-    deviceType: '声光',
-    model: '—',
-    effect: '声光驱离'
-  },
-  microwave_strike: {
-    deviceType: '高功率微波',
-    model: 'TBD-HPM',
-    effect: '微波打击'
-  },
-  laser_strike: {
-    deviceType: '激光打击',
-    model: 'TBD-LSR',
-    effect: '激光打击'
-  },
-  forced_landing: {
-    deviceType: '导航诱骗',
-    model: 'DY506F',
-    effect: '迫降（legacy → DY506F）'
-  }
-}
-
 export function resolveCountermeasureDeviceBinding(
   functionValue: string
 ): CountermeasureDeviceBinding | undefined {
-  return countermeasureDeviceBindings[functionValue]
+  const actionValue = resolveCountermeasureActionValue(functionValue)
+  return actionValue ? COUNTERMEASURE_DEVICE_BINDINGS[actionValue] : undefined
 }
 
 export function countermeasureActionDeviceHint(functionValue: string): string {
   const hit = resolveCountermeasureDeviceBinding(functionValue)
   if (!hit) return ''
-  if (hit.model === '—' || hit.model.startsWith('TBD-')) {
+  if (hit.internalOnly || !hit.demoExecutable || hit.model.startsWith('TBD-')) {
     return `${hit.deviceType} · ${hit.effect}`
   }
   return `推荐设备：${hit.model}（${hit.deviceType}）· ${hit.effect}`

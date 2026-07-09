@@ -17,6 +17,7 @@
 | P5 | 设备操作走**供应商上报链路**为原始设计；具体 API 待后续明确，本阶段只做展示与演示指令 |
 | P6 | 数据大屏仍以 **Axure 原型交互为主**；「查看更多」(u170) 弹窗 (u299) 内容逐步与后台设备数据对齐 |
 | P7 | 说明书原件放在仓库根目录 **`device-docs/`**，开发侧通过 **`deviceCatalog.ts` 结构化索引** 引用，不直接解析 PDF |
+| P8 | 档案指标拆为 **设备规格**（说明书固定，只读）与 **可配置项**（`device` 级在设备信息设定；`runtime` 级如转台角度仅指挥大屏控制） |
 
 ---
 
@@ -349,6 +350,43 @@
 | 7b | 完成 | 2026-07-08 | `dataScreenDeviceSync.ts`、`CommandScreen.vue` | iframe 注入 u308–u551/u563，型号可点选 |
 | 8 | 完成 | 2026-07-08 | `device-control/*`、`index.mock.ts`、`DeviceRemoteControlPanel.vue`、`DeviceInfoDetail.vue` | 供应商链路 mock POST |
 | 9 | 完成 | 2026-07-08 | `archiveStore.ts`、`infoStore.ts`、`groupStore.ts`、`planStore.ts`、`planTrigger.ts`、`DeviceRemoteControlPanel.vue` | 审查修复：档案 ID 映射、预案组对齐、RDS200/TBD 组、供应商字段 |
+| 10 | 完成 | 2026-07-09 | `device/types.ts`、`deviceCatalog.ts`、`archiveStore.ts`、`infoStore.ts`、`DeviceArchiveDetail.vue`、`DeviceInfoDetail.vue`、`DeviceMonitorCard.vue`、`monitorStore.ts`、`DeviceRemoteControlPanel.vue` | **设备规格 vs 可配置项**：规格为说明书固定参数（如功率、频段范围）；可配置项分 `device`（设备信息可设）与 `runtime`（转台角度等仅指挥大屏控制） |
+
+---
+
+## 4.1 设备规格与可配置项（步骤 10 补充说明）
+
+### 概念划分
+
+| 类型 | 含义 | 示例（FG310F） | 维护位置 | 单台设备是否可改 |
+|------|------|----------------|----------|------------------|
+| **设备规格** | 说明书固定参数，随型号/档案确定 | 设备功率 ≤600W、工作频段、水平/俯仰**范围** | 设备档案 → 设备规格表 | 否（只读） |
+| **可配置项 · 设备级** | 部署时可设定的业务参数 | 默认压制频段、联动跟踪模式 | 设备信息 → 基础档案下方 | 是 |
+| **可配置项 · 运行时** | 作战/演示时实时控制 | 转台方位角、转台俯仰角 | 指挥大屏（`dataScreenDeviceSync`） | 是（不在设备信息表单） |
+
+### 已确认型号配置项一览
+
+| 型号 | 设备规格（节选） | 设备级可配置项 | 运行时可配置项 |
+|------|------------------|----------------|----------------|
+| FG310F | 功率、频段、转角/俯仰**范围**、拦截距离 | 默认压制频段、联动跟踪模式 | 转台方位角、转台俯仰角 |
+| DY506F | 频率、防御距离、功耗 | 默认证诱骗模式、发射功率档位 | — |
+| PL671F | 频率范围、侦测半径 | 侦测灵敏度、平台上报周期 | — |
+| RDS200 | 频段、探测半径 | 监测刷新策略 | — |
+| EXD55-LS | 接收频段、覆盖半径 | 数据输出格式 | — |
+| TBD-EO | 跟踪距离、视场角 | 跟踪模式、预置位编号 | 转台方位角、转台俯仰角 |
+
+### 页面验收（FG310F 演示设备 `DEV-FG310-01`）
+
+- [ ] `/lad/device/archive/detail/D-LAD-JAM0001`：设备规格含功率/频段；可配置项表中转台角度标记为「运行时（大屏）」
+- [ ] `/lad/device/info/detail/DEV-FG310-01`：基础档案下方仅显示「默认压制频段」「联动跟踪模式」；提示转台由大屏控制
+- [ ] 右侧 Tab「设备规格」只读展示档案规格，不含当前转台角度值
+- [ ] 指挥大屏 FG310F 面板仍可联动方位（`dataScreenDeviceSync.ts`）
+
+### 数据模型
+
+- `DeviceArchiveIndicator` → 档案 **specifications**（`item / unit / value`）
+- `DeviceArchiveConfigurableItem` → **configurableItems**（`key / label / unit / scope / hint / defaultValue?`）
+- 设备台账 **deviceConfigValues**: `Record<string, string>`，仅存 `scope === 'device'` 的键值
 
 ---
 

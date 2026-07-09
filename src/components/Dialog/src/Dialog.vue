@@ -163,6 +163,11 @@ watch(
   &__footer {
     border-top: 1px solid var(--el-border-color);
     flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
   }
 
   &__headerbtn {

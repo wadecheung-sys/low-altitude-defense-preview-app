@@ -10,6 +10,7 @@ const blackWhiteTargetDetailPage = () => import('@/views/Lad/List/BlackWhiteTarg
 const deviceArchivePage = () => import('@/views/Lad/Device/DeviceArchive.vue')
 const deviceArchiveDetailPage = () => import('@/views/Lad/Device/DeviceArchiveDetail.vue')
 const deviceGroupManagementPage = () => import('@/views/Lad/Device/DeviceGroupManagement.vue')
+const deviceAssociationPage = () => import('@/views/Lad/Device/DeviceAssociation.vue')
 const deviceInfoListPage = () => import('@/views/Lad/Device/DeviceInfoList.vue')
 const deviceInfoDetailPage = () => import('@/views/Lad/Device/DeviceInfoDetail.vue')
 const deviceRuntimeMonitorPage = () => import('@/views/Lad/Device/DeviceRuntimeMonitor.vue')
@@ -282,6 +283,14 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         component: deviceGroupManagementPage,
         meta: ladMeta('device-group', {
           title: '设备组管理'
+        })
+      },
+      {
+        path: 'linkage',
+        name: 'LadDeviceAssociation',
+        component: deviceAssociationPage,
+        meta: ladMeta('device-association', {
+          title: '设备关联'
         })
       }
     ]

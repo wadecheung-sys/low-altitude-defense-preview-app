@@ -5,7 +5,6 @@ import type {
   DeviceMonitorItem,
   DeviceMonitorListResult,
   DeviceMonitorQuery,
-  DeviceMonitorStatusField,
   DeviceOnlineStatus
 } from './types'
 
@@ -71,69 +70,13 @@ function buildMetrics(seed: number, online: DeviceOnlineStatus) {
   }
 }
 
-function buildRuntimeStatus(
-  model: string,
-  online: DeviceOnlineStatus,
-  seed: number,
-  metrics: ReturnType<typeof buildMetrics>
-): DeviceMonitorStatusField[] {
-  const offline = online === '离线'
-  const bearing = (seed * 37) % 360
-  const pitch = -10 + (seed % 71)
-
-  if (model === 'FG310F') {
-    return [
-      { label: '转台方位', value: offline ? '—' : `${bearing}°` },
-      { label: '转台俯仰', value: offline ? '—' : `${pitch}°` },
-      { label: '压制状态', value: offline ? '离线' : online === '异常' ? '待机' : '联动待命' },
-      { label: '今日压制', value: offline ? '0' : String(metrics.handleCount) }
-    ]
-  }
-  if (model === 'DY506F') {
-    return [
-      { label: 'GPS 搜星', value: offline ? '—' : `${6 + (seed % 4)}` },
-      { label: 'GLONASS 搜星', value: offline ? '—' : `${4 + (seed % 3)}` },
-      { label: '发射状态', value: offline ? '关闭' : online === '异常' ? '授时异常' : '关闭' },
-      { label: '工作模式', value: offline ? '—' : '待命' }
-    ]
-  }
-  if (model === 'PL671F') {
-    return [
-      { label: '探测目标', value: offline ? '0' : String(Math.max(0, metrics.detectCount % 40)) },
-      { label: '测向方位', value: offline ? '—' : `${bearing}°` },
-      { label: '今日告警', value: offline ? '0' : String(metrics.alertCount) },
-      { label: '识别模式', value: '频谱/RID/WiFi' }
-    ]
-  }
-  if (model === 'RDS200') {
-    return [
-      { label: 'RID 目标', value: offline ? '0' : String(Math.max(0, metrics.detectCount % 50)) },
-      { label: '刷新周期', value: offline ? '—' : '≤1s' },
-      { label: '上报链路', value: offline ? '断开' : '正常' },
-      { label: '今日跟踪', value: offline ? '0' : String(metrics.detectCount) }
-    ]
-  }
-  if (model.startsWith('TBD-')) {
-    return [{ label: '运行状态', value: '正常' }]
-  }
-  if (model === 'EXD55-LS') {
-    return [
-      { label: '输出模式', value: 'Mode 4 JSON' },
-      { label: '心跳间隔', value: '12s' }
-    ]
-  }
-  return [
-    { label: '今日探测', value: offline ? '0' : String(metrics.detectCount) },
-    { label: '今日告警', value: offline ? '0' : String(metrics.alertCount) }
-  ]
-}
-
 function cloneLinkedArchive(detail: ReturnType<typeof queryDeviceInfoDetail>) {
   if (!detail?.linkedArchive) return null
   const arch = detail.linkedArchive
   return {
     ...arch,
-    indicators: arch.indicators.map((indicator) => ({ ...indicator }))
+    specifications: arch.specifications.map((indicator) => ({ ...indicator })),
+    configurableItems: arch.configurableItems.map((item) => ({ ...item }))
   }
 }
 
@@ -159,7 +102,6 @@ function enrichMonitorRow(row: DeviceInfoItem): DeviceMonitorItem {
     onlineStatus,
     runtimeText: formatRuntime(runtimeSec),
     metrics,
-    runtimeStatus: buildRuntimeStatus(deviceModel, onlineStatus, seed, metrics),
     manufacturer:
       linkedArchive?.vendor || archive?.vendor || VENDOR_BY_TYPE[row.deviceType] || '—',
     deviceModel,

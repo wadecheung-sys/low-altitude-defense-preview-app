@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElAlert, ElDescriptions, ElDescriptionsItem, ElMessage, ElPagination, ElTag } from 'element-plus'
+import { ElAlert, ElDescriptions, ElDescriptionsItem, ElMessage, ElPagination, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { getHistoryEventDetailApi } from '@/api/lad/incident'
 import { historyTargetTypeTagType, resolveHistoryTargetType } from '@/api/lad/incident/historyTargetType'
 import type {
@@ -40,6 +40,7 @@ const detail = ref<HistoryEventDetail | null>(null)
 const loadError = ref('')
 const replayRef = ref<InstanceType<typeof TrajectoryReplay> | null>(null)
 const confirmVisible = ref(false)
+const activeTab = ref('basic')
 
 const eventId = computed(() => String(route.params.id || ''))
 
@@ -233,10 +234,20 @@ const fetchDetail = async () => {
 onMounted(async () => {
   await fetchDetail()
   if (route.query.tab === 'replay') {
+    activeTab.value = 'trajectory'
     await nextTick()
     replayRef.value?.play()
   }
 })
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab !== 'replay') return
+    activeTab.value = 'trajectory'
+    nextTick(() => replayRef.value?.play())
+  }
+)
 </script>
 
 <template>
@@ -251,9 +262,8 @@ onMounted(async () => {
     </template>
 
     <template v-if="viewDetail">
-      <el-row :gutter="16" class="detail-info">
-        <el-col :span="24">
-          <div class="detail-info__desc-title">基本信息</div>
+      <ElTabs v-model="activeTab" class="detail-tabs">
+        <ElTabPane label="基本信息" name="basic">
           <ElDescriptions :column="3" border size="small">
             <ElDescriptionsItem label="目标ID">{{ viewDetail.targetId }}</ElDescriptionsItem>
             <ElDescriptionsItem label="目标型号">{{ viewDetail.targetModel }}</ElDescriptionsItem>
@@ -315,19 +325,19 @@ onMounted(async () => {
               {{ viewDetail.remark }}
             </ElDescriptionsItem>
           </ElDescriptions>
-        </el-col>
-      </el-row>
+        </ElTabPane>
 
-      <div v-if="viewDetail.disposalTimeline?.length" class="detail-split-layout">
-        <section class="detail-split-layout__timeline detail-timeline-section">
-          <div class="detail-timeline-section__title">设备处置时间链</div>
-          <p class="detail-timeline-section__hint">
-            展示小型低空飞行物从发现、识别、评估、处置到复盘归档的全过程记录。
-          </p>
-          <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
-        </section>
-        <section class="detail-split-layout__eo detail-eo-section">
-          <div class="detail-eo-section__title">无人机光电</div>
+        <ElTabPane label="事件过程记录" name="timeline">
+          <template v-if="viewDetail.disposalTimeline?.length">
+            <p class="detail-timeline-section__hint">
+              展示小型低空飞行物从发现、识别、评估、处置到复盘归档的全过程记录。
+            </p>
+            <DisposalTimelinePanel :nodes="viewDetail.disposalTimeline" />
+          </template>
+          <div v-else class="detail-empty">暂无事件过程记录</div>
+        </ElTabPane>
+
+        <ElTabPane label="光电图像" name="eo">
           <LadVideoMonitor
             :linked="eoConnected"
             :show-demo-badge="false"
@@ -338,63 +348,62 @@ onMounted(async () => {
             :record-end="viewDetail.endedAt"
             :screenshot-name-prefix="`光电截图_${viewDetail.targetId}`"
           />
-        </section>
-      </div>
+        </ElTabPane>
 
-      <div class="detail-map-section">
-        <div class="detail-map-section__title">地图轨迹</div>
-        <TrajectoryReplay ref="replayRef" :detail="viewDetail" />
-      </div>
+        <ElTabPane label="地图轨迹" name="trajectory">
+          <TrajectoryReplay ref="replayRef" :detail="viewDetail" />
 
-      <section class="detail-source-section">
-        <div class="detail-source-section__header">
-          <div class="detail-source-section__title">航迹列表</div>
-          <BaseButton type="primary" size="small" @click="exportTrajectoryList">导出</BaseButton>
-        </div>
-        <div class="detail-source-section__table-wrap">
-          <table class="detail-source-table">
-            <thead>
-              <tr>
-                <th>序号</th>
-                <th>目标ID</th>
-                <th>时间</th>
-                <th>高度</th>
-                <th>经度</th>
-                <th>纬度</th>
-                <th>距离</th>
-                <th>速度</th>
-                <th>方位角</th>
-                <th>俯仰角</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in paginatedTrajectoryListRows" :key="row.seq">
-                <td>{{ row.seq }}</td>
-                <td>{{ row.targetId }}</td>
-                <td>{{ row.time }}</td>
-                <td>{{ row.altitude }}m</td>
-                <td>{{ row.longitude }}</td>
-                <td>{{ row.latitude }}</td>
-                <td>{{ row.distance }}m</td>
-                <td>{{ row.speed }}m/s</td>
-                <td>{{ row.azimuth }}°</td>
-                <td>{{ row.pitch }}°</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <ElPagination
-          v-if="showTrajectoryPagination"
-          v-model:current-page="trajectoryPageIndex"
-          v-model:page-size="trajectoryPageSize"
-          class="detail-source-section__pagination"
-          :page-sizes="TRAJECTORY_PAGE_SIZES"
-          :total="trajectoryListRows.length"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
-          small
-        />
-      </section>
+          <section class="detail-source-section">
+            <div class="detail-source-section__header">
+              <div class="detail-source-section__title">航迹列表</div>
+              <BaseButton type="primary" size="small" @click="exportTrajectoryList">导出</BaseButton>
+            </div>
+            <div class="detail-source-section__table-wrap">
+              <table class="detail-source-table">
+                <thead>
+                  <tr>
+                    <th>序号</th>
+                    <th>目标ID</th>
+                    <th>时间</th>
+                    <th>高度</th>
+                    <th>经度</th>
+                    <th>纬度</th>
+                    <th>距离</th>
+                    <th>速度</th>
+                    <th>方位角</th>
+                    <th>俯仰角</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in paginatedTrajectoryListRows" :key="row.seq">
+                    <td>{{ row.seq }}</td>
+                    <td>{{ row.targetId }}</td>
+                    <td>{{ row.time }}</td>
+                    <td>{{ row.altitude }}m</td>
+                    <td>{{ row.longitude }}</td>
+                    <td>{{ row.latitude }}</td>
+                    <td>{{ row.distance }}m</td>
+                    <td>{{ row.speed }}m/s</td>
+                    <td>{{ row.azimuth }}°</td>
+                    <td>{{ row.pitch }}°</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <ElPagination
+              v-if="showTrajectoryPagination"
+              v-model:current-page="trajectoryPageIndex"
+              v-model:page-size="trajectoryPageSize"
+              class="detail-source-section__pagination"
+              :page-sizes="TRAJECTORY_PAGE_SIZES"
+              :total="trajectoryListRows.length"
+              layout="total, sizes, prev, pager, next, jumper"
+              background
+              small
+            />
+          </section>
+        </ElTabPane>
+      </ElTabs>
     </template>
 
     <ElAlert v-else-if="loadError" :title="loadError" type="warning" :closable="false" show-icon />
@@ -418,16 +427,13 @@ onMounted(async () => {
   width: 100%;
 }
 
-.detail-info {
-  margin-bottom: 20px;
-
-  &__desc-title {
-    margin-bottom: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
+.detail-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 16px;
   }
+}
 
+.detail-info {
   &__confidence {
     display: block;
     margin-top: 4px;
@@ -436,46 +442,7 @@ onMounted(async () => {
   }
 }
 
-.detail-split-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-  width: 100%;
-  margin-bottom: 20px;
-
-  &__timeline,
-  &__eo {
-    min-width: 0;
-    width: 100%;
-  }
-
-  @media (max-width: 991px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.detail-eo-section {
-  &__title {
-    margin-bottom: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-  }
-}
-
 .detail-timeline-section {
-  height: 100%;
-  padding: 14px 16px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-
-  &__title {
-    margin-bottom: 6px;
-    font-size: 15px;
-    font-weight: 600;
-  }
-
   &__hint {
     margin: 0 0 12px;
     font-size: 12px;
@@ -484,17 +451,8 @@ onMounted(async () => {
   }
 }
 
-.detail-map-section {
-  margin-bottom: 20px;
-
-  &__title {
-    margin-bottom: 12px;
-    font-size: 15px;
-    font-weight: 600;
-  }
-}
-
 .detail-source-section {
+  margin-top: 20px;
   padding: 14px 16px;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);

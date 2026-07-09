@@ -15,12 +15,10 @@ import type {
   DeviceLinkedArchive,
   DeviceSelfCheckResult
 } from '@/api/lad/device-info/types'
+import type { DeviceArchiveConfigurableItem } from '@/api/lad/device/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
-import { deviceInfoTypeOptions } from './deviceInfoConstants'
-import { isPeripheralDevice } from '@/api/lad/device-group/deviceGroupCatalog'
 import DeviceInfoGisMap from './components/DeviceInfoGisMap.vue'
-import DeviceRemoteControlPanel from '../shared/DeviceRemoteControlPanel.vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
   ElAlert,
@@ -42,8 +40,7 @@ import {
   ElTable,
   ElTableColumn,
   ElTabs,
-  ElTag,
-  ElTimePicker
+  ElTag
 } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -79,7 +76,12 @@ const detailFallbackPath = computed(() =>
   isMonitorDetailMode.value ? '/lad/device/monitor' : '/lad/device/info/list'
 )
 
+const deviceConfigValues = ref<Record<string, string>>({})
+
 const linkedArchive = computed(() => currentLinkedArchive.value)
+const deviceScopeConfigItems = computed(() =>
+  (linkedArchive.value?.configurableItems || []).filter((item) => item.scope === 'device')
+)
 const archiveSelectOptions = computed(() => {
   const selectedArchiveId = form.archiveId
   return archiveOptions.value.filter((item) => item.enabled || item.id === selectedArchiveId)
@@ -96,22 +98,6 @@ const selectedDeployAreaName = computed(
 const supportsSelfCheck = computed(
   () => detail.value?.supportsSelfCheck ?? deviceSupportsSelfCheck(form.deviceType)
 )
-
-const deviceModel = computed(
-  () => linkedArchive.value?.deviceModel || detail.value?.linkedArchive?.deviceModel || ''
-)
-
-const showRemoteControlPanel = computed(() => {
-  if (isCreateMode.value || !detail.value) return false
-  return !isPeripheralDevice({ deviceType: form.deviceType || detail.value.deviceType })
-})
-
-const deviceOnline = computed(() => {
-  if (!detail.value?.lastHeartbeat) return true
-  const t = new Date(detail.value.lastHeartbeat.replace(/-/g, '/')).getTime()
-  if (Number.isNaN(t)) return true
-  return Date.now() - t < 48 * 3600 * 1000
-})
 
 const selfCheckOverallTag = computed(() => {
   const overall = selfCheckResult.value?.overall
@@ -146,7 +132,7 @@ const rules: FormRules = {
   deviceId: [{ required: true, message: '请输入设备编号', trigger: 'blur' }],
   deviceName: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
   archiveId: [{ required: true, message: '请选择基础档案', trigger: 'change' }],
-  deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
+  deviceType: [{ required: true, message: '请先选择基础档案以确定设备类型', trigger: 'change' }],
   deployAreaId: [{ required: true, message: '请选择部署区域', trigger: 'change' }]
 }
 
@@ -227,53 +213,26 @@ function mapArchiveDetailToLinkedArchive(
     vendor: data.vendor,
     deviceModel: data.deviceModel,
     imageUrl: data.imageUrl,
-    indicators: data.indicators.map((item) => ({ ...item }))
+    specifications: data.specifications.map((item) => ({ ...item })),
+    configurableItems: data.configurableItems.map((item) => ({ ...item }))
   } satisfies DeviceLinkedArchive
 }
 
-function indicatorDatePickerType(row: DeviceLinkedArchive['indicators'][number]) {
-  const format = row.config?.timeFormat
-  if (format === 'YYYY') return 'year'
-  if (format === 'YYYY-MM') return 'month'
-  if (format === 'YYYY-MM-DD') return 'date'
-  return 'datetime'
-}
-
-function indicatorNumberLimit(row: DeviceLinkedArchive['indicators'][number]) {
-  const digits = Math.min(12, Math.max(1, row.config?.integerDigits || 8))
-  return Number('9'.repeat(digits))
-}
-
-function updateIndicatorNumber(
-  row: DeviceLinkedArchive['indicators'][number],
-  value: number | undefined
-) {
-  row.value = value === undefined ? '' : String(value)
-}
-
-function validateArchiveIndicatorValues() {
-  for (const row of linkedArchive.value?.indicators || []) {
-    if (!row.value) continue
-    if (row.dataType === 'text' && row.value.length > (row.config?.maxLength || 100)) {
-      return `“${row.item}”不能超过 ${row.config?.maxLength || 100} 个字符`
-    }
-    if (row.dataType === 'number') {
-      const match = row.value.match(/^-?(\d+)(?:\.(\d+))?$/)
-      if (!match) return `“${row.item}”必须填写有效数值`
-      const integerLength = match[1]?.replace(/^0+/, '').length || 1
-      const decimalLength = match[2]?.length || 0
-      if (integerLength > (row.config?.integerDigits || 8)) {
-        return `“${row.item}”整数部分最多 ${row.config?.integerDigits || 8} 位`
+function syncDeviceConfigDefaults(items: DeviceArchiveConfigurableItem[], preserve = true) {
+  const next: Record<string, string> = preserve ? { ...deviceConfigValues.value } : {}
+  items
+    .filter((item) => item.scope === 'device')
+    .forEach((item) => {
+      if (next[item.key] === undefined) {
+        next[item.key] = item.defaultValue || ''
       }
-      if (decimalLength > (row.config?.decimalPlaces ?? 0)) {
-        return `“${row.item}”小数部分最多 ${row.config?.decimalPlaces ?? 0} 位`
-      }
+    })
+  Object.keys(next).forEach((key) => {
+    if (!items.some((item) => item.scope === 'device' && item.key === key)) {
+      delete next[key]
     }
-    if (row.dataType === 'select' && !row.config?.options?.includes(row.value)) {
-      return `“${row.item}”不在档案允许的选项范围内`
-    }
-  }
-  return null
+  })
+  deviceConfigValues.value = next
 }
 
 function resolveDeployAreaId(deployLocation: string) {
@@ -285,6 +244,7 @@ function resolveDeployAreaId(deployLocation: string) {
 function applyDetail(data: DeviceInfoDetail) {
   detail.value = data
   currentLinkedArchive.value = data.linkedArchive
+  deviceConfigValues.value = { ...(data.deviceConfigValues || {}) }
   form.deviceId = data.deviceId
   form.ipAddress = data.ipAddress
   form.deviceName = data.deviceName
@@ -318,18 +278,22 @@ function applyDetail(data: DeviceInfoDetail) {
   placement.mapX = data.mapX
   placement.mapY = data.mapY
   placement.controlRangeM = data.controlRangeM
+  if (data.linkedArchive) {
+    syncDeviceConfigDefaults(data.linkedArchive.configurableItems)
+  }
 }
 
 function resetCreate() {
   detail.value = null
   currentLinkedArchive.value = null
+  deviceConfigValues.value = {}
   form.deviceId = ''
   form.ipAddress = ''
   form.deviceName = ''
   form.archiveId = ''
   form.deployAreaId = ''
   form.serialNo = ''
-  form.deviceType = '无线电干扰'
+  form.deviceType = ''
   form.deployLocation = ''
   form.deployAddress = ''
   form.personInCharge = ''
@@ -358,15 +322,20 @@ async function loadArchiveOptions() {
 async function syncLinkedArchive(archiveId?: string) {
   if (!archiveId) {
     currentLinkedArchive.value = null
+    form.deviceType = ''
+    deviceConfigValues.value = {}
     return
   }
-  if (currentLinkedArchive.value?.id === archiveId) return
   archiveLoading.value = true
   try {
     const res = await getDeviceArchiveDetailApi(archiveId)
     currentLinkedArchive.value = mapArchiveDetailToLinkedArchive(res.data)
+    form.deviceType = res.data.deviceType
+    syncDeviceConfigDefaults(res.data.configurableItems)
   } catch {
     currentLinkedArchive.value = null
+    form.deviceType = ''
+    deviceConfigValues.value = {}
     ElMessage.warning('基础档案加载失败')
   } finally {
     archiveLoading.value = false
@@ -451,12 +420,6 @@ async function runSelfCheck() {
 
 async function save() {
   if (!isEditable.value) return
-  const indicatorError = validateArchiveIndicatorValues()
-  if (indicatorError) {
-    ElMessage.warning(indicatorError)
-    metricsTab.value = 'archive'
-    return
-  }
   try {
     await formRef.value?.validate()
   } catch {
@@ -493,9 +456,7 @@ async function save() {
         label: row.label.trim(),
         value: row.value.trim()
       })),
-      archiveIndicatorValues: Object.fromEntries(
-        (linkedArchive.value?.indicators || []).map((row) => [row.id, row.value.trim()])
-      )
+      deviceConfigValues: { ...deviceConfigValues.value }
     })
     ElMessage.success(isCreateMode.value ? '新增成功' : '保存成功')
     if (isCreateMode.value) {
@@ -636,91 +597,76 @@ watch(metricsTab, (tab) => {
           <ElFormItem label="设备" prop="deviceName" required>
             <ElInput v-model="form.deviceName" placeholder="请输入设备名称" clearable />
           </ElFormItem>
-          <ElFormItem label="设备类型" prop="deviceType" required>
-            <ElSelect v-model="form.deviceType" placeholder="请选择" class="w-100%" clearable>
+          <ElFormItem label="基础档案" prop="archiveId" required>
+            <ElSelect
+              v-if="isEditable"
+              v-model="form.archiveId"
+              class="w-100%"
+              filterable
+              :loading="archiveLoading"
+              placeholder="请选择基础档案"
+            >
               <ElOption
-                v-for="option in deviceInfoTypeOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
+                v-for="item in archiveSelectOptions"
+                :key="item.id"
+                :label="`${item.archiveName} (${item.archiveNo})`"
+                :value="item.id"
               />
             </ElSelect>
+            <template v-else-if="linkedArchive">
+              <ElLink type="primary" :underline="false" @click="goArchiveDetail">
+                {{ linkedArchive.archiveName }}（{{ linkedArchive.archiveNo }}）
+              </ElLink>
+            </template>
+            <span v-else class="text-[var(--el-text-color-secondary)]">
+              {{ detail?.archiveInfo || '未关联' }}
+            </span>
+          </ElFormItem>
+          <ElFormItem label="设备类型" prop="deviceType" required>
+            <ElInput v-model="form.deviceType" placeholder="随所选档案自动确定" disabled />
+          </ElFormItem>
+          <ElFormItem label="厂商" required>
+            <ElInput
+              :model-value="linkedArchive?.vendor || ''"
+              placeholder="随所选档案自动确定"
+              disabled
+            />
+          </ElFormItem>
+          <ElFormItem label="设备型号" required>
+            <ElInput
+              :model-value="linkedArchive?.deviceModel || ''"
+              placeholder="随所选档案自动确定"
+              disabled
+            />
           </ElFormItem>
           <ElFormItem label="备注">
-            <ElInput v-model="form.remark" type="textarea" :rows="2" placeholder="选填" />
+            <ElInput v-model="form.remark" type="textarea" :rows="2" placeholder="请输入备注信息" />
           </ElFormItem>
 
-          <ElDivider content-position="left">基础档案</ElDivider>
-          <div class="device-detail-archive-section">
-            <ElFormItem label="档案选择" prop="archiveId" required>
-              <ElSelect
-                v-if="isEditable"
-                v-model="form.archiveId"
-                class="w-100%"
-                filterable
-                :loading="archiveLoading"
-                placeholder="请选择基础档案"
+          <ElDivider content-position="left">可配置项</ElDivider>
+          <div class="device-detail-config-section">
+            <p v-if="deviceScopeConfigItems.length" class="device-detail-config-section__hint">
+              以下参数可在设备部署时设定；转台方位等运行时参数请在指挥大屏控制。
+            </p>
+            <div v-if="deviceScopeConfigItems.length" class="device-detail-config-grid">
+              <ElFormItem
+                v-for="item in deviceScopeConfigItems"
+                :key="item.key"
+                :label="item.unit ? `${item.label}（${item.unit}）` : item.label"
               >
-                <ElOption
-                  v-for="item in archiveSelectOptions"
-                  :key="item.id"
-                  :label="`${item.archiveName} (${item.archiveNo})`"
-                  :value="item.id"
+                <ElInput
+                  v-model="deviceConfigValues[item.key]"
+                  :disabled="!isEditable"
+                  :placeholder="item.hint || '请输入'"
+                  clearable
                 />
-              </ElSelect>
-              <template v-else-if="linkedArchive">
-                <ElLink type="primary" :underline="false" @click="goArchiveDetail">
-                  {{ linkedArchive.archiveName }}
-                </ElLink>
-              </template>
-              <span v-else class="text-[var(--el-text-color-secondary)]">
-                {{ detail?.archiveInfo || '未关联' }}
-              </span>
-            </ElFormItem>
-
-            <div v-if="linkedArchive" class="device-detail-archive-summary">
-              <div class="device-detail-archive-summary__title">档案基本信息</div>
-              <div class="device-detail-archive-facts">
-                <div class="device-detail-archive-fact">
-                  <span class="device-detail-archive-fact__label">档案编号</span>
-                  <span class="device-detail-archive-fact__value">{{ linkedArchive.archiveNo }}</span>
-                </div>
-                <div class="device-detail-archive-fact">
-                  <span class="device-detail-archive-fact__label">档案名称</span>
-                  <span class="device-detail-archive-fact__value">
-                    <ElLink
-                      v-if="!isEditable"
-                      type="primary"
-                      :underline="false"
-                      @click="goArchiveDetail"
-                    >
-                      {{ linkedArchive.archiveName }}
-                    </ElLink>
-                    <template v-else>{{ linkedArchive.archiveName }}</template>
-                  </span>
-                </div>
-                <div class="device-detail-archive-fact">
-                  <span class="device-detail-archive-fact__label">厂商</span>
-                  <span class="device-detail-archive-fact__value">
-                    {{ linkedArchive.vendor || '—' }}
-                  </span>
-                </div>
-                <div class="device-detail-archive-fact">
-                  <span class="device-detail-archive-fact__label">设备型号</span>
-                  <span class="device-detail-archive-fact__value">
-                    {{ linkedArchive.deviceModel || '—' }}
-                  </span>
-                </div>
-                <div class="device-detail-archive-fact">
-                  <span class="device-detail-archive-fact__label">设备类型</span>
-                  <span class="device-detail-archive-fact__value">
-                    {{ linkedArchive.deviceType || '—' }}
-                  </span>
-                </div>
-              </div>
+              </ElFormItem>
             </div>
+            <p v-else-if="linkedArchive" class="device-detail-archive-empty">
+              当前档案无设备级可配置项；运行时参数（如转台角度）由指挥大屏控制。
+            </p>
             <p v-else class="device-detail-archive-empty">
-              选择档案后将展示厂商、设备型号等档案基本信息。
+              请先选择基础档案，再配置设备级参数。
             </p>
           </div>
 
@@ -783,77 +729,31 @@ watch(metricsTab, (tab) => {
               </div>
             </ElForm>
           </ElTabPane>
-          <ElTabPane label="档案指标" name="archive">
+          <ElTabPane label="档案信息" name="archive">
             <p v-if="!linkedArchive" class="device-detail-metrics-empty">
-              未关联基础档案，暂无档案指标。请绑定基础档案后查看。
+              未关联基础档案，暂无档案信息。请绑定基础档案后查看。
             </p>
             <template v-else>
               <p class="device-detail-metrics-tip">
-                以下指标来自基础档案“{{
-                  linkedArchive.archiveName
-                }}”。指标值按档案规则校验，可针对当前设备单独维护。
+                以下指标来自基础档案「{{ linkedArchive.archiveName }}」，为说明书固定参数，只读展示。
               </p>
-              <ElTable :data="linkedArchive.indicators" border stripe row-key="id" max-height="360">
+              <ElTable
+                :data="linkedArchive.specifications"
+                border
+                stripe
+                row-key="id"
+                max-height="360"
+              >
                 <ElTableColumn type="index" label="序号" width="64" />
                 <ElTableColumn prop="item" label="指标项" min-width="130" />
-                <ElTableColumn prop="unit" label="单位" width="100" />
-                <ElTableColumn label="指标值" min-width="180">
+                <ElTableColumn prop="unit" label="单位" width="100">
                   <template #default="{ row }">
-                    <template v-if="isEditable">
-                      <ElInputNumber
-                        v-if="row.dataType === 'number'"
-                        :model-value="row.value === '' ? undefined : Number(row.value)"
-                        :precision="row.config?.decimalPlaces ?? 0"
-                        :min="-indicatorNumberLimit(row)"
-                        :max="indicatorNumberLimit(row)"
-                        controls-position="right"
-                        class="w-100%"
-                        placeholder="可不填"
-                        @update:model-value="updateIndicatorNumber(row, $event)"
-                      />
-                      <ElSelect
-                        v-else-if="row.dataType === 'select'"
-                        v-model="row.value"
-                        class="w-100%"
-                        clearable
-                        placeholder="可不填"
-                      >
-                        <ElOption
-                          v-for="option in row.config?.options || []"
-                          :key="option"
-                          :label="option"
-                          :value="option"
-                        />
-                      </ElSelect>
-                      <ElTimePicker
-                        v-else-if="
-                          row.dataType === 'datetime' && row.config?.timeFormat === 'HH:mm:ss'
-                        "
-                        v-model="row.value"
-                        value-format="HH:mm:ss"
-                        format="HH:mm:ss"
-                        class="w-100%"
-                        placeholder="可不填"
-                      />
-                      <ElDatePicker
-                        v-else-if="row.dataType === 'datetime'"
-                        v-model="row.value"
-                        :type="indicatorDatePickerType(row)"
-                        :value-format="row.config?.timeFormat || 'YYYY-MM-DD HH:mm:ss'"
-                        :format="row.config?.timeFormat || 'YYYY-MM-DD HH:mm:ss'"
-                        class="w-100%"
-                        placeholder="可不填"
-                      />
-                      <ElInput
-                        v-else
-                        v-model="row.value"
-                        :maxlength="row.config?.maxLength || 100"
-                        show-word-limit
-                        clearable
-                        placeholder="可不填"
-                      />
-                    </template>
-                    <span v-else>{{ row.value || '—' }}</span>
+                    {{ row.unit || '—' }}
+                  </template>
+                </ElTableColumn>
+                <ElTableColumn prop="value" label="值" min-width="180">
+                  <template #default="{ row }">
+                    {{ row.value || '—' }}
                   </template>
                 </ElTableColumn>
               </ElTable>
@@ -909,17 +809,6 @@ watch(metricsTab, (tab) => {
         </ElTabs>
       </section>
     </div>
-
-    <section v-if="showRemoteControlPanel" class="device-detail-control-wrap">
-      <DeviceRemoteControlPanel
-        :device-record-id="recordId"
-        :device-name="form.deviceName || detail?.deviceName"
-        :device-type="form.deviceType || detail?.deviceType"
-        :device-model="deviceModel"
-        :device-code="form.deviceId || detail?.deviceId"
-        :online="deviceOnline"
-      />
-    </section>
 
     <ElDialog v-model="selfCheckVisible" title="设备自检结果" width="520px" destroy-on-close>
       <template v-if="selfCheckResult">
@@ -985,10 +874,6 @@ watch(metricsTab, (tab) => {
   .device-detail-grid {
     grid-template-columns: 1fr;
   }
-}
-
-.device-detail-control-wrap {
-  margin-top: 16px;
 }
 
 .device-detail-panel {
@@ -1213,63 +1098,34 @@ watch(metricsTab, (tab) => {
   color: var(--el-text-color-secondary);
 }
 
-.device-detail-archive-section {
-  padding: 12px;
-  margin-top: 4px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-}
-
-.device-detail-archive-section :deep(.el-form-item:last-child) {
-  margin-bottom: 0;
-}
-
-.device-detail-archive-summary {
-  margin-top: 8px;
-}
-
-.device-detail-archive-summary__title {
-  margin-bottom: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-text-color-regular);
-}
-
-.device-detail-archive-facts {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
-}
-
-.device-detail-archive-fact {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.device-detail-archive-fact__label {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--el-text-color-secondary);
-}
-
-.device-detail-archive-fact__value {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--el-text-color-primary);
-  word-break: break-word;
-}
-
 .device-detail-archive-empty {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
   color: var(--el-text-color-secondary);
+}
+
+.device-detail-config-section {
+  margin-top: 4px;
+}
+
+.device-detail-config-section__hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
+.device-detail-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+@media (max-width: 760px) {
+  .device-detail-config-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .device-detail-metrics-tabs {

@@ -8,6 +8,7 @@ import {
 } from '@/constants/deviceCatalog'
 import type {
   DeviceArchiveCategory,
+  DeviceArchiveConfigurableItem,
   DeviceArchiveDetail,
   DeviceArchiveIndicator,
   DeviceArchiveItem,
@@ -43,12 +44,36 @@ const CAMERA_ARCHIVE: Omit<DeviceArchiveItem, 'id'> = {
   updatedAt: '2026-03-16 11:10:00'
 }
 
-function buildIndicators(entry: DeviceCatalogEntry, archiveId: string): DeviceArchiveIndicator[] {
-  return entry.indicators.map((indicator, index) => ({
+function buildSpecifications(
+  entry: DeviceCatalogEntry,
+  archiveId: string
+): DeviceArchiveIndicator[] {
+  return entry.specifications.map((indicator, index) => ({
     ...indicator,
-    id: `${archiveId}-${index + 1}`,
-    config: indicator.config ? { ...indicator.config } : undefined
+    id: `${archiveId}-spec-${index + 1}`
   }))
+}
+
+function buildConfigurableItems(
+  entry: DeviceCatalogEntry,
+  archiveId: string
+): DeviceArchiveConfigurableItem[] {
+  return entry.configurableItems.map((item, index) => ({
+    ...item,
+    id: `${archiveId}-cfg-${index + 1}`
+  }))
+}
+
+function buildArchiveDetailExt(entry: DeviceCatalogEntry, archiveId: string) {
+  return {
+    remark:
+      entry.tier === 'pending'
+        ? `${entry.deviceType}（${entry.model}）档案，技术参数待完善。`
+        : `${entry.deviceType}（${entry.model}）档案，规格摘自产品说明书。`,
+    imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
+    specifications: buildSpecifications(entry, archiveId),
+    configurableItems: buildConfigurableItems(entry, archiveId)
+  }
 }
 
 function catalogToArchiveRow(entry: DeviceCatalogEntry, id: string): DeviceArchiveItem {
@@ -79,34 +104,31 @@ const catalogArchiveIds = [
 
 const detailExt: Record<
   string,
-  { remark: string; imageUrl: string | null; indicators: DeviceArchiveIndicator[] }
+  {
+    remark: string
+    imageUrl: string | null
+    specifications: DeviceArchiveIndicator[]
+    configurableItems: DeviceArchiveConfigurableItem[]
+  }
 > = {}
 
 ALL_CATALOG_DEVICES.forEach((entry, index) => {
   const id = catalogArchiveIds[index]!
-  detailExt[id] = {
-    remark:
-      entry.tier === 'pending'
-        ? `${entry.deviceType}（${entry.model}）档案，技术参数待完善。`
-        : `${entry.deviceType}（${entry.model}）档案，指标摘自产品说明书。`,
-    imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
-    indicators: buildIndicators(entry, id)
-  }
+  detailExt[id] = buildArchiveDetailExt(entry, id)
 })
 
 detailExt['da-10010'] = {
   remark: '周边监控摄像头通用档案。',
   imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
-  indicators: [
+  specifications: [
     {
-      id: 'da-10010-1',
+      id: 'da-10010-spec-1',
       item: '分辨率',
       unit: '',
-      dataType: 'text',
-      config: { maxLength: 32 },
       value: '1080P'
     }
-  ]
+  ],
+  configurableItems: []
 }
 
 let allList: DeviceArchiveItem[] = [
@@ -150,13 +172,15 @@ export function buildDeviceArchiveDetail(row: DeviceArchiveItem): DeviceArchiveD
   const ext = detailExt[row.id] ?? {
     remark: `${row.deviceType}档案，供部署、联动与维护使用。`,
     imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
-    indicators: []
+    specifications: [],
+    configurableItems: []
   }
   if (!detailExt[row.id]) {
     detailExt[row.id] = {
       remark: ext.remark,
       imageUrl: ext.imageUrl,
-      indicators: ext.indicators.map((i) => ({ ...i }))
+      specifications: ext.specifications.map((i) => ({ ...i })),
+      configurableItems: ext.configurableItems.map((i) => ({ ...i }))
     }
   }
   const cur = detailExt[row.id]!
@@ -164,7 +188,8 @@ export function buildDeviceArchiveDetail(row: DeviceArchiveItem): DeviceArchiveD
     ...row,
     remark: cur.remark,
     imageUrl: cur.imageUrl,
-    indicators: cur.indicators.map((i) => ({ ...i }))
+    specifications: cur.specifications.map((i) => ({ ...i })),
+    configurableItems: cur.configurableItems.map((i) => ({ ...i }))
   }
 }
 
@@ -243,7 +268,8 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
     detailExt[row.id] = {
       remark: body.remark ?? '',
       imageUrl: body.imageUrl ?? detailExt[row.id]?.imageUrl ?? DEVICE_ARCHIVE_PLACEHOLDER,
-      indicators: body.indicators.map((i) => ({ ...i }))
+      specifications: body.specifications.map((i) => ({ ...i })),
+      configurableItems: detailExt[row.id]?.configurableItems.map((i) => ({ ...i })) ?? []
     }
     return row
   }
@@ -264,7 +290,8 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
   detailExt[id] = {
     remark: body.remark ?? '',
     imageUrl: body.imageUrl ?? DEVICE_ARCHIVE_PLACEHOLDER,
-    indicators: body.indicators.map((i) => ({ ...i }))
+    specifications: body.specifications.map((i) => ({ ...i })),
+    configurableItems: []
   }
   return row
 }

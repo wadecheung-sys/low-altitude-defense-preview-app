@@ -217,6 +217,36 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
                 status: 'enabled'
               }
             ]
+          },
+          {
+            id: 'pm-device-linkage',
+            parentId: 'pm-device',
+            name: '设备关联',
+            permCode: 'lad:device:linkage',
+            nodeType: 'menu',
+            path: '/lad/device/linkage',
+            sort: 5,
+            status: 'enabled',
+            children: [
+              {
+                id: 'pm-device-linkage-view',
+                parentId: 'pm-device-linkage',
+                name: '查看',
+                permCode: 'lad:device:linkage:view',
+                nodeType: 'button',
+                sort: 1,
+                status: 'enabled'
+              },
+              {
+                id: 'pm-device-linkage-save',
+                parentId: 'pm-device-linkage',
+                name: '维护',
+                permCode: 'lad:device:linkage:save',
+                nodeType: 'button',
+                sort: 2,
+                status: 'enabled'
+              }
+            ]
           }
         ]
       },

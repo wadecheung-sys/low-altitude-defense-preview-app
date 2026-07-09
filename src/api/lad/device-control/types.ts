@@ -1,5 +1,6 @@
 /** 指令下发通道：供应商平台上报链路（原始设计） */
 export type DeviceCommandChannel = 'supplier'
+export type DeviceCommandStatus = 'accepted' | 'precheck_failed'
 
 export interface DeviceCommandRequest {
   /** 设备信息记录 id（di-*） */
@@ -17,6 +18,7 @@ export interface DeviceCommandRequest {
 export interface DeviceCommandResult {
   accepted: boolean
   commandId: string
+  status: DeviceCommandStatus
   message: string
   channel: DeviceCommandChannel
   dispatchedAt: string
@@ -25,6 +27,7 @@ export interface DeviceCommandResult {
 export interface DeviceCommandLogEntry extends DeviceCommandRequest {
   id: string
   accepted: boolean
+  status: DeviceCommandStatus
   message: string
   dispatchedAt: string
 }

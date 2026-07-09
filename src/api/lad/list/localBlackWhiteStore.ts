@@ -10,7 +10,6 @@ import type {
   EntryMethod,
   ListType
 } from './types'
-import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
 import {
   COOPERATIVE_DRONE_KIND,
   enrichManagedBlackWhiteListItem,
@@ -18,10 +17,13 @@ import {
   normalizeCooperativeBlackWhiteFields
 } from './listTargetKind'
 import { matchValidUntilRange, normalizeValidUntil } from './validUntilUtils'
+import {
+  LAD_RESOLVABLE_TARGET_PROFILES,
+  findTargetProfileByTargetId
+} from '@/api/lad/shared/targetProfiles'
 
 const listTypes: ListType[] = ['黑名单', '白名单']
 const targetTypes = ['多旋翼', '固定翼', '行业级']
-const models = LAD_TARGET_MODELS.filter((item) => item !== '蜂群目标' && item !== '其他')
 const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
 const zones = ['核心保护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
 const entryMethods: EntryMethod[] = ['自动录入', '人工录入', '自动+人工校验']
@@ -32,12 +34,10 @@ const validOptions = [
   '2024-12-31 08:30:00'
 ]
 
-function buildCooperativeSn(index: number) {
-  return `1581F4${String(100000 + index * 131).padStart(6, '0')}`
-}
-
 function buildSeedList(): BlackWhiteListItem[] {
+  const resolvableProfiles = LAD_RESOLVABLE_TARGET_PROFILES
   return Array.from({ length: 56 }, (_, i) => {
+    const profile = resolvableProfiles[i % resolvableProfiles.length]
     const day = String(4 + (i % 20)).padStart(2, '0')
     const hour = String(8 + (i % 10)).padStart(2, '0')
     const min = String((i * 5) % 60).padStart(2, '0')
@@ -49,7 +49,7 @@ function buildSeedList(): BlackWhiteListItem[] {
 
     return normalizeCooperativeBlackWhiteFields({
       id: `bw-${10001 + i}`,
-      targetId: `TG-2024-${String((i % 24) + 1).padStart(4, '0')}`,
+      targetId: profile.targetId,
       listType: listTypes[i % listTypes.length],
       historyTargetType: COOPERATIVE_DRONE_KIND,
       targetType: targetTypes[i % targetTypes.length],
@@ -57,9 +57,9 @@ function buildSeedList(): BlackWhiteListItem[] {
       discoveredAt: discovered,
       updatedAt: updated,
       duration: `00:${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`,
-      model: models[i % models.length],
+      model: profile.targetModel,
       frequency: frequencies[i % frequencies.length],
-      sn: buildCooperativeSn(i),
+      sn: profile.uavSn,
       zoneName: zones[i % zones.length],
       longitude: Number((113.38 + (i % 30) * 0.008).toFixed(4)),
       latitude: Number((23.08 + (i % 25) * 0.006).toFixed(4)),
@@ -69,7 +69,7 @@ function buildSeedList(): BlackWhiteListItem[] {
   }).filter((row) => hasResolvableSn(row.sn))
 }
 
-export const BLACK_WHITE_STORE_VERSION = 5
+export const BLACK_WHITE_STORE_VERSION = 6
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladBlackWhiteStoreVer?: number }
@@ -137,7 +137,7 @@ function buildTargetDetail(row: BlackWhiteListItem): BlackWhiteTargetDetail {
     disposalDetail,
     lastObservedAt: row.updatedAt,
     pilotLocatedAt: pilotLocated ? row.updatedAt : '—',
-    eventCount: 2 + (seed % 5)
+    eventCount: findTargetProfileByTargetId(row.targetId)?.eventCount ?? 2
   }
 }
 

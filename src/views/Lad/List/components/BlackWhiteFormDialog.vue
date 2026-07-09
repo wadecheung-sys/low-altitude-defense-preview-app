@@ -246,8 +246,8 @@ const onSubmit = async () => {
       </ElFormItem>
     </ElForm>
     <template #footer>
-      <BaseButton @click="visible = false">取消</BaseButton>
       <BaseButton type="primary" :loading="loading" @click="onSubmit">保存</BaseButton>
+      <BaseButton @click="visible = false">取消</BaseButton>
     </template>
   </Dialog>
 </template>

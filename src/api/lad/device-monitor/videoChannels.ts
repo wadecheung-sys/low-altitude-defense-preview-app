@@ -1,4 +1,4 @@
-import type { DeviceGroupItem } from '@/api/lad/device-group/types'
+import type { DeviceLinkageItem } from '@/api/lad/device-group/types'
 import type { DeviceInfoItem } from '@/api/lad/device-info/types'
 import type { DeviceMonitorItem } from './types'
 
@@ -14,7 +14,7 @@ export interface DeviceMonitorVideoChannel {
 
 export function buildMonitorVideoChannels(
   monitor: DeviceMonitorItem,
-  linkage: DeviceGroupItem | null | undefined,
+  linkage: DeviceLinkageItem | null | undefined,
   deviceCatalog: DeviceInfoItem[]
 ): DeviceMonitorVideoChannel[] {
   if (!linkage?.linkedDeviceIds.length) return []
@@ -40,8 +40,8 @@ export function buildMonitorVideoChannels(
 }
 
 export function findLinkageByMasterDeviceId(
-  groups: DeviceGroupItem[],
+  linkages: DeviceLinkageItem[],
   masterDeviceId: string
-): DeviceGroupItem | null {
-  return groups.find((item) => item.masterDeviceId === masterDeviceId && item.enabled) ?? null
+): DeviceLinkageItem | null {
+  return linkages.find((item) => item.masterDeviceId === masterDeviceId && item.enabled) ?? null
 }

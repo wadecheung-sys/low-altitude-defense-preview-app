@@ -40,10 +40,21 @@ const panelMode = computed<'counter' | 'detect' | 'readonly' | 'pending'>(() => 
   const model = props.deviceModel
   if (model === 'FG310F' || props.deviceType === '无线电干扰') return 'counter'
   if (model === 'DY506F' || props.deviceType === '导航诱骗') return 'counter'
-  if (model === 'PL671F' || model === 'RDS200' || props.deviceType === '无线电侦测' || props.deviceType === 'Remote-ID 监视') {
+  if (
+    model === 'PL671F' ||
+    model === 'RDS200' ||
+    props.deviceType === '无线电侦测' ||
+    props.deviceType === 'Remote-ID 监视'
+  ) {
     return 'detect'
   }
-  if (model.startsWith('TBD-') || props.deviceType === '雷达' || props.deviceType === '光电跟踪' || props.deviceType === '激光打击' || props.deviceType === '高功率微波') {
+  if (
+    model.startsWith('TBD-') ||
+    props.deviceType === '雷达' ||
+    props.deviceType === '光电跟踪' ||
+    props.deviceType === '激光打击' ||
+    props.deviceType === '高功率微波'
+  ) {
     return 'pending'
   }
   return 'readonly'
@@ -84,11 +95,15 @@ const panelHint = computed(() => {
   if (panelMode.value === 'pending') return '该设备暂无可下发操作项。'
   if (panelMode.value === 'detect') return '探测类设备以监视为主，指令经供应商平台上报链路转发。'
   if (props.deviceModel === 'DY506F') return '导航诱骗：迫降 / 禁飞 / 驱离对应 DY506F 上位机能力。'
-  if (props.deviceModel === 'FG310F') return '无线电压制：压制效果可能触发目标自动返航。'
+  if (props.deviceModel === 'FG310F') return '无线电压制：压制效果可能触发目标自动返航；转台方位/俯仰请在指挥大屏实时控制。'
   return '指令经平台上报链路转发。'
 })
 
-async function dispatchCommand(actionKey: string, actionLabel: string, payload?: Record<string, unknown>) {
+async function dispatchCommand(
+  actionKey: string,
+  actionLabel: string,
+  payload?: Record<string, unknown>
+) {
   if (!props.deviceRecordId) {
     ElMessage.warning('缺少设备记录，无法下发指令')
     return
@@ -107,7 +122,12 @@ async function dispatchCommand(actionKey: string, actionLabel: string, payload?:
       channel: 'supplier',
       payload
     })
-    ElMessage.success(res.data?.message || `已向「${props.deviceName}」下发「${actionLabel}」`)
+    const message = res.data?.message || `已向「${props.deviceName}」下发「${actionLabel}」`
+    if (res.data?.accepted === false) {
+      ElMessage.warning(message)
+    } else {
+      ElMessage.success(message)
+    }
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : '指令下发失败')
   } finally {
@@ -123,9 +143,13 @@ function onAction(action: DeviceOperationAction) {
 }
 
 function onAutoModeChange(enabled: boolean) {
-  void dispatchCommand(enabled ? 'auto_mode_on' : 'auto_mode_off', enabled ? '切换自动联动' : '切换手动控制', {
-    autoMode: enabled
-  })
+  void dispatchCommand(
+    enabled ? 'auto_mode_on' : 'auto_mode_off',
+    enabled ? '切换自动联动' : '切换手动控制',
+    {
+      autoMode: enabled
+    }
+  )
 }
 </script>
 

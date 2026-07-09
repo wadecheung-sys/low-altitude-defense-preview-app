@@ -31,32 +31,35 @@ export interface DeviceArchiveListResult {
   total: number
 }
 
-export type DeviceArchiveIndicatorDataType = 'text' | 'number' | 'datetime' | 'select'
-
-export interface DeviceArchiveIndicatorConfig {
-  maxLength?: number
-  integerDigits?: number
-  decimalPlaces?: number
-  includeDate?: boolean
-  includeTime?: boolean
-  timeFormat?: 'YYYY-MM-DD HH:mm:ss' | 'YYYY-MM-DD' | 'YYYY-MM' | 'YYYY' | 'HH:mm:ss'
-  options?: string[]
-}
-
 export interface DeviceArchiveIndicator {
   id: string
   item: string
   unit: string
-  dataType?: DeviceArchiveIndicatorDataType
-  config?: DeviceArchiveIndicatorConfig
-  /** 指标未单独维护时采用的默认值。 */
   value: string
+}
+
+/** 可配置项作用域：device=设备部署时可设定；runtime=指挥大屏运行时控制 */
+export type DeviceConfigItemScope = 'device' | 'runtime'
+
+export interface DeviceArchiveConfigurableItem {
+  id: string
+  key: string
+  label: string
+  unit: string
+  scope: DeviceConfigItemScope
+  /** 能力范围或说明 */
+  hint?: string
+  /** 设备级可配置项在档案中的建议默认值 */
+  defaultValue?: string
 }
 
 export interface DeviceArchiveDetail extends DeviceArchiveItem {
   remark: string
   imageUrl: string | null
-  indicators: DeviceArchiveIndicator[]
+  /** 设备规格（说明书固定参数，不可随单台设备变更） */
+  specifications: DeviceArchiveIndicator[]
+  /** 可配置项定义（区分设备级与运行时） */
+  configurableItems: DeviceArchiveConfigurableItem[]
 }
 
 export type DeviceArchiveSavePayload = Pick<
@@ -67,7 +70,7 @@ export type DeviceArchiveSavePayload = Pick<
   archiveNo?: string
   remark?: string
   imageUrl?: string | null
-  indicators: DeviceArchiveIndicator[]
+  specifications: DeviceArchiveIndicator[]
 }
 
 export interface DeviceArchiveEnabledPayload {

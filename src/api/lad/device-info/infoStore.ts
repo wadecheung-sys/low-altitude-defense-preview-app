@@ -20,7 +20,7 @@ import type {
 interface DeviceInfoExt extends DeviceInfoDeployment {
   remark: string
   extendedFields: DeviceExtendedField[]
-  archiveIndicatorValues: Record<string, string>
+  deviceConfigValues: Record<string, string>
 }
 
 const DEFAULT_EXT: DeviceInfoExt = {
@@ -35,7 +35,7 @@ const DEFAULT_EXT: DeviceInfoExt = {
   controlRangeM: 500,
   contactPhone: '',
   extendedFields: [],
-  archiveIndicatorValues: {}
+  deviceConfigValues: {}
 }
 
 let extendSeq = 0
@@ -84,10 +84,7 @@ function defaultExtendedFields(row: DeviceInfoItem, index: number): DeviceExtend
   ]
 }
 
-function resolveLinkedArchive(
-  archiveId?: string,
-  indicatorValues: Record<string, string> = {}
-): DeviceLinkedArchive | null {
+function resolveLinkedArchive(archiveId?: string): DeviceLinkedArchive | null {
   if (!archiveId) return null
   const arch = queryDeviceArchiveDetail(archiveId)
   if (!arch) return null
@@ -99,18 +96,8 @@ function resolveLinkedArchive(
     vendor: arch.vendor,
     deviceModel: arch.deviceModel,
     imageUrl: arch.imageUrl,
-    indicators: arch.indicators.map((indicator) => ({
-      ...indicator,
-      config: indicator.config
-        ? {
-            ...indicator.config,
-            options: indicator.config.options ? [...indicator.config.options] : undefined
-          }
-        : undefined,
-      value: Object.prototype.hasOwnProperty.call(indicatorValues, indicator.id)
-        ? indicatorValues[indicator.id]!
-        : indicator.value
-    }))
+    specifications: arch.specifications.map((item) => ({ ...item })),
+    configurableItems: arch.configurableItems.map((item) => ({ ...item }))
   }
 }
 
@@ -120,6 +107,17 @@ function formatNow() {
   const d = new Date()
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
+
+function buildDefaultDeviceConfigValues(archiveId?: string): Record<string, string> {
+  if (!archiveId) return {}
+  const arch = queryDeviceArchiveDetail(archiveId)
+  if (!arch) return {}
+  return Object.fromEntries(
+    arch.configurableItems
+      .filter((item) => item.scope === 'device' && item.defaultValue)
+      .map((item) => [item.key, item.defaultValue!])
+  )
 }
 
 function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
@@ -168,7 +166,7 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
                       : 500,
     contactPhone: `138${String(10000000 + index).slice(-8)}`,
     extendedFields: [],
-    archiveIndicatorValues: {}
+    deviceConfigValues: buildDefaultDeviceConfigValues(row.archiveId)
   }
 }
 
@@ -193,9 +191,9 @@ function mergeExt(body: DeviceInfoSavePayload, prev?: DeviceInfoExt): DeviceInfo
     controlRangeM: Number(body.controlRangeM ?? prev?.controlRangeM ?? DEFAULT_EXT.controlRangeM),
     contactPhone: body.contactPhone?.trim() ?? prev?.contactPhone ?? '',
     extendedFields,
-    archiveIndicatorValues: body.archiveIndicatorValues
-      ? { ...body.archiveIndicatorValues }
-      : { ...(prev?.archiveIndicatorValues || {}) }
+    deviceConfigValues: body.deviceConfigValues
+      ? { ...body.deviceConfigValues }
+      : { ...(prev?.deviceConfigValues || {}) }
   }
 }
 
@@ -443,8 +441,9 @@ export function buildDeviceInfoDetail(row: DeviceInfoItem): DeviceInfoDetail {
     ...row,
     ...ext,
     remark: ext.remark,
-    linkedArchive: resolveLinkedArchive(row.archiveId, ext.archiveIndicatorValues),
+    linkedArchive: resolveLinkedArchive(row.archiveId),
     extendedFields: ext.extendedFields.map((f) => ({ ...f })),
+    deviceConfigValues: { ...ext.deviceConfigValues },
     supportsSelfCheck: deviceSupportsSelfCheck(row.deviceType)
   }
 }

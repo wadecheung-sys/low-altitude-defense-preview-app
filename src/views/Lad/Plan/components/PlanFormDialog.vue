@@ -515,8 +515,8 @@ async function onSave() {
       </ElFormItem>
     </ElForm>
     <template #footer>
-      <BaseButton @click="visible = false">{{ UI.btnCancel }}</BaseButton>
       <BaseButton type="primary" :loading="loading" @click="onSave">{{ UI.btnSave }}</BaseButton>
+      <BaseButton @click="visible = false">{{ UI.btnCancel }}</BaseButton>
     </template>
   </Dialog>
 </template>

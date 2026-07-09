@@ -6,11 +6,13 @@ import {
   suggestEventAttributeName
 } from '@/api/lad/system/eventAttributeMessageAlign'
 import type { EventAttributeEventType, EventOwnership } from '@/api/lad/system/types'
-import {
-  resolvePlanDisplayName,
-  resolvePlanTriggerAction
-} from './planTriggerHitDetails'
+import { resolvePlanDisplayName, resolvePlanTriggerAction } from './planTriggerHitDetails'
 import { isHandlingInProgress } from './handlingStatusUtils'
+import {
+  countermeasureResultEventType,
+  countermeasureTimelineLabel,
+  resolveCountermeasureActionValue
+} from '@/constants/deviceCatalog'
 import type { DisposalExecutionSource, HistoryEventItem, ThreatLevel } from './types'
 
 export type DisposalTimelineStageKey = 'discover' | 'threat' | 'assess' | 'dispose' | 'result'
@@ -34,10 +36,7 @@ function parseDetectionDevice(row: HistoryEventItem) {
 }
 
 /** 将模板占位符替换为实际值，返回纯文本消息描述 */
-export function fillMessageTemplate(
-  template: string,
-  values: Record<string, string>
-): string {
+export function fillMessageTemplate(template: string, values: Record<string, string>): string {
   return template.replace(/\{([^}]+)\}/g, (_, key: string) => values[key] ?? `{${key}}`)
 }
 
@@ -69,8 +68,20 @@ const MID_ASSESS_CONDITIONS: RuleCondition[] = [
 
 const HIGH_ASSESS_FALLBACK_CONDITIONS: RuleCondition[] = [
   { id: 'assess-high-speed', property: 'speed', operator: '>', value: '12', nextLogic: 'and' },
-  { id: 'assess-high-stay', property: 'stayDuration', operator: '>', value: '0.25', nextLogic: 'and' },
-  { id: 'assess-high-altitude', property: 'altitude', operator: '<=', value: '100', nextLogic: 'and' },
+  {
+    id: 'assess-high-stay',
+    property: 'stayDuration',
+    operator: '>',
+    value: '0.25',
+    nextLogic: 'and'
+  },
+  {
+    id: 'assess-high-altitude',
+    property: 'altitude',
+    operator: '<=',
+    value: '100',
+    nextLogic: 'and'
+  },
   INTRUSION_ASSESS_CONDITION
 ]
 
@@ -185,6 +196,12 @@ function fallbackPlanName(row: HistoryEventItem) {
 }
 
 function fallbackActionName(row: HistoryEventItem) {
+  const actionValue =
+    row.disposalAction ??
+    resolveCountermeasureActionValue(row.manualDisposalAction) ??
+    resolveCountermeasureActionValue(row.countermeasureDevice) ??
+    resolveCountermeasureActionValue(row.handlingResult)
+  if (actionValue) return countermeasureTimelineLabel(actionValue)
   if (row.handlingResult.includes('迫降')) return '迫降处置'
   if (row.handlingResult.includes('压制')) return '无线电压制'
   if (row.handlingResult.includes('激光')) return '激光打击'
@@ -192,6 +209,12 @@ function fallbackActionName(row: HistoryEventItem) {
 }
 
 function resolveResultEventType(row: HistoryEventItem): EventAttributeEventType {
+  const actionValue =
+    row.disposalAction ??
+    resolveCountermeasureActionValue(row.manualDisposalAction) ??
+    resolveCountermeasureActionValue(row.countermeasureDevice) ??
+    resolveCountermeasureActionValue(row.handlingResult)
+  if (actionValue) return countermeasureResultEventType(actionValue)
   const text = `${row.handlingResult}${row.remark}`
   if (text.includes('迫降')) return '迫降'
   if (text.includes('打击') || text.includes('激光')) return '打击'

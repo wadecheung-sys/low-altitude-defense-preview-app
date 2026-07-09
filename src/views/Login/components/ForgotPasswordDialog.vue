@@ -187,10 +187,10 @@ const submit = async () => {
     </ElForm>
 
     <template #footer>
-      <BaseButton @click="visible = false">{{ t('common.cancel') }}</BaseButton>
       <BaseButton type="primary" :loading="submitLoading" @click="submit">
         {{ t('login.resetSubmit') }}
       </BaseButton>
+      <BaseButton @click="visible = false">{{ t('common.cancel') }}</BaseButton>
     </template>
   </Dialog>
 </template>

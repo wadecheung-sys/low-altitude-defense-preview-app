@@ -1,117 +1,63 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 import { ContentWrap } from '@/components/ContentWrap'
+import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
+import { useTable } from '@/hooks/web/useTable'
+import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import {
-  ElAlert,
   ElColorPicker,
   ElDialog,
   ElForm,
   ElFormItem,
-  ElInput,
-  ElInputNumber,
   ElMessage,
   ElMessageBox,
   ElOption,
   ElSelect,
-  ElTable,
-  ElTableColumn,
+  ElSwitch,
   ElTag,
   ElUpload
 } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { normalizeThreatLevel, THREAT_LEVEL_OPTIONS } from '@/api/lad/threat/threatLevelUtils'
+import { LAD_DICT_THREAT_LEVEL, threatLevelTagType } from '../shared/ladDictHelpers'
+import { useLadDictOptions } from '../shared/useLadDictOptions'
+import { buildThreatLevelFormOptions } from './threatConstants'
 
 defineOptions({ name: 'LadSystemSoundAlarm' })
 
-type ThreatLevel = '低危' | '中危' | '高危' | '无危'
-type AlarmAudioMode = '无' | '蜂鸣.wav' | '连续蜂鸣.wav' | '汽笛.wav' | '语音警示.wav' | string
-type AudioPlayMode = '无' | '单次' | '循环' | '最大持续时间'
-/** 界面视觉动态方式（可扩展叠加，当前：无 / 闪烁 / 常亮） */
-type UiVisualMode = '无' | '闪烁' | '常亮'
-/** 界面告警持续策略（与视觉方式独立配置） */
-type UiDurationMode = '无' | '单次' | '循环' | '最大持续时间'
+type VisualAlarmMode = '闪烁' | '常亮'
+type AudioDurationMode = '单次' | '循环'
 
-const BUILTIN_ALARM_IDS = new Set(['za-low', 'za-middle', 'za-high', 'za-none'])
-
-const AUDIO_PLAY_MODE_OPTIONS: { label: string; value: AudioPlayMode }[] = [
-  { label: '无', value: '无' },
-  { label: '单次', value: '单次' },
-  { label: '循环', value: '循环' },
-  { label: '最大持续时间', value: '最大持续时间' }
-]
-
-const UI_VISUAL_MODE_OPTIONS: { label: string; value: UiVisualMode }[] = [
-  { label: '无', value: '无' },
+const VISUAL_MODE_OPTIONS: { label: string; value: VisualAlarmMode }[] = [
   { label: '闪烁', value: '闪烁' },
   { label: '常亮', value: '常亮' }
 ]
 
-const UI_DURATION_MODE_OPTIONS: { label: string; value: UiDurationMode }[] = [
-  { label: '无', value: '无' },
+const AUDIO_DURATION_OPTIONS: { label: string; value: AudioDurationMode }[] = [
   { label: '单次', value: '单次' },
-  { label: '循环', value: '循环' },
-  { label: '最大持续时间', value: '最大持续时间' }
+  { label: '循环', value: '循环' }
 ]
 
-const DURATION_PRESETS = [60, 120, 300, 600, 900, 1800]
-
-interface AlarmAudioRow {
-  id: string
-  level: ThreatLevel
-  tagColor: string
-  audioMode: AlarmAudioMode
-  audioPlayMode: AudioPlayMode
-  audioMaxDurationSec: number
-  uiVisualMode: UiVisualMode
-  uiDurationMode: UiDurationMode
-  uiMaxDurationSec: number
+const DEFAULT_TAG_COLORS: Record<string, string> = {
+  高危: '#f56c6c',
+  中危: '#e6a23c',
+  低危: '#67c23a',
+  无危: '#909399'
 }
 
-const rows = ref<AlarmAudioRow[]>([
-  {
-    id: 'za-low',
-    level: '低危',
-    tagColor: '#67c23a',
-    audioMode: '无',
-    audioPlayMode: '单次',
-    audioMaxDurationSec: 600,
-    uiVisualMode: '无',
-    uiDurationMode: '无',
-    uiMaxDurationSec: 600
-  },
-  {
-    id: 'za-middle',
-    level: '中危',
-    tagColor: '#e6a23c',
-    audioMode: '蜂鸣.wav',
-    audioPlayMode: '最大持续时间',
-    audioMaxDurationSec: 600,
-    uiVisualMode: '闪烁',
-    uiDurationMode: '最大持续时间',
-    uiMaxDurationSec: 600
-  },
-  {
-    id: 'za-high',
-    level: '高危',
-    tagColor: '#f56c6c',
-    audioMode: '汽笛.wav',
-    audioPlayMode: '循环',
-    audioMaxDurationSec: 600,
-    uiVisualMode: '闪烁',
-    uiDurationMode: '循环',
-    uiMaxDurationSec: 600
-  },
-  {
-    id: 'za-none',
-    level: '无危',
-    tagColor: '#909399',
-    audioMode: '无',
-    audioPlayMode: '无',
-    audioMaxDurationSec: 600,
-    uiVisualMode: '无',
-    uiDurationMode: '无',
-    uiMaxDurationSec: 600
-  }
-])
+interface SoundAlarmRow {
+  id: string
+  level: string
+  tagColor: string
+  audioEnabled: boolean
+  uiFlashEnabled: boolean
+}
+
+interface GlobalAlarmConfig {
+  audioFileName: string
+  audioDurationMode: AudioDurationMode
+  visualMode: VisualAlarmMode
+}
 
 const uploadProps = {
   action: '#',
@@ -119,262 +65,464 @@ const uploadProps = {
   showFileList: false
 }
 
+const globalConfig = reactive<GlobalAlarmConfig>({
+  audioFileName: '蜂鸣.wav',
+  audioDurationMode: '循环',
+  visualMode: '闪烁'
+})
+
+const alarmRows = ref<SoundAlarmRow[]>([
+  {
+    id: 'za-low',
+    level: '低危',
+    tagColor: '#67c23a',
+    audioEnabled: false,
+    uiFlashEnabled: false
+  },
+  {
+    id: 'za-middle',
+    level: '中危',
+    tagColor: '#e6a23c',
+    audioEnabled: true,
+    uiFlashEnabled: true
+  },
+  {
+    id: 'za-high',
+    level: '高危',
+    tagColor: '#f56c6c',
+    audioEnabled: true,
+    uiFlashEnabled: true
+  },
+  {
+    id: 'za-none',
+    level: '无危',
+    tagColor: '#909399',
+    audioEnabled: false,
+    uiFlashEnabled: false
+  }
+])
+
+const selectedIds = ref<string[]>([])
 const editVisible = ref(false)
 const createVisible = ref(false)
-const selectedRows = ref<AlarmAudioRow[]>([])
+
 const createForm = reactive({
   level: '',
   tagColor: '#409eff',
-  audioMode: '无' as AlarmAudioMode,
-  audioPlayMode: '循环' as AudioPlayMode,
-  audioMaxDurationSec: 600,
-  uiVisualMode: '无' as UiVisualMode,
-  uiDurationMode: '无' as UiDurationMode,
-  uiMaxDurationSec: 600
+  audioEnabled: true,
+  uiFlashEnabled: true
 })
+
 const editForm = reactive({
   id: '',
-  level: '低危' as ThreatLevel,
+  level: '',
   tagColor: '#67c23a',
-  audioMode: '无' as AlarmAudioMode,
-  audioPlayMode: '循环' as AudioPlayMode,
-  audioMaxDurationSec: 600,
-  uiVisualMode: '无' as UiVisualMode,
-  uiDurationMode: '无' as UiDurationMode,
-  uiMaxDurationSec: 600
+  audioEnabled: false,
+  uiFlashEnabled: false
 })
 
-function isDeletable(row: AlarmAudioRow) {
-  return !BUILTIN_ALARM_IDS.has(row.id)
-}
+const { entries: threatLevelEntries, reload: reloadThreatLevels } = useLadDictOptions(
+  LAD_DICT_THREAT_LEVEL,
+  true
+)
 
-function levelTagType(level: ThreatLevel): 'info' | 'success' | 'warning' | 'danger' | 'primary' {
-  if (level === '无危') return 'info'
-  if (level === '低危') return 'success'
-  if (level === '中危') return 'warning'
-  if (level === '高危') return 'danger'
-  return 'primary'
-}
+const threatLevelOptions = computed(() => {
+  const fromDict = buildThreatLevelFormOptions(threatLevelEntries.value)
+  return fromDict.length ? fromDict : THREAT_LEVEL_OPTIONS
+})
 
-function hasAudio(mode: AlarmAudioMode) {
-  return mode !== '无' && Boolean(mode)
-}
+const configuredLevelSet = computed(
+  () => new Set(alarmRows.value.map((item) => normalizeThreatLevel(item.level)))
+)
 
-function formatAudioPolicy(row: Pick<AlarmAudioRow, 'audioPlayMode' | 'audioMaxDurationSec'>) {
-  if (row.audioPlayMode === '无') return '无'
-  if (row.audioPlayMode === '最大持续时间') {
-    return `最大持续时间 ${row.audioMaxDurationSec}秒`
+/** 字段管理中存在、且尚未配置告警的威胁等级 */
+const availableThreatLevelOptions = computed(() =>
+  threatLevelOptions.value.filter(
+    (item) => !configuredLevelSet.value.has(normalizeThreatLevel(item.value))
+  )
+)
+
+const { tableRegister, tableState, tableMethods } = useTable({
+  fetchDataApi: async () => {
+    const list = alarmRows.value
+    return { list, total: list.length }
   }
-  return row.audioPlayMode
-}
+})
 
-function formatUiDuration(row: Pick<AlarmAudioRow, 'uiDurationMode' | 'uiMaxDurationSec'>) {
-  if (row.uiDurationMode === '无') return '无'
-  if (row.uiDurationMode === '最大持续时间') {
-    return `最大持续时间 ${row.uiMaxDurationSec}秒`
+const { loading, dataList, total, currentPage, pageSize } = tableState
+const { getList } = tableMethods
+
+onMounted(() => {
+  void reloadThreatLevels()
+})
+
+watch(createVisible, (visible) => {
+  if (visible) {
+    syncCreateFormLevel()
   }
-  return row.uiDurationMode
+})
+
+function syncCreateFormLevel() {
+  const options = availableThreatLevelOptions.value
+  const currentValid = options.some((item) => item.value === createForm.level)
+  if (!currentValid) {
+    createForm.level = options[0]?.value ?? ''
+  }
+  if (createForm.level) {
+    createForm.tagColor = DEFAULT_TAG_COLORS[createForm.level] || createForm.tagColor
+  }
 }
 
-function formatUiAlarmSummary(row: AlarmAudioRow) {
-  const visual = row.uiVisualMode
-  const duration = formatUiDuration(row)
-  if (visual === '无' && duration === '无') return '无'
-  if (duration === '无') return visual
-  if (visual === '无') return duration
-  return `${visual} · ${duration}`
+function switchLabel(enabled: boolean) {
+  return enabled ? '开' : '关'
 }
 
-function openCreate() {
-  createForm.level = ''
-  createForm.tagColor = '#409eff'
-  createForm.audioMode = '无'
-  createForm.audioPlayMode = '循环'
-  createForm.audioMaxDurationSec = 600
-  createForm.uiVisualMode = '无'
-  createForm.uiDurationMode = '无'
-  createForm.uiMaxDurationSec = 600
-  createVisible.value = true
+function onSelectionChange(rows: SoundAlarmRow[]) {
+  selectedIds.value = rows.map((row) => row.id)
 }
 
-function applyUploadedAudio(target: { audioMode: AlarmAudioMode }, file: { name?: string }) {
+function hasGlobalAudio() {
+  return Boolean(globalConfig.audioFileName.trim())
+}
+
+function applyUploadedAudio(file: { name?: string }) {
   const name = file.name?.trim()
-  target.audioMode = (name || '自定义告警音频.wav') as AlarmAudioMode
-  ElMessage.success(`已选择音频文件：${target.audioMode}`)
+  globalConfig.audioFileName = name || '自定义告警音频.wav'
+  ElMessage.success(`已选择音频文件：${globalConfig.audioFileName}`)
   return false
 }
 
-function clearAudio(target: { audioMode: AlarmAudioMode }) {
-  target.audioMode = '无'
-  ElMessage.success('已清空报警音频')
+function clearGlobalAudio() {
+  globalConfig.audioFileName = ''
+  ElMessage.success('已清除告警音频')
+}
+
+function testGlobalAlarm() {
+  if (!hasGlobalAudio()) {
+    ElMessage.warning('请先上传告警音频')
+    return
+  }
+  ElMessage.info(
+    `试鸣：${globalConfig.audioFileName}（持续时间：${globalConfig.audioDurationMode}，告警视觉形式：${globalConfig.visualMode}）`
+  )
+}
+
+async function openCreate() {
+  await reloadThreatLevels()
+  createForm.audioEnabled = true
+  createForm.uiFlashEnabled = true
+  syncCreateFormLevel()
+  createVisible.value = true
+}
+
+function onCreateLevelChange(level: string) {
+  createForm.tagColor = DEFAULT_TAG_COLORS[level] || createForm.tagColor
 }
 
 function submitCreate() {
   const level = createForm.level.trim()
   if (!level) {
-    ElMessage.warning('请输入威胁等级')
+    ElMessage.warning('请选择尚未配置告警的威胁等级')
     return
   }
-  if (rows.value.some((item) => item.level === level)) {
-    ElMessage.warning(`威胁等级“${level}”已存在`)
+  if (
+    !availableThreatLevelOptions.value.some(
+      (item) => normalizeThreatLevel(item.value) === normalizeThreatLevel(level)
+    )
+  ) {
+    ElMessage.warning('所选威胁等级已配置告警，请重新选择')
     return
   }
-  rows.value.push({
+  if (
+    alarmRows.value.some(
+      (item) => normalizeThreatLevel(item.level) === normalizeThreatLevel(level)
+    )
+  ) {
+    ElMessage.warning(`威胁等级「${level}」已存在，不可重复添加`)
+    return
+  }
+  alarmRows.value.push({
     id: `za-${Date.now()}`,
-    level: level as ThreatLevel,
+    level,
     tagColor: createForm.tagColor,
-    audioMode: createForm.audioMode,
-    audioPlayMode: createForm.audioPlayMode,
-    audioMaxDurationSec: createForm.audioMaxDurationSec,
-    uiVisualMode: createForm.uiVisualMode,
-    uiDurationMode: createForm.uiDurationMode,
-    uiMaxDurationSec: createForm.uiMaxDurationSec
+    audioEnabled: createForm.audioEnabled,
+    uiFlashEnabled: createForm.uiFlashEnabled
   })
   createVisible.value = false
-  ElMessage.success(`已新增“${level}”威胁等级`)
+  createForm.level = ''
+  selectedIds.value = selectedIds.value.filter((id) => alarmRows.value.some((row) => row.id === id))
+  ElMessage.success(`已新增「${level}」威胁等级`)
+  getList()
 }
 
-async function deleteRows(targets: AlarmAudioRow[] = selectedRows.value) {
-  const deletable = targets.filter(isDeletable)
-  if (!deletable.length) {
-    ElMessage.warning('请先勾选可删除的新增威胁等级')
+async function batchRemove() {
+  if (!selectedIds.value.length) {
+    ElMessage.warning('请先勾选威胁等级配置')
     return
   }
+  const targets = alarmRows.value.filter((row) => selectedIds.value.includes(row.id))
   try {
     await ElMessageBox.confirm(
-      `确认删除选中的威胁等级“${deletable.map((item) => item.level).join('、')}”吗？`,
-      '删除确认',
-      {
-        type: 'warning',
-        confirmButtonText: '删除',
-        cancelButtonText: '取消'
-      }
+      `确认删除选中的 ${targets.length} 条威胁等级配置吗？`,
+      '批量删除',
+      { type: 'warning' }
     )
   } catch {
     return
   }
-  const ids = new Set(deletable.map((item) => item.id))
-  rows.value = rows.value.filter((item) => !ids.has(item.id))
-  selectedRows.value = selectedRows.value.filter((item) => !ids.has(item.id))
-  ElMessage.success('删除成功')
+  const idSet = new Set(selectedIds.value)
+  alarmRows.value = alarmRows.value.filter((row) => !idSet.has(row.id))
+  selectedIds.value = []
+  ElMessage.success('已删除')
+  getList()
 }
 
-function openEdit(row: AlarmAudioRow) {
+async function removeRow(row: SoundAlarmRow) {
+  try {
+    await ElMessageBox.confirm(`确认删除威胁等级「${row.level}」吗？`, '删除', {
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+  alarmRows.value = alarmRows.value.filter((item) => item.id !== row.id)
+  selectedIds.value = selectedIds.value.filter((id) => id !== row.id)
+  ElMessage.success('已删除')
+  getList()
+}
+
+function openEdit(row: SoundAlarmRow) {
   editForm.id = row.id
   editForm.level = row.level
   editForm.tagColor = row.tagColor
-  editForm.audioMode = row.audioMode
-  editForm.audioPlayMode = row.audioPlayMode
-  editForm.audioMaxDurationSec = row.audioMaxDurationSec
-  editForm.uiVisualMode = row.uiVisualMode
-  editForm.uiDurationMode = row.uiDurationMode
-  editForm.uiMaxDurationSec = row.uiMaxDurationSec
+  editForm.audioEnabled = row.audioEnabled
+  editForm.uiFlashEnabled = row.uiFlashEnabled
   editVisible.value = true
 }
 
 function submitEdit() {
-  const current = rows.value.find((item) => item.id === editForm.id)
+  const current = alarmRows.value.find((item) => item.id === editForm.id)
   if (!current) return
   current.tagColor = editForm.tagColor
-  current.audioMode = editForm.audioMode
-  current.audioPlayMode = editForm.audioPlayMode
-  current.audioMaxDurationSec = editForm.audioMaxDurationSec
-  current.uiVisualMode = editForm.uiVisualMode
-  current.uiDurationMode = editForm.uiDurationMode
-  current.uiMaxDurationSec = editForm.uiMaxDurationSec
+  current.audioEnabled = editForm.audioEnabled
+  current.uiFlashEnabled = editForm.uiFlashEnabled
   editVisible.value = false
   ElMessage.success(`已更新「${current.level}」声光报警配置`)
+  getList()
 }
 
-function testAlarm(row: AlarmAudioRow) {
-  ElMessage.info(
-    `已向「${row.level}」下发联调指令（音频：${row.audioMode} / ${formatAudioPolicy(row)}，界面：${formatUiAlarmSummary(row)}）`
-  )
-}
+const crudSchemas = reactive<CrudSchema[]>([
+  {
+    field: 'selection',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: { type: 'selection' }
+  },
+  {
+    field: 'index',
+    label: '序号',
+    type: 'index',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: { width: 68, align: 'center' }
+  },
+  {
+    field: 'level',
+    label: '威胁等级',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: {
+      minWidth: 140,
+      align: 'center',
+      slots: {
+        default: ({ row }: { row: SoundAlarmRow }) => (
+          <ElTag type={threatLevelTagType(row.level)} size="small" effect="light">
+            {row.level}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
+    field: 'tagColor',
+    label: '标签颜色',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: {
+      minWidth: 140,
+      align: 'center',
+      slots: {
+        default: ({ row }: { row: SoundAlarmRow }) => (
+          <span
+            class="threat-sound-alarm__color-chip"
+            style={{ backgroundColor: row.tagColor }}
+          ></span>
+        )
+      }
+    }
+  },
+  {
+    field: 'audioEnabled',
+    label: '告警音频',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: {
+      minWidth: 140,
+      align: 'center',
+      slots: {
+        default: ({ row }: { row: SoundAlarmRow }) => (
+          <ElTag type={row.audioEnabled ? 'success' : 'info'} size="small" effect="light">
+            {switchLabel(row.audioEnabled)}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
+    field: 'uiFlashEnabled',
+    label: '界面闪烁',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: {
+      minWidth: 140,
+      align: 'center',
+      slots: {
+        default: ({ row }: { row: SoundAlarmRow }) => (
+          <ElTag type={row.uiFlashEnabled ? 'success' : 'info'} size="small" effect="light">
+            {switchLabel(row.uiFlashEnabled)}
+          </ElTag>
+        )
+      }
+    }
+  },
+  {
+    field: 'action',
+    label: '操作',
+    search: { hidden: true },
+    form: { hidden: true },
+    table: {
+      minWidth: 180,
+      align: 'center',
+      fixed: 'right',
+      slots: {
+        default: ({ row }: { row: SoundAlarmRow }) => (
+          <>
+            <BaseButton type="primary" onClick={() => openEdit(row)}>
+              编辑
+            </BaseButton>
+            <BaseButton type="danger" class="ml-8px" onClick={() => removeRow(row)}>
+              删除
+            </BaseButton>
+          </>
+        )
+      }
+    }
+  }
+])
+
+const { allSchemas } = useCrudSchemas(crudSchemas)
 </script>
 
 <template>
   <ContentWrap>
-    <ElAlert
-      class="threat-sound-alarm__page-tip"
-      type="info"
-      :closable="false"
-      show-icon
-    >
-      <p class="threat-sound-alarm__page-tip-text">
-        系统持续监测最高级别报警状态，并展示对应的告警提示反馈，直到对应级别的告警状态消失（或降级）。
-      </p>
-      <p class="threat-sound-alarm__page-tip-text">
-        当前最高级别告警下，若触发新的同级别不同来源告警（如不同无人机），可尝试再次触发告警动态。
-      </p>
-    </ElAlert>
+    <section class="threat-sound-alarm__config">
+      <div class="threat-sound-alarm__config-title">报警配置</div>
+      <div class="threat-sound-alarm__config-grid">
+        <div class="threat-sound-alarm__config-item">
+          <div class="threat-sound-alarm__config-label">告警音频</div>
+          <div class="threat-sound-alarm__config-body">
+            <div class="threat-sound-alarm__audio-row">
+              <span
+                class="threat-sound-alarm__file-name"
+                :class="{ 'is-empty': !hasGlobalAudio() }"
+              >
+                {{ hasGlobalAudio() ? globalConfig.audioFileName : '未上传音频文件' }}
+              </span>
+              <div class="threat-sound-alarm__upload-actions">
+                <ElUpload
+                  v-bind="uploadProps"
+                  accept=".mp3,.wav,.aac"
+                  :before-upload="applyUploadedAudio"
+                >
+                  <BaseButton type="primary">上传</BaseButton>
+                </ElUpload>
+                <BaseButton :disabled="!hasGlobalAudio()" @click="clearGlobalAudio">清除</BaseButton>
+                <BaseButton :disabled="!hasGlobalAudio()" @click="testGlobalAlarm">试鸣</BaseButton>
+              </div>
+            </div>
+            <div class="threat-sound-alarm__config-field">
+              <span class="threat-sound-alarm__config-field-label">持续时间</span>
+              <ElSelect
+                v-model="globalConfig.audioDurationMode"
+                class="threat-sound-alarm__duration-select"
+              >
+                <ElOption
+                  v-for="opt in AUDIO_DURATION_OPTIONS"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </div>
+          </div>
+        </div>
+        <div class="threat-sound-alarm__config-item">
+          <div class="threat-sound-alarm__config-label">告警视觉形式</div>
+          <div class="threat-sound-alarm__config-body threat-sound-alarm__config-body--visual">
+            <ElSelect v-model="globalConfig.visualMode" class="threat-sound-alarm__visual-select">
+              <ElOption
+                v-for="opt in VISUAL_MODE_OPTIONS"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </ElSelect>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <div class="threat-sound-alarm__toolbar">
+    <div class="mb-10px">
       <BaseButton type="primary" @click="openCreate">新增威胁等级</BaseButton>
-      <BaseButton type="danger" @click="deleteRows()">批量删除</BaseButton>
+      <BaseButton type="danger" class="ml-8px" @click="batchRemove">批量删除</BaseButton>
     </div>
 
-    <ElTable :data="rows" border stripe @selection-change="selectedRows = $event">
-      <ElTableColumn type="selection" width="52" :selectable="(row: AlarmAudioRow) => isDeletable(row)" />
-      <ElTableColumn type="index" label="序号" width="65" align="center" />
-      <ElTableColumn prop="level" label="威胁等级" width="120">
-        <template #default="{ row }">
-          <ElTag :type="levelTagType(row.level)">{{ row.level }}</ElTag>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="标签颜色" width="120" align="center">
-        <template #default="{ row }">
-          <span
-            class="threat-sound-alarm__color-chip"
-            :style="{ backgroundColor: row.tagColor }"
-          ></span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="报警音频" min-width="140">
-        <template #default="{ row }">
-          <span class="threat-sound-alarm__plain-value">{{ row.audioMode }}</span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="音频提示原则" min-width="140">
-        <template #default="{ row }">
-          <span class="threat-sound-alarm__plain-value">{{ formatAudioPolicy(row) }}</span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="视觉方式" min-width="100" align="center">
-        <template #default="{ row }">
-          <span class="threat-sound-alarm__plain-value">{{ row.uiVisualMode }}</span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="界面持续" min-width="140" align="center">
-        <template #default="{ row }">
-          <span class="threat-sound-alarm__plain-value">{{ formatUiDuration(row) }}</span>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="操作" width="240" fixed="right">
-        <template #default="{ row }">
-          <BaseButton type="primary" @click="openEdit(row)">编辑</BaseButton>
-          <BaseButton type="primary" class="ml-8px" @click="testAlarm(row)">试鸣</BaseButton>
-          <BaseButton
-            v-if="isDeletable(row)"
-            type="danger"
-            class="ml-8px"
-            @click="deleteRows([row])"
-          >
-            删除
-          </BaseButton>
-        </template>
-      </ElTableColumn>
-    </ElTable>
+    <Table
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :columns="allSchemas.tableColumns"
+      :data="dataList"
+      :loading="loading"
+      :pagination="{ total }"
+      @register="tableRegister"
+      @selection-change="onSelectionChange"
+    />
 
-    <ElDialog v-model="createVisible" title="新增威胁等级" width="520px">
-      <ElForm :model="createForm" label-width="100px" class="threat-sound-alarm__form">
+    <ElDialog v-model="createVisible" title="新增威胁等级" width="480px">
+      <ElForm label-width="100px" class="threat-sound-alarm__form">
         <ElFormItem label="威胁等级" required>
-          <ElInput
+          <ElSelect
             v-model="createForm.level"
-            maxlength="10"
-            placeholder="请输入威胁等级"
+            class="w-full"
             clearable
-          />
+            :placeholder="
+              availableThreatLevelOptions.length
+                ? '请选择威胁等级'
+                : '暂无未配置的威胁等级'
+            "
+            :disabled="!availableThreatLevelOptions.length"
+            @change="onCreateLevelChange"
+          >
+            <ElOption
+              v-for="opt in availableThreatLevelOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </ElSelect>
+          <p v-if="!availableThreatLevelOptions.length" class="threat-sound-alarm__form-hint">
+            字段管理中的威胁等级均已配置告警；删除列表项后可再次新增。
+          </p>
         </ElFormItem>
         <ElFormItem label="标签颜色">
           <div class="threat-sound-alarm__editor">
@@ -382,132 +530,31 @@ function testAlarm(row: AlarmAudioRow) {
             <span class="threat-sound-alarm__color-value">{{ createForm.tagColor }}</span>
           </div>
         </ElFormItem>
-        <ElFormItem label="报警音频">
-          <div class="threat-sound-alarm__upload">
-            <span class="threat-sound-alarm__file-name">{{ createForm.audioMode }}</span>
-            <div class="threat-sound-alarm__upload-actions">
-              <ElUpload
-                v-bind="uploadProps"
-                accept=".mp3,.wav,.aac"
-                :before-upload="(file) => applyUploadedAudio(createForm, file)"
-              >
-                <BaseButton type="primary">上传</BaseButton>
-              </ElUpload>
-              <BaseButton
-                :disabled="!hasAudio(createForm.audioMode)"
-                @click="clearAudio(createForm)"
-              >
-                清空
-              </BaseButton>
-            </div>
-          </div>
+        <ElFormItem label="告警音频">
+          <ElSwitch v-model="createForm.audioEnabled" active-text="开" inactive-text="关" />
         </ElFormItem>
-        <div class="threat-sound-alarm__policy-block">
-          <div class="threat-sound-alarm__policy-title">提示原则 · 报警音频</div>
-          <p class="threat-sound-alarm__policy-hint">
-            可先设定播放原则，上传音频后按所选方式播放（无 / 单次 / 循环 / 最大持续时间）。
-          </p>
-          <ElFormItem label="播放方式">
-            <ElSelect v-model="createForm.audioPlayMode" class="w-full">
-              <ElOption
-                v-for="opt in AUDIO_PLAY_MODE_OPTIONS"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem
-            v-if="createForm.audioPlayMode === '最大持续时间'"
-            label="最大时长"
-          >
-            <ElInputNumber
-              v-model="createForm.audioMaxDurationSec"
-              :min="1"
-              :max="3600"
-              :step="60"
-              controls-position="right"
-              class="threat-sound-alarm__duration-input"
-            />
-            <span class="threat-sound-alarm__unit">秒</span>
-            <div class="threat-sound-alarm__duration-presets">
-              <BaseButton
-                v-for="sec in DURATION_PRESETS"
-                :key="sec"
-                link
-                type="primary"
-                @click="createForm.audioMaxDurationSec = sec"
-              >
-                {{ sec }}s
-              </BaseButton>
-            </div>
-          </ElFormItem>
-        </div>
-        <div class="threat-sound-alarm__policy-block">
-          <div class="threat-sound-alarm__policy-title">提示原则 · 界面视觉</div>
-          <p class="threat-sound-alarm__policy-hint">
-            配置界面视觉动态方式：无、闪烁、常亮。未来可叠加更多视觉样式，与下方「告警持续」独立配置。
-          </p>
-          <ElFormItem label="视觉方式">
-            <ElSelect v-model="createForm.uiVisualMode" class="w-full">
-              <ElOption
-                v-for="opt in UI_VISUAL_MODE_OPTIONS"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-        </div>
-        <div class="threat-sound-alarm__policy-block">
-          <div class="threat-sound-alarm__policy-title">提示原则 · 界面告警持续</div>
-          <p class="threat-sound-alarm__policy-hint">
-            单独配置界面告警的持续策略：无、单次、循环、最大持续时间。
-          </p>
-          <ElFormItem label="持续方式">
-            <ElSelect v-model="createForm.uiDurationMode" class="w-full">
-              <ElOption
-                v-for="opt in UI_DURATION_MODE_OPTIONS"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem v-if="createForm.uiDurationMode === '最大持续时间'" label="最大时长">
-            <ElInputNumber
-              v-model="createForm.uiMaxDurationSec"
-              :min="1"
-              :max="3600"
-              :step="60"
-              controls-position="right"
-              class="threat-sound-alarm__duration-input"
-            />
-            <span class="threat-sound-alarm__unit">秒</span>
-            <div class="threat-sound-alarm__duration-presets">
-              <BaseButton
-                v-for="sec in DURATION_PRESETS"
-                :key="sec"
-                link
-                type="primary"
-                @click="createForm.uiMaxDurationSec = sec"
-              >
-                {{ sec }}s
-              </BaseButton>
-            </div>
-          </ElFormItem>
-        </div>
+        <ElFormItem label="界面闪烁">
+          <ElSwitch v-model="createForm.uiFlashEnabled" active-text="开" inactive-text="关" />
+        </ElFormItem>
       </ElForm>
       <template #footer>
+        <BaseButton
+          type="primary"
+          :disabled="!createForm.level || !availableThreatLevelOptions.length"
+          @click="submitCreate"
+        >
+          确定
+        </BaseButton>
         <BaseButton @click="createVisible = false">取消</BaseButton>
-        <BaseButton type="primary" @click="submitCreate">确定新增</BaseButton>
       </template>
     </ElDialog>
 
-    <ElDialog v-model="editVisible" title="编辑告警配置" width="520px">
+    <ElDialog v-model="editVisible" title="编辑告警配置" width="480px">
       <ElForm label-width="100px" class="threat-sound-alarm__form">
         <ElFormItem label="威胁等级">
-          <span>{{ editForm.level }}</span>
+          <ElTag :type="threatLevelTagType(editForm.level)" size="small" effect="light">
+            {{ editForm.level }}
+          </ElTag>
         </ElFormItem>
         <ElFormItem label="标签颜色">
           <div class="threat-sound-alarm__editor">
@@ -515,151 +562,95 @@ function testAlarm(row: AlarmAudioRow) {
             <span class="threat-sound-alarm__color-value">{{ editForm.tagColor }}</span>
           </div>
         </ElFormItem>
-        <ElFormItem label="报警音频">
-          <div class="threat-sound-alarm__upload">
-            <span class="threat-sound-alarm__file-name">{{ editForm.audioMode }}</span>
-            <div class="threat-sound-alarm__upload-actions">
-              <ElUpload
-                v-bind="uploadProps"
-                accept=".mp3,.wav,.aac"
-                :before-upload="(file) => applyUploadedAudio(editForm, file)"
-              >
-                <BaseButton type="primary">上传</BaseButton>
-              </ElUpload>
-              <BaseButton
-                :disabled="!hasAudio(editForm.audioMode)"
-                @click="clearAudio(editForm)"
-              >
-                清空
-              </BaseButton>
-            </div>
-          </div>
+        <ElFormItem label="告警音频">
+          <ElSwitch v-model="editForm.audioEnabled" active-text="开" inactive-text="关" />
         </ElFormItem>
-        <div class="threat-sound-alarm__policy-block">
-          <div class="threat-sound-alarm__policy-title">提示原则 · 报警音频</div>
-          <p class="threat-sound-alarm__policy-hint">
-            可先设定播放原则，上传音频后按所选方式播放（无 / 单次 / 循环 / 最大持续时间）。
-          </p>
-          <ElFormItem label="播放方式">
-            <ElSelect v-model="editForm.audioPlayMode" class="w-full">
-              <ElOption
-                v-for="opt in AUDIO_PLAY_MODE_OPTIONS"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem v-if="editForm.audioPlayMode === '最大持续时间'" label="最大时长">
-            <ElInputNumber
-              v-model="editForm.audioMaxDurationSec"
-              :min="1"
-              :max="3600"
-              :step="60"
-              controls-position="right"
-              class="threat-sound-alarm__duration-input"
-            />
-            <span class="threat-sound-alarm__unit">秒</span>
-            <div class="threat-sound-alarm__duration-presets">
-              <BaseButton
-                v-for="sec in DURATION_PRESETS"
-                :key="sec"
-                link
-                type="primary"
-                @click="editForm.audioMaxDurationSec = sec"
-              >
-                {{ sec }}s
-              </BaseButton>
-            </div>
-          </ElFormItem>
-        </div>
-        <div class="threat-sound-alarm__policy-block">
-          <div class="threat-sound-alarm__policy-title">提示原则 · 界面视觉</div>
-          <p class="threat-sound-alarm__policy-hint">
-            配置界面视觉动态方式：无、闪烁、常亮。未来可叠加更多视觉样式，与下方「告警持续」独立配置。
-          </p>
-          <ElFormItem label="视觉方式">
-            <ElSelect v-model="editForm.uiVisualMode" class="w-full">
-              <ElOption
-                v-for="opt in UI_VISUAL_MODE_OPTIONS"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-        </div>
-        <div class="threat-sound-alarm__policy-block">
-          <div class="threat-sound-alarm__policy-title">提示原则 · 界面告警持续</div>
-          <p class="threat-sound-alarm__policy-hint">
-            单独配置界面告警的持续策略：无、单次、循环、最大持续时间。
-          </p>
-          <ElFormItem label="持续方式">
-            <ElSelect v-model="editForm.uiDurationMode" class="w-full">
-              <ElOption
-                v-for="opt in UI_DURATION_MODE_OPTIONS"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem v-if="editForm.uiDurationMode === '最大持续时间'" label="最大时长">
-            <ElInputNumber
-              v-model="editForm.uiMaxDurationSec"
-              :min="1"
-              :max="3600"
-              :step="60"
-              controls-position="right"
-              class="threat-sound-alarm__duration-input"
-            />
-            <span class="threat-sound-alarm__unit">秒</span>
-            <div class="threat-sound-alarm__duration-presets">
-              <BaseButton
-                v-for="sec in DURATION_PRESETS"
-                :key="sec"
-                link
-                type="primary"
-                @click="editForm.uiMaxDurationSec = sec"
-              >
-                {{ sec }}s
-              </BaseButton>
-            </div>
-          </ElFormItem>
-        </div>
+        <ElFormItem label="界面闪烁">
+          <ElSwitch v-model="editForm.uiFlashEnabled" active-text="开" inactive-text="关" />
+        </ElFormItem>
       </ElForm>
       <template #footer>
-        <BaseButton @click="editVisible = false">取消</BaseButton>
         <BaseButton type="primary" @click="submitEdit">确定</BaseButton>
+        <BaseButton @click="editVisible = false">取消</BaseButton>
       </template>
     </ElDialog>
   </ContentWrap>
 </template>
 
 <style scoped lang="less">
-.threat-sound-alarm__toolbar {
+.threat-sound-alarm__config {
+  padding: 14px 16px 16px;
+  margin-bottom: 16px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+}
+
+.threat-sound-alarm__config-title {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.threat-sound-alarm__config-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.threat-sound-alarm__config-item {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  margin-top: 12px;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
 }
 
-.threat-sound-alarm__page-tip {
-  margin-bottom: 0;
-}
-
-.threat-sound-alarm__page-tip-text {
-  margin: 0;
+.threat-sound-alarm__config-label {
   font-size: 13px;
-  line-height: 1.6;
+  font-weight: 600;
   color: var(--el-text-color-regular);
-
-  & + & {
-    margin-top: 6px;
-  }
 }
 
-.threat-sound-alarm__color-chip {
+.threat-sound-alarm__config-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+
+.threat-sound-alarm__config-body--visual {
+  align-items: flex-start;
+}
+
+.threat-sound-alarm__config-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.threat-sound-alarm__config-field-label {
+  flex-shrink: 0;
+  width: 64px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.threat-sound-alarm__duration-select,
+.threat-sound-alarm__visual-select {
+  width: 100%;
+  max-width: 280px;
+}
+
+:deep(.threat-sound-alarm__color-chip) {
   display: inline-block;
   width: 18px;
   height: 18px;
@@ -678,25 +669,37 @@ function testAlarm(row: AlarmAudioRow) {
   font-size: 13px;
 }
 
-.threat-sound-alarm__plain-value {
-  color: var(--el-text-color-regular);
-}
-
-.threat-sound-alarm__upload {
+.threat-sound-alarm__audio-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 10px;
   width: 100%;
+  min-width: 0;
 }
 
 .threat-sound-alarm__file-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 10px;
+  overflow: hidden;
   color: var(--el-text-color-regular);
-  word-break: break-all;
+  font-size: 13px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+
+  &.is-empty {
+    color: var(--el-text-color-secondary);
+  }
 }
 
 .threat-sound-alarm__upload-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
   gap: 8px;
   align-items: center;
 }
@@ -705,47 +708,16 @@ function testAlarm(row: AlarmAudioRow) {
   margin-bottom: 14px;
 }
 
-.threat-sound-alarm__policy-block {
-  padding: 12px 14px;
-  margin-bottom: 12px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
-}
-
-.threat-sound-alarm__policy-block :deep(.el-form-item:last-child) {
-  margin-bottom: 0;
-}
-
-.threat-sound-alarm__policy-title {
-  margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.threat-sound-alarm__policy-hint {
-  margin: 0 0 12px;
+.threat-sound-alarm__form-hint {
+  margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.5;
   color: var(--el-text-color-secondary);
 }
 
-.threat-sound-alarm__duration-input {
-  width: 140px;
-}
-
-.threat-sound-alarm__unit {
-  margin-left: 8px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.threat-sound-alarm__duration-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  width: 100%;
-  margin-top: 8px;
+@media (max-width: 900px) {
+  .threat-sound-alarm__config-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -614,8 +614,8 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       </div>
 
       <template #footer>
-        <BaseButton @click="exportVisible = false">取消</BaseButton>
         <BaseButton type="primary" :loading="exportLoading" @click="exportReport">确定导出</BaseButton>
+        <BaseButton @click="exportVisible = false">取消</BaseButton>
       </template>
     </Dialog>
   </ContentWrap>

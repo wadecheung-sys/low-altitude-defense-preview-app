@@ -90,7 +90,7 @@ const onSubmit = async () => {
     <div class="confirm-layout">
       <section class="optical-panel">
         <div class="optical-toolbar">
-          <span><i class="live-dot"></i>光电-01 实时画面</span>
+          <span><i class="live-dot"></i>光电-01 录像画面</span>
           <span>EO / 4K / 12.6x</span>
         </div>
         <div class="optical-view">
@@ -165,8 +165,8 @@ const onSubmit = async () => {
     </div>
 
     <template #footer>
+      <BaseButton type="primary" :loading="loading" @click="onSubmit">确认</BaseButton>
       <BaseButton @click="visible = false">取消</BaseButton>
-      <BaseButton type="primary" :loading="loading" @click="onSubmit">提交核查</BaseButton>
     </template>
   </Dialog>
 </template>

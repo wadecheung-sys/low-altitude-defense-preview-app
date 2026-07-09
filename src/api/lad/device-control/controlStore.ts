@@ -1,8 +1,5 @@
-import type {
-  DeviceCommandLogEntry,
-  DeviceCommandRequest,
-  DeviceCommandResult
-} from './types'
+import type { DeviceCommandLogEntry, DeviceCommandRequest, DeviceCommandResult } from './types'
+import { isDemoExecutableDeviceModel } from '@/constants/deviceCatalog'
 
 const commandLog: DeviceCommandLogEntry[] = []
 
@@ -24,17 +21,25 @@ function buildMessage(req: DeviceCommandRequest): string {
   return `指令「${req.actionLabel}」已提交至供应商上报链路，目标：${name}`
 }
 
+function buildPrecheckMessage(req: DeviceCommandRequest): string {
+  const name = req.deviceName || req.deviceModel || req.deviceRecordId
+  return `设备「${name}」暂未开放演示指令下发`
+}
+
 export function dispatchDeviceCommand(req: DeviceCommandRequest): DeviceCommandResult {
   const dispatchedAt = formatNow()
   const commandId = nextCommandId()
   const channel = req.channel ?? 'supplier'
-  const message = buildMessage(req)
+  const accepted = isDemoExecutableDeviceModel(req.deviceModel)
+  const status = accepted ? 'accepted' : 'precheck_failed'
+  const message = accepted ? buildMessage(req) : buildPrecheckMessage(req)
 
   const entry: DeviceCommandLogEntry = {
     ...req,
     id: commandId,
     channel,
-    accepted: true,
+    accepted,
+    status,
     message,
     dispatchedAt
   }
@@ -42,8 +47,9 @@ export function dispatchDeviceCommand(req: DeviceCommandRequest): DeviceCommandR
   if (commandLog.length > 200) commandLog.length = 200
 
   return {
-    accepted: true,
+    accepted,
     commandId,
+    status,
     message,
     channel,
     dispatchedAt

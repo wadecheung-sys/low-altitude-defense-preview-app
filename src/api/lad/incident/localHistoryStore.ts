@@ -2,8 +2,12 @@ import { buildDisposalTimeline } from './disposalTimeline'
 import { isHandlingEnded, normalizeHandlingStatus } from './handlingStatusUtils'
 import { BIRD_NUISANCE_DEMO_EVENT_ID, resolveHistoryTargetType } from './historyTargetType'
 import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore'
-import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
+import { resolveCountermeasureActionValue } from '@/constants/deviceCatalog'
 import { normalizeThreatLevel } from '@/api/lad/threat/threatLevelUtils'
+import {
+  LAD_TARGET_PROFILES,
+  type LadTargetProfile
+} from '@/api/lad/shared/targetProfiles'
 import type {
   HistoryEventDetail,
   HistoryEventItem,
@@ -15,7 +19,6 @@ import type {
   TrajectoryPoint
 } from './types'
 
-const models = LAD_TARGET_MODELS.filter((item) => item !== '其他')
 const trajectories = ['直线逼近', '盘旋', '悬停', '快速穿越', '不规则']
 const threatLevels: ThreatLevel[] = ['高危', '中危', '低危', '无危']
 const handlingResults = ['驱离成功', '迫降成功', '激光打击成功', '无线电压制成功']
@@ -25,18 +28,9 @@ const zoneAreaIds = ['ar-10001', 'ar-10002', 'ar-10003', 'ar-10003']
 const dataSources = ['雷达+无线电融合', '雷达单源', '无线电侦测', '光电跟踪', '多源融合节点']
 const countermeasures = ['干扰-01', '--', '诱骗-02', '干扰-01', '激光-01']
 
-const TARGET_COUNT = 24
 const LIST_TYPE_STORAGE_KEY = 'lad-history-event-list-types'
 
-const targetProfiles = Array.from({ length: TARGET_COUNT }, (_, index) => {
-  const hasUavSn = index % 4 !== 0
-  return {
-    targetId: `TG-2024-${String(index + 1).padStart(4, '0')}`,
-    uavSn: hasUavSn ? `1581F4${String(100000 + index * 137).slice(0, 6)}` : '未解析',
-    targetModel: models[index % models.length],
-    eventCount: 2 + (index % 4)
-  }
-})
+const targetProfiles: LadTargetProfile[] = LAD_TARGET_PROFILES
 
 function hashSeed(id: string): number {
   let h = 0
@@ -114,6 +108,11 @@ function buildSeedList() {
               : i % 7 === 0
                 ? '多源轨迹已合并'
                 : ''
+      const manualDisposalAction = forceManualExecution ? '无线电干扰' : undefined
+      const disposalAction =
+        resolveCountermeasureActionValue(manualDisposalAction) ??
+        resolveCountermeasureActionValue(countermeasureDevice) ??
+        resolveCountermeasureActionValue(handlingResult)
 
       const rowTargetModel = isBirdNuisanceDemo ? '未知型号' : profile.targetModel
       const rowUavSn = isBirdNuisanceDemo ? '未解析' : profile.uavSn
@@ -142,9 +141,7 @@ function buildSeedList() {
         pilotLocation: '未定位',
         targetLocation: `E:${lng} N:${lat}`,
         approachingDistance:
-          approachMeters >= 1000
-            ? `${(approachMeters / 1000).toFixed(2)}km`
-            : `${approachMeters}m`,
+          approachMeters >= 1000 ? `${(approachMeters / 1000).toFixed(2)}km` : `${approachMeters}m`,
         assessmentMetrics: {
           speed: Number(
             (isBirdNuisanceDemo ? 1.2 + (seedNum % 8) / 10 : 6 + (seedNum % 140) / 10).toFixed(1)
@@ -171,6 +168,7 @@ function buildSeedList() {
         uavSn: rowUavSn,
         detectionDevice: detectionDevices[i % detectionDevices.length],
         countermeasureDevice,
+        disposalAction,
         disposalExecutionSource: forceManualExecution
           ? 'manual'
           : keepOpen || forceEnded || countermeasureDevice === '--'
@@ -178,7 +176,7 @@ function buildSeedList() {
             : 'plan',
         ...(forceManualExecution
           ? {
-              manualDisposalAction: '无线电干扰',
+              manualDisposalAction,
               disposalOperator: '值班员张三'
             }
           : {}),
@@ -252,18 +250,22 @@ function applyConfirm(
       row.handlingStatus = '进行中'
       row.handlingResult = '自动监控中'
       row.countermeasureDevice = '光电-01'
+      row.disposalAction = undefined
     } else if (threatLevel === '中危') {
       row.handlingStatus = '已结束'
       row.handlingResult = '驱离成功'
       row.countermeasureDevice = '干扰-01'
+      row.disposalAction = resolveCountermeasureActionValue(row.countermeasureDevice)
     } else if (threatLevel === '高危') {
       row.handlingStatus = '已结束'
       row.handlingResult = '激光打击成功'
       row.countermeasureDevice = '激光-01'
+      row.disposalAction = resolveCountermeasureActionValue(row.countermeasureDevice)
     } else {
       row.handlingStatus = '进行中'
       row.handlingResult = '待执行'
       row.countermeasureDevice = '--'
+      row.disposalAction = undefined
     }
     row.remark = remark || `人工核查真实入侵，威胁等级${threatLevel}`
     row.historyTargetType = resolveHistoryTargetType(row)
@@ -275,6 +277,7 @@ function applyConfirm(
     row.handlingStatus = '已结束'
     row.handlingResult = '飞鸟虚警过滤'
     row.countermeasureDevice = '--'
+    row.disposalAction = undefined
     row.historyTargetType = '躁扰信号-飞鸟'
     row.targetModel = '未知型号'
     row.uavSn = '未解析'
@@ -312,9 +315,16 @@ function buildHistoryEventDetail(row: HistoryEventItem): HistoryEventDetail {
     ...row,
     pilotConfidence: '--',
     zoneName: ['核心防护区A区', '缓冲区B区', '管制空域C区'][seed % 3],
-    frequencyInfo: row.historyTargetType === '躁扰信号-飞鸟' ? '--' : seed % 2 === 0 ? '2.4GHz + 5.8GHz' : '5.8GHz',
+    frequencyInfo:
+      row.historyTargetType === '躁扰信号-飞鸟'
+        ? '--'
+        : seed % 2 === 0
+          ? '2.4GHz + 5.8GHz'
+          : '5.8GHz',
     targetType:
-      row.historyTargetType === '躁扰信号-飞鸟' || row.targetModel === '未知型号' ? '未知' : '多旋翼',
+      row.historyTargetType === '躁扰信号-飞鸟' || row.targetModel === '未知型号'
+        ? '未知'
+        : '多旋翼',
     disposalDetail: `${row.handlingResult}；反制设备：${row.countermeasureDevice}`,
     disposalTimeline: buildDisposalTimeline(row),
     pilotPos,

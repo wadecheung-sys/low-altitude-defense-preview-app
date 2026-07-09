@@ -1,14 +1,12 @@
 <script setup lang="tsx">
 import { reactive, ref, unref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
-import { BaseButton } from '@/components/Button'
 import type { FormSchema } from '@/components/Form'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { deleteMessageCenterApi, getMessageCenterListApi } from '@/api/lad/message'
+import { getMessageCenterListApi } from '@/api/lad/message'
 import type { MessageCenterItem } from '@/api/lad/message/types'
 import {
   MESSAGE_SEARCH_COL,
@@ -20,7 +18,6 @@ import {
 defineOptions({ name: 'LadMessageCenterList' })
 
 const searchParams = ref<Recordable>({})
-const selectedIds = ref<string[]>([])
 
 const searchSchema: FormSchema[] = [
   {
@@ -72,30 +69,6 @@ const setSearchParams = (params: Recordable) => {
   getList()
 }
 
-function onSelectionChange(rows: MessageCenterItem[]) {
-  selectedIds.value = rows.map((row) => row.id)
-}
-
-async function batchRemove() {
-  if (!selectedIds.value.length) {
-    ElMessage.warning('请先勾选需要删除的消息')
-    return
-  }
-  try {
-    await ElMessageBox.confirm(
-      `确认删除选中的 ${selectedIds.value.length} 条消息吗？`,
-      '批量删除',
-      { type: 'warning' }
-    )
-  } catch {
-    return
-  }
-  await deleteMessageCenterApi({ ids: [...selectedIds.value] })
-  selectedIds.value = []
-  ElMessage.success('删除成功')
-  getList()
-}
-
 const { tableRegister, tableState, tableMethods } = useTable({
   fetchDataApi: async () => {
     const { currentPage, pageSize } = tableState
@@ -128,11 +101,6 @@ function renderContent(row: MessageCenterItem) {
 }
 
 const crudSchemas = reactive<CrudSchema[]>([
-  {
-    field: 'selection',
-    search: { hidden: true },
-    table: { type: 'selection' }
-  },
   {
     field: 'index',
     label: '序号',
@@ -180,10 +148,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
   <ContentWrap>
     <Search :schema="searchSchema" @search="setSearchParams" @reset="setSearchParams" />
 
-    <div class="mb-10px">
-      <BaseButton type="danger" @click="batchRemove">批量删除</BaseButton>
-    </div>
-
     <Table
       v-model:current-page="currentPage"
       v-model:page-size="pageSize"
@@ -192,7 +156,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       :loading="loading"
       :pagination="{ total }"
       @register="tableRegister"
-      @selection-change="onSelectionChange"
     />
   </ContentWrap>
 </template>

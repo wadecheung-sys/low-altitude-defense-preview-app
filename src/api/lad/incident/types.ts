@@ -1,4 +1,5 @@
 import type { ThreatLevelLabel } from '../threat/threatLevelUtils'
+import type { CountermeasureActionValue } from '@/constants/deviceCatalog'
 
 export type ThreatLevel = ThreatLevelLabel
 
@@ -56,6 +57,8 @@ export interface HistoryEventItem {
   detectionDevice: string
   countermeasureDevice: string
   disposalExecutionSource: DisposalExecutionSource
+  /** 结构化处置动作；中文展示仍由别名/字典生成 */
+  disposalAction?: CountermeasureActionValue
   manualDisposalAction?: string
   disposalOperator?: string
   handlingResult: string

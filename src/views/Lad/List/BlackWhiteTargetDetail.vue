@@ -5,13 +5,11 @@ import type { ManagedListType } from '@/api/lad/list/listTargetKind'
 import { formatValidUntilDisplay } from '@/api/lad/list/validUntilUtils'
 import { displayManagedListType } from '@/api/lad/list/listTargetKind'
 import { getHistoryEventListApi } from '@/api/lad/incident'
-import type { HistoryEventItem, ThreatLevel } from '@/api/lad/incident/types'
+import type { HistoryEventItem } from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import { ContentWrap } from '@/components/ContentWrap'
-import { Icon } from '@/components/Icon'
 import { Table } from '@/components/Table'
-import { LAD_HOME_PATH } from '@/constants/lad'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import {
@@ -25,12 +23,11 @@ import {
   ElMessageBox,
   ElOption,
   ElSelect,
-  ElTag,
-  ElTooltip
+  ElTag
 } from 'element-plus'
-import { computed, onUnmounted, reactive, ref, unref, watch } from 'vue'
+import { computed, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { handlingStatusDisplay, isHandlingInProgress } from '../shared/ladDictHelpers'
+import { handlingStatusDisplay, threatLevelDisplay, threatLevelTagType, countermeasureDeviceDisplay, handlingStatusTagType, verificationMethodOf, verificationMethodTagType } from '../shared/ladDictHelpers'
 
 defineOptions({
   name: 'LadBlackWhiteTargetDetail'
@@ -45,90 +42,7 @@ const loadError = ref('')
 
 const recordId = computed(() => route.params.id as string)
 
-/** 名单前列表示例：模拟正在发生的飞行探测 */
-const LIVE_FLIGHT_RECORD_IDS = ['bw-10001', 'bw-10002', 'bw-10003']
-
-const LIVE_FLIGHT_TOOLTIP =
-  '最近探测包含正在发生的飞行行为记录，探测时间、无人机位置等信息会随设备飞行持续更新。'
-
-const enableLiveFlight = computed(() => LIVE_FLIGHT_RECORD_IDS.includes(recordId.value))
-
-type PositionParts = { lng: number; lat: number; alt: number }
-
-function parsePosition(pos: string): PositionParts | null {
-  const match = pos.match(/E:([\d.]+).*N:([\d.]+).*?(\d+)m/)
-  if (!match) return null
-  return {
-    lng: Number(match[1]),
-    lat: Number(match[2]),
-    alt: Number(match[3])
-  }
-}
-
-function formatPosition({ lng, lat, alt }: PositionParts) {
-  return `E:${lng.toFixed(4)}，N:${lat.toFixed(4)}（海拔${Math.round(alt)}m）`
-}
-
-function formatNow() {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
-
-const liveSnapshot = reactive({
-  observedAt: '',
-  lastPosition: '',
-  active: false
-})
-
-let flightTimer: ReturnType<typeof setInterval> | undefined
-
-function stopLiveFlight() {
-  if (flightTimer) {
-    clearInterval(flightTimer)
-    flightTimer = undefined
-  }
-  liveSnapshot.active = false
-}
-
-function hashSeed(id: string): number {
-  let h = 0
-  for (let i = 0; i < id.length; i++) {
-    h = (h * 31 + id.charCodeAt(i)) | 0
-  }
-  return Math.abs(h)
-}
-
-function startLiveFlight(base: BlackWhiteTargetDetail) {
-  stopLiveFlight()
-  const seed = hashSeed(base.id)
-  const parts = parsePosition(base.lastPosition) ?? { lng: 113.39, lat: 23.08, alt: 88 }
-  liveSnapshot.observedAt = formatNow()
-  liveSnapshot.lastPosition = formatPosition(parts)
-  liveSnapshot.active = true
-
-  let tick = 0
-  flightTimer = setInterval(() => {
-    tick += 1
-    const angle = (seed % 360) * 0.01 + tick * 0.31
-    parts.lng += Math.sin(angle) * 0.0008 + Math.cos(angle * 1.7) * 0.0003
-    parts.lat += Math.cos(angle) * 0.0006 + Math.sin(angle * 1.3) * 0.0002
-    parts.alt += Math.sin(angle * 2) * 0.8
-    parts.alt = Math.max(30, Math.min(320, parts.alt))
-    liveSnapshot.observedAt = formatNow()
-    liveSnapshot.lastPosition = formatPosition(parts)
-  }, 2500)
-}
-
-const snapshotObservedAt = computed(() => {
-  if (enableLiveFlight.value && liveSnapshot.active) return liveSnapshot.observedAt
-  return detail.value?.lastObservedAt || detail.value?.updatedAt || '—'
-})
-
-const snapshotLastPosition = computed(() => {
-  if (enableLiveFlight.value && liveSnapshot.active) return liveSnapshot.lastPosition
-  return detail.value?.lastPosition ?? '—'
-})
+const latestEvent = ref<HistoryEventItem | null>(null)
 
 const eventFilters = reactive({
   discoveredAtRange: [] as string[],
@@ -153,15 +67,7 @@ const dataSourceOptions = [
   { label: '多源融合节点', value: '多源融合节点' }
 ]
 
-const threatTagType = (level: ThreatLevel) => {
-  const map: Record<ThreatLevel, 'danger' | 'warning' | 'success' | 'info'> = {
-    高危: 'danger',
-    中危: 'warning',
-    低危: 'success',
-    无危: 'info'
-  }
-  return map[level] ?? 'info'
-}
+const threatTagType = threatLevelTagType
 
 const listTypeTag = (type: ManagedListType) => {
   const map: Record<ManagedListType, 'danger' | 'success'> = {
@@ -171,12 +77,27 @@ const listTypeTag = (type: ManagedListType) => {
   return map[type]
 }
 
-/** 进行中且尚无处置记录时，说明为「未处置」或留空 */
-function disposalDetailText(row: BlackWhiteTargetDetail): string {
-  if (isHandlingInProgress(row.handlingStatus) && !row.disposalDetail?.trim()) {
-    return '未处置'
+function formatEventRemark(remark: string): string {
+  const text = remark.replace('人工确认', '人工核查')
+  if (text === '等待值守人员确认' || text === '等待值守人员人工核查') return '—'
+  return text.trim() || '—'
+}
+
+async function fetchLatestEvent() {
+  const d = detail.value
+  if (!d) {
+    latestEvent.value = null
+    return
   }
-  return row.disposalDetail?.trim() || '—'
+  const res = await getHistoryEventListApi({
+    pageIndex: 1,
+    pageSize: 100,
+    targetId: d.targetId
+  })
+  const list = res.data.list
+  latestEvent.value = list.length
+    ? [...list].sort((a, b) => b.discoveredAt.localeCompare(a.discoveredAt))[0]
+    : null
 }
 
 const fetchDetail = async () => {
@@ -205,7 +126,6 @@ const eventQueryParams = computed(() => {
   const range = eventFilters.discoveredAtRange
   return {
     targetId: d.targetId,
-    uavSn: d.sn,
     discoveredAtStart: range?.[0],
     discoveredAtEnd: range?.[1],
     zoneName: eventFilters.zoneName || undefined,
@@ -253,6 +173,9 @@ watch(
     if (id) {
       currentPage.value = 1
       getList()
+      fetchLatestEvent()
+    } else {
+      latestEvent.value = null
     }
   }
 )
@@ -282,18 +205,6 @@ const onRemoveFromList = async () => {
   goBackList()
 }
 
-const goCommandScreen = () => {
-  if (!detail.value) return
-  push({
-    path: LAD_HOME_PATH,
-    query: {
-      locate: '1',
-      targetId: detail.value.targetId,
-      sn: detail.value.sn
-    }
-  })
-}
-
 const onEventDetail = (row: HistoryEventItem) => {
   push({
     path: `/lad/list/incident/target/${row.id}`
@@ -314,32 +225,29 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { showOverflowTooltip: true }
   },
   {
-    field: 'endedAt',
-    label: '最后更新时间',
+    field: 'handledAt',
+    label: '处置时间',
     minWidth: 168,
     table: { showOverflowTooltip: true }
   },
   {
-    field: 'duration',
-    label: '持续时长',
-    minWidth: 96
-  },
-  {
-    field: 'zoneName',
-    label: '所在区域',
-    minWidth: 140,
-    table: { showOverflowTooltip: true }
-  },
-  {
-    field: 'targetLocation',
-    label: '目标位置',
-    minWidth: 150,
-    table: { showOverflowTooltip: true }
+    field: 'threatLevel',
+    label: '威胁等级',
+    minWidth: 92,
+    table: {
+      slots: {
+        default: (data: { row: HistoryEventItem }) => (
+          <ElTag type={threatLevelTagType(data.row.threatLevel)} size="small" effect="light">
+            {threatLevelDisplay(data.row.threatLevel)}
+          </ElTag>
+        )
+      }
+    }
   },
   {
     field: 'pilotLocation',
     label: '飞手位置',
-    minWidth: 150,
+    minWidth: 112,
     table: {
       showOverflowTooltip: true,
       slots: {
@@ -353,21 +261,64 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
+    field: 'manualConfirmStatus',
+    label: '验证方式',
+    minWidth: 108,
+    table: {
+      slots: {
+        default: (data: { row: HistoryEventItem }) => {
+          const method = verificationMethodOf(data.row.manualConfirmStatus)
+          return (
+            <ElTag type={verificationMethodTagType(method)} effect="light">
+              {method}
+            </ElTag>
+          )
+        }
+      }
+    }
+  },
+  {
+    field: 'detectionDevice',
+    label: '探测设备',
+    minWidth: 140,
+    table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'countermeasureDevice',
+    label: '反制设备',
+    minWidth: 130,
+    table: {
+      showOverflowTooltip: true,
+      slots: {
+        default: (data: { row: HistoryEventItem }) =>
+          countermeasureDeviceDisplay(data.row.countermeasureDevice)
+      }
+    }
+  },
+  {
     field: 'handlingStatus',
     label: '处置状态',
     minWidth: 96,
     table: {
       slots: {
-        default: (data: { row: HistoryEventItem }) =>
-          handlingStatusDisplay(data.row.handlingStatus)
+        default: (data: { row: HistoryEventItem }) => (
+          <ElTag type={handlingStatusTagType(data.row.handlingStatus)} effect="light">
+            {handlingStatusDisplay(data.row.handlingStatus)}
+          </ElTag>
+        )
       }
     }
   },
   {
-    field: 'dataSource',
-    label: '数据来源',
-    minWidth: 140,
-    table: { showOverflowTooltip: true }
+    field: 'remark',
+    label: '备注',
+    minWidth: 120,
+    table: {
+      showOverflowTooltip: true,
+      slots: {
+        default: (data: { row: HistoryEventItem }) => formatEventRemark(data.row.remark)
+      }
+    }
   },
   {
     field: 'action',
@@ -395,16 +346,6 @@ watch(
   },
   { immediate: true }
 )
-
-watch(
-  [() => detail.value, enableLiveFlight],
-  ([d, live]) => {
-    stopLiveFlight()
-    if (d && live) startLiveFlight(d)
-  }
-)
-
-onUnmounted(stopLiveFlight)
 </script>
 
 <template>
@@ -468,80 +409,42 @@ onUnmounted(stopLiveFlight)
       <ContentWrap class="target-detail-events" title="历史事件信息">
         <section class="target-detail-events__snapshot">
           <div class="target-detail-events__snapshot-title-row">
-            <div class="target-detail-events__snapshot-title-left">
-              <span class="target-detail-events__snapshot-title">最近一次探测</span>
-              <ElTooltip :content="LIVE_FLIGHT_TOOLTIP" effect="dark" placement="right">
-                <Icon
-                  class="target-detail-events__snapshot-tip"
-                  icon="vi-bi:question-circle-fill"
-                  :size="14"
-                />
-              </ElTooltip>
-              <ElTag v-if="enableLiveFlight" type="warning" size="small" effect="light">
-                飞行中
-              </ElTag>
-            </div>
-            <BaseButton v-if="enableLiveFlight" type="primary" @click="goCommandScreen">
-              跳转指控中心
-            </BaseButton>
+            <span class="target-detail-events__snapshot-title">最近一次探测</span>
           </div>
           <ElDescriptions
+            v-if="latestEvent"
             :column="2"
             border
             size="small"
             label-width="128px"
             class="target-detail-descriptions target-detail-events__snapshot-table"
           >
-            <ElDescriptionsItem label="探测时间">
-              <span :class="{ 'target-detail-events__live-value': enableLiveFlight }">
-                {{ snapshotObservedAt }}
-              </span>
+            <ElDescriptionsItem label="发现时间">
+              {{ latestEvent.discoveredAt }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="威胁等级">
-              <ElTag :type="threatTagType(detail.threatLevel)" size="small" effect="light">
-                {{ detail.threatLevel }}
+              <ElTag :type="threatTagType(latestEvent.threatLevel)" size="small" effect="light">
+                {{ latestEvent.threatLevel }}
               </ElTag>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="处置状态">
-              {{ handlingStatusDisplay(detail.handlingStatus) }}
+              {{ handlingStatusDisplay(latestEvent.handlingStatus) }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="所在区域">{{ detail.zoneName }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="所在区域">{{ latestEvent.zoneName }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="无人机最后位置" :span="2">
-              <span :class="{ 'target-detail-events__live-value': enableLiveFlight }">
-                {{ snapshotLastPosition }}
-              </span>
+              {{ latestEvent.targetLocation }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="飞手最后已知位置" :span="2">
-              <template v-if="detail.pilotLocation === '未定位'">
+              <template v-if="latestEvent.pilotLocation === '未定位'">
                 <span class="text-[var(--el-text-color-secondary)]">未定位</span>
               </template>
               <template v-else>
-                {{ detail.pilotLocation }}
-                <span v-if="detail.pilotConfidence !== '—'" class="target-detail-events__cell-sub">
-                  置信度 {{ detail.pilotConfidence }}
-                </span>
-                <span
-                  v-if="detail.pilotLocatedAt && detail.pilotLocatedAt !== '—'"
-                  class="target-detail-events__cell-sub"
-                >
-                  推算 {{ detail.pilotLocatedAt }}
-                </span>
+                {{ latestEvent.pilotLocation }}
               </template>
             </ElDescriptionsItem>
-
-            <ElDescriptionsItem label="处置说明" :span="2">
-              <span
-                :class="
-                  isHandlingInProgress(detail.handlingStatus) && !detail.disposalDetail?.trim()
-                    ? 'text-[var(--el-text-color-secondary)]'
-                    : ''
-                "
-              >
-                {{ disposalDetailText(detail) }}
-              </span>
-            </ElDescriptionsItem>
           </ElDescriptions>
+          <p v-else class="target-detail-events__snapshot-empty">暂无历史事件记录</p>
         </section>
 
         <div class="target-detail-events__list-head-row">
@@ -564,7 +467,6 @@ onUnmounted(stopLiveFlight)
                 end-placeholder="结束日期"
                 clearable
                 style="width: 260px"
-                @change="applyEventFilters"
               />
             </ElFormItem>
             <ElFormItem label="区域">
@@ -573,7 +475,6 @@ onUnmounted(stopLiveFlight)
                 placeholder="全部区域"
                 clearable
                 style="width: 160px"
-                @change="applyEventFilters"
               >
                 <ElOption
                   v-for="opt in zoneOptions"
@@ -589,7 +490,6 @@ onUnmounted(stopLiveFlight)
                 placeholder="全部数据来源"
                 clearable
                 style="width: 160px"
-                @change="applyEventFilters"
               >
                 <ElOption
                   v-for="opt in dataSourceOptions"
@@ -600,7 +500,8 @@ onUnmounted(stopLiveFlight)
               </ElSelect>
             </ElFormItem>
             <ElFormItem>
-              <BaseButton @click="resetEventFilters">重置</BaseButton>
+              <BaseButton type="primary" @click="applyEventFilters">查询</BaseButton>
+              <BaseButton class="ml-12px" @click="resetEventFilters">重置</BaseButton>
             </ElFormItem>
           </ElForm>
         </div>
@@ -677,15 +578,7 @@ onUnmounted(stopLiveFlight)
     display: flex;
     gap: 12px;
     align-items: center;
-    justify-content: space-between;
     margin-bottom: 8px;
-  }
-
-  &__snapshot-title-left {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    min-width: 0;
   }
 
   &__snapshot-title {
@@ -694,26 +587,16 @@ onUnmounted(stopLiveFlight)
     color: var(--el-text-color-primary);
   }
 
-  &__snapshot-tip {
+  &__snapshot-empty {
+    margin: 0;
+    padding: 12px 0;
+    font-size: 13px;
     color: var(--el-text-color-secondary);
-    cursor: help;
-  }
-
-  &__live-value {
-    font-variant-numeric: tabular-nums;
-    transition: color 0.2s ease;
   }
 
   &__snapshot-table {
     width: 100%;
     margin-bottom: 0;
-  }
-
-  &__cell-sub {
-    display: block;
-    margin-top: 4px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
   }
 
   &__list-head-row {
