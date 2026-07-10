@@ -216,7 +216,7 @@ function persistListTypes() {
 }
 
 const storedListTypes = readStoredListTypes()
-let allList: HistoryEventItem[] = buildSeedList().map((row) => ({
+const allList: HistoryEventItem[] = buildSeedList().map((row) => ({
   ...row,
   listType: storedListTypes[row.id] || row.listType || '未知'
 }))
@@ -424,12 +424,6 @@ export function getLocalHistoryEventDetail(id: string): HistoryEventDetail | nul
     allList.find((item) => item.targetId === id) ||
     allList[0]
   return row ? buildHistoryEventDetail(row) : null
-}
-
-export function deleteLocalHistoryEvent(ids: string[]) {
-  allList = allList.filter((row) => !ids.includes(row.id))
-  updateRelatedEventCount()
-  return true
 }
 
 export function confirmLocalHistoryEvent(payload: ManualConfirmPayload) {

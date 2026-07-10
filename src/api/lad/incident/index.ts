@@ -8,7 +8,6 @@ import type {
 } from './types'
 import {
   confirmLocalHistoryEvent,
-  deleteLocalHistoryEvent,
   getLocalHistoryEventDetail,
   queryLocalHistoryEventList,
   updateLocalHistoryEventListType
@@ -25,10 +24,6 @@ export const getHistoryEventListApi = (
   params: HistoryEventQuery
 ): Promise<IResponse<HistoryEventListResult>> => {
   return Promise.resolve(wrapLocalResponse(queryLocalHistoryEventList(params)))
-}
-
-export const deleteHistoryEventApi = (ids: string[]): Promise<IResponse> => {
-  return Promise.resolve(wrapLocalResponse(deleteLocalHistoryEvent(ids)))
 }
 
 export const confirmHistoryEventApi = (data: ManualConfirmPayload): Promise<IResponse> => {

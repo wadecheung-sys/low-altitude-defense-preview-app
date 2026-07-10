@@ -1,7 +1,6 @@
 import { SUCCESS_CODE } from '@/constants'
 import {
   confirmLocalHistoryEvent,
-  deleteLocalHistoryEvent,
   getLocalHistoryEventDetail,
   queryLocalHistoryEventList
 } from '@/api/lad/incident/localHistoryStore'
@@ -17,15 +16,6 @@ export default [
     response: ({ query }: { query: HistoryEventQuery }) => ({
       code: SUCCESS_CODE,
       data: queryLocalHistoryEventList(query)
-    })
-  },
-  {
-    url: '/mock/lad/incident/history/delete',
-    method: 'post',
-    timeout,
-    response: ({ body }: { body: { ids: string[] } }) => ({
-      code: SUCCESS_CODE,
-      data: deleteLocalHistoryEvent(body?.ids || [])
     })
   },
   {

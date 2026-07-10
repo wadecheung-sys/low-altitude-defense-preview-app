@@ -420,27 +420,6 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
                 status: 'enabled'
               }
             ]
-          },
-          {
-            id: 'pm-system-diag',
-            parentId: 'pm-system',
-            name: '系统自诊断',
-            permCode: 'lad:system:diagnostics',
-            nodeType: 'menu',
-            path: '/lad/system/diagnostics',
-            sort: 3,
-            status: 'enabled',
-            children: [
-              {
-                id: 'pm-system-diag-run',
-                parentId: 'pm-system-diag',
-                name: '执行诊断',
-                permCode: 'lad:system:diagnostics:run',
-                nodeType: 'button',
-                sort: 1,
-                status: 'enabled'
-              }
-            ]
           }
         ]
       },
@@ -545,27 +524,6 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
                 status: 'enabled'
               }
             ]
-          }
-        ]
-      },
-      {
-        id: 'pm-integration',
-        parentId: 'pm-root',
-        name: '系统对接及算法服务',
-        permCode: 'lad:integration',
-        nodeType: 'menu',
-        path: '/lad/integration/index',
-        sort: 11,
-        status: 'enabled',
-        children: [
-          {
-            id: 'pm-integration-view',
-            parentId: 'pm-integration',
-            name: '查看',
-            permCode: 'lad:integration:view',
-            nodeType: 'button',
-            sort: 1,
-            status: 'enabled'
           }
         ]
       }
