@@ -98,7 +98,7 @@ function buildSeedList() {
       const remark = isBirdNuisanceDemo
         ? '融合算法虚警过滤，目标判定为飞鸟，未执行反制'
         : forceManualExecution
-          ? '数据大屏选中干扰设备后人工下发驱离指令'
+          ? '选中干扰设备后人工下发驱离指令'
           : keepOpen
             ? '等待值守人员人工核查'
             : forceEnded
@@ -114,7 +114,9 @@ function buildSeedList() {
 
       const rowTargetModel = isBirdNuisanceDemo ? '未知型号' : profile.targetModel
       const rowUavSn = isBirdNuisanceDemo ? '未解析' : profile.uavSn
-      const rowTargetId = isBirdNuisanceDemo ? 'TG-2024-BIRD-001' : profile.targetId
+      const rowTargetId = isBirdNuisanceDemo
+        ? 'TG-2024-BIRD-001'
+        : `TG-2024-${String(i + 1).padStart(4, '0')}`
       const historyTargetType = isBirdNuisanceDemo
         ? '躁扰信号-飞鸟'
         : resolveHistoryTargetType({
@@ -125,7 +127,7 @@ function buildSeedList() {
       list.push({
         id: eventId,
         targetId: rowTargetId,
-        relatedEventCount: isBirdNuisanceDemo ? 1 : profile.eventCount,
+        relatedEventCount: 1,
         historyTargetType,
         threatLevel: isBirdNuisanceDemo ? '无危' : threatLevels[i % threatLevels.length],
         handledAt: keepOpen || forceEnded ? '--' : handled,

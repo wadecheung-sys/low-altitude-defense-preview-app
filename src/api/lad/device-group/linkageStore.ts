@@ -35,7 +35,7 @@ let allLinkages: DeviceLinkageItem[] = [
       deviceType: '无线电干扰',
       deployArea: '核心区制高点',
       linkedDeviceIds: ['di-20001', 'di-20002', 'di-20003'],
-      linkedChain: 'FG310F压制-东向监控、FG310F压制-南向监控、FG310F压制-西向监控',
+      linkedChain: '核心区东围墙筒机、核心区南围墙筒机、核心区西围墙枪机',
       enabled: true
     },
     'dl-1001'
@@ -48,7 +48,7 @@ let allLinkages: DeviceLinkageItem[] = [
       deviceType: '无线电侦测',
       deployArea: '东侧瞭望台',
       linkedDeviceIds: ['di-20004', 'di-20005'],
-      linkedChain: 'PL671F侦测-北侧监控、PL671F侦测-南侧监控',
+      linkedChain: '东侧瞭望台北向枪机、东侧瞭望台南向枪机',
       enabled: true
     },
     'dl-1002'
@@ -61,7 +61,7 @@ let allLinkages: DeviceLinkageItem[] = [
       deviceType: '光电跟踪',
       deployArea: '南门岗哨',
       linkedDeviceIds: ['di-20006', 'di-20007', 'di-20008'],
-      linkedChain: '光电跟踪-东侧监控、光电跟踪-西侧监控、光电跟踪-岗哨全景监控',
+      linkedChain: '南门岗云台-东侧、南门岗云台-西侧、南门岗全景摄像机',
       enabled: true
     },
     'dl-1003'
@@ -74,7 +74,7 @@ let allLinkages: DeviceLinkageItem[] = [
       deviceType: '导航诱骗',
       deployArea: '西区机房',
       linkedDeviceIds: ['di-20009', 'di-20010'],
-      linkedChain: 'DY506F诱骗-机房入口监控、DY506F诱骗-外围监控',
+      linkedChain: '西区机房入口枪机、西区机房外围筒机',
       enabled: true
     },
     'dl-1004'

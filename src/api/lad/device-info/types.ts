@@ -2,18 +2,10 @@ import type {
   DeviceArchiveConfigurableItem,
   DeviceArchiveIndicator
 } from '../device/types'
+import type { LadDeviceTypeLabel } from '@/constants/deviceTypes'
 
 /** 设备类型（筛选项 / 列表展示） */
-export type DeviceInfoKind =
-  | '雷达'
-  | '无线电侦测'
-  | 'Remote-ID 监视'
-  | 'ADS-B 监视'
-  | '无线电干扰'
-  | '导航诱骗'
-  | '激光打击'
-  | '高功率微波'
-  | '光电跟踪'
+export type DeviceInfoKind = LadDeviceTypeLabel
 
 export interface DeviceInfoItem {
   id: string

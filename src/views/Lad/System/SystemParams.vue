@@ -1,230 +1,288 @@
-<script setup lang="tsx">
-import { reactive, ref, unref } from 'vue'
-import { ElMessage, ElMessageBox, ElTag } from 'element-plus'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { ElForm, ElFormItem, ElMessage, ElMessageBox, ElTooltip } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
-import { Search } from '@/components/Search'
-import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
-import { useTable } from '@/hooks/web/useTable'
-import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { getSystemParamListApi, restoreSystemParamDefaultsApi } from '@/api/lad/system'
-import type { ParamValueType, SystemParam } from '@/api/lad/system/types'
-import SystemParamEditDialog from './components/SystemParamEditDialog.vue'
-import { allOption } from '../shared/ladOptionConstants'
+import { Icon } from '@/components/Icon'
+import {
+  getSystemParamListApi,
+  restoreSystemParamDefaultsApi,
+  saveSystemParamApi
+} from '@/api/lad/system'
+import { ALARM_PARAM_KEYS } from '@/api/lad/system/alarmParams'
+import type { ParamGroup, SystemParam } from '@/api/lad/system/types'
+import SystemParamValueInput from './components/SystemParamValueInput.vue'
 
 defineOptions({ name: 'LadSystemParams' })
 
-const PARAM_SEARCH_COL = { span: 6 } as const
-const PARAM_SEARCH_DATE_COL = { span: 6 } as const
+const PARAM_GROUP_ORDER: ParamGroup[] = ['系统', '地图', '存储', '管制', '模拟', '告警']
 
-const paramValueTypeFilterOptions = [
-  allOption,
-  { label: '文本', value: 'string' },
-  { label: '数值', value: 'number' },
-  { label: '布尔', value: 'boolean' }
-]
-
-const paramValueTypeLabelMap: Record<ParamValueType, string> = {
-  string: '文本',
-  number: '数值',
-  boolean: '布尔'
-}
-
-const searchParams = ref<Recordable>({})
-const editVisible = ref(false)
-const editRow = ref<SystemParam>()
+const loading = ref(false)
+const editing = ref(false)
+const saveLoading = ref(false)
 const restoreLoading = ref(false)
+const params = ref<SystemParam[]>([])
+const formValues = ref<Record<string, string | number | boolean | null>>({})
 
-const setSearchParams = (params: Recordable) => {
-  const range = params.updatedAtRange as string[] | undefined
-  const valueType = params.valueType as ParamValueType | '全部' | undefined
-  searchParams.value = {
-    paramName: params.paramName?.trim() || undefined,
-    valueType: !valueType || valueType === '全部' ? undefined : valueType,
-    remark: params.remark?.trim() || undefined,
-    updatedAtStart: range?.[0],
-    updatedAtEnd: range?.[1]
+const groupedParams = computed(() => {
+  const map = new Map<ParamGroup, SystemParam[]>()
+  PARAM_GROUP_ORDER.forEach((group) => map.set(group, []))
+  params.value.forEach((param) => {
+    const list = map.get(param.group) ?? []
+    list.push(param)
+    map.set(param.group, list)
+  })
+  return PARAM_GROUP_ORDER.map((group) => ({
+    group,
+    items: map.get(group) ?? []
+  })).filter((section) => section.items.length > 0)
+})
+
+function toFormValue(param: SystemParam): string | number | boolean | null {
+  const value = param.paramValue
+  if (param.valueType === 'boolean') return Boolean(value)
+  if (param.valueType === 'number') {
+    if (value === null || value === undefined || value === '') return null
+    return Number(value)
   }
-  currentPage.value = 1
-  getList()
+  return String(value ?? '')
 }
 
-const openEdit = (row: SystemParam) => {
-  editRow.value = row
-  editVisible.value = true
+function syncFormValues(list: SystemParam[]) {
+  const next: Record<string, string | number | boolean | null> = {}
+  list.forEach((param) => {
+    next[param.id] = toFormValue(param)
+  })
+  formValues.value = next
+}
+
+async function loadParams() {
+  loading.value = true
+  try {
+    const res = await getSystemParamListApi({ pageIndex: 1, pageSize: 200 })
+    params.value = res.data.list
+    syncFormValues(res.data.list)
+  } finally {
+    loading.value = false
+  }
+}
+
+function startEdit() {
+  editing.value = true
+}
+
+function cancelEdit() {
+  syncFormValues(params.value)
+  editing.value = false
+}
+
+function validateParam(param: SystemParam, value: string | number | boolean | null): string | null {
+  if (param.paramKey === ALARM_PARAM_KEYS.maxDurationSeconds) {
+    const duration = value === null || value === undefined || value === '' ? undefined : Number(value)
+    if (duration === undefined || !Number.isFinite(duration) || duration < 1) {
+      return '持续时间须大于 0 秒'
+    }
+  }
+  if (param.paramKey === ALARM_PARAM_KEYS.visualMode) {
+    if (!String(value ?? '').trim()) {
+      return '请选择告警视觉表现形式'
+    }
+  }
+  return null
+}
+
+async function saveAll() {
+  for (const param of params.value) {
+    const message = validateParam(param, formValues.value[param.id])
+    if (message) {
+      ElMessage.warning(`${param.paramName}：${message}`)
+      return
+    }
+  }
+
+  saveLoading.value = true
+  try {
+    await Promise.all(
+      params.value.map((param) =>
+        saveSystemParamApi({
+          id: param.id,
+          paramValue: formValues.value[param.id]
+        })
+      )
+    )
+    await loadParams()
+    editing.value = false
+    ElMessage.success('参数配置已保存')
+  } finally {
+    saveLoading.value = false
+  }
 }
 
 async function restoreDefaults() {
   await ElMessageBox.confirm('确认将所有参数恢复为系统初始值吗？当前修改将被覆盖。', '恢复初始值', {
-    type: 'warning'
+    type: 'warning',
+    confirmButtonText: '确定',
+    cancelButtonText: '取消'
   })
   restoreLoading.value = true
   try {
     await restoreSystemParamDefaultsApi()
+    await loadParams()
+    editing.value = false
     ElMessage.success('已恢复初始值')
-    getList()
   } finally {
     restoreLoading.value = false
   }
 }
 
-const { tableRegister, tableState, tableMethods } = useTable({
-  fetchDataApi: async () => {
-    const { currentPage, pageSize } = tableState
-    const res = await getSystemParamListApi({
-      pageIndex: unref(currentPage),
-      pageSize: unref(pageSize),
-      ...unref(searchParams)
-    })
-    return { list: res.data.list, total: res.data.total }
-  }
+onMounted(() => {
+  loadParams()
 })
-
-const { loading, dataList, total, currentPage, pageSize } = tableState
-const { getList } = tableMethods
-
-const crudSchemas = reactive<CrudSchema[]>([
-  {
-    field: 'selection',
-    search: { hidden: true },
-    form: { hidden: true },
-    table: { type: 'selection' }
-  },
-  {
-    field: 'index',
-    label: '序号',
-    type: 'index',
-    search: { hidden: true },
-    form: { hidden: true }
-  },
-  {
-    field: 'paramName',
-    label: '参数名称',
-    search: {
-      component: 'Input',
-      colProps: PARAM_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入参数名称',
-        style: { width: '100%' }
-      }
-    },
-    table: { minWidth: 180, showOverflowTooltip: true }
-  },
-  {
-    field: 'valueType',
-    label: '参数类型',
-    search: {
-      component: 'Select',
-      colProps: PARAM_SEARCH_COL,
-      componentProps: {
-        options: paramValueTypeFilterOptions,
-        clearable: true,
-        placeholder: '全部',
-        style: { width: '100%' }
-      }
-    },
-    table: {
-      width: 100,
-      slots: {
-        default: ({ row }: { row: SystemParam }) => (
-          <span>{paramValueTypeLabelMap[row.valueType] || row.valueType}</span>
-        )
-      }
-    }
-  },
-  {
-    field: 'paramValue',
-    label: '参数值',
-    search: { hidden: true },
-    table: {
-      minWidth: 160,
-      slots: {
-        default: ({ row }: { row: SystemParam }) => {
-          const value = row.paramValue
-          if (row.valueType === 'boolean') {
-            return <ElTag type={value ? 'success' : 'info'}>{value ? '是' : '否'}</ElTag>
-          }
-          if (value === '' || value === null || value === undefined) {
-            return <span class="text-[var(--el-text-color-secondary)]">—</span>
-          }
-          return <span>{String(value)}</span>
-        }
-      }
-    }
-  },
-  {
-    field: 'remark',
-    label: '描述',
-    search: {
-      component: 'Input',
-      colProps: PARAM_SEARCH_COL,
-      componentProps: {
-        clearable: true,
-        placeholder: '请输入描述关键词',
-        style: { width: '100%' }
-      }
-    },
-    table: { minWidth: 180, showOverflowTooltip: true }
-  },
-  {
-    field: 'updatedAt',
-    label: '更新时间',
-    search: { hidden: true },
-    table: { width: 170 }
-  },
-  {
-    field: 'updatedAtRange',
-    label: '更新时间',
-    search: {
-      component: 'DatePicker',
-      colProps: PARAM_SEARCH_DATE_COL,
-      componentProps: {
-        type: 'datetimerange',
-        valueFormat: 'YYYY-MM-DD HH:mm:ss',
-        startPlaceholder: '开始时间',
-        endPlaceholder: '结束时间',
-        style: { width: '100%' }
-      }
-    },
-    table: { hidden: true }
-  },
-  {
-    field: 'action',
-    label: '操作',
-    search: { hidden: true },
-    table: {
-      width: 100,
-      fixed: 'right',
-      slots: {
-        default: ({ row }: { row: SystemParam }) => (
-          <BaseButton type="primary" onClick={() => openEdit(row)}>
-            编辑
-          </BaseButton>
-        )
-      }
-    }
-  }
-])
-
-const { allSchemas } = useCrudSchemas(crudSchemas)
 </script>
 
 <template>
-  <ContentWrap>
-    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
-    <div class="mb-10px">
-      <BaseButton :loading="restoreLoading" @click="restoreDefaults">恢复初始值</BaseButton>
+  <ContentWrap title="参数配置" message="按业务分组维护系统运行参数，编辑后统一保存。">
+    <template #header>
+      <div class="system-params__actions">
+        <template v-if="!editing">
+          <BaseButton type="primary" @click="startEdit">编辑</BaseButton>
+          <BaseButton :loading="restoreLoading" @click="restoreDefaults">恢复初始值</BaseButton>
+        </template>
+        <template v-else>
+          <BaseButton type="primary" :loading="saveLoading" @click="saveAll">保存</BaseButton>
+          <BaseButton @click="cancelEdit">取消</BaseButton>
+        </template>
+      </div>
+    </template>
+
+    <div v-loading="loading" class="system-params">
+      <section v-for="section in groupedParams" :key="section.group" class="system-params__group">
+        <h3 class="system-params__group-title">{{ section.group }}</h3>
+        <ElForm class="system-params__form" label-position="top" :disabled="!editing">
+          <div class="system-params__form-grid">
+            <ElFormItem
+              v-for="param in section.items"
+              :key="param.id"
+              class="system-params__form-item"
+            >
+              <template #label>
+                <span class="system-params__label">
+                  {{ param.paramName }}
+                  <ElTooltip
+                    v-if="param.remark"
+                    :content="param.remark"
+                    placement="top"
+                    effect="dark"
+                  >
+                    <Icon
+                      icon="vi-bi:question-circle-fill"
+                      :size="14"
+                      class="system-params__label-tip"
+                    />
+                  </ElTooltip>
+                </span>
+              </template>
+              <SystemParamValueInput
+                :param="param"
+                :model-value="formValues[param.id]"
+                :readonly="!editing"
+                @update:model-value="formValues[param.id] = $event"
+              />
+            </ElFormItem>
+          </div>
+        </ElForm>
+      </section>
     </div>
-    <Table
-      v-model:pageSize="pageSize"
-      v-model:currentPage="currentPage"
-      :columns="allSchemas.tableColumns"
-      :data="dataList"
-      :loading="loading"
-      :pagination="{ total }"
-      @register="tableRegister"
-    />
-    <SystemParamEditDialog v-model="editVisible" :row="editRow" @success="getList" />
   </ContentWrap>
 </template>
+
+<style scoped lang="less">
+.system-params {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.system-params__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.system-params__group {
+  padding-top: 10px;
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  & + & {
+    margin-top: 2px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--el-border-color-lighter);
+  }
+}
+
+.system-params__group-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--el-text-color-regular);
+}
+
+.system-params__form {
+  width: 100%;
+}
+
+.system-params__form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.system-params__label {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.system-params__label-tip {
+  color: var(--el-text-color-secondary);
+  cursor: help;
+}
+
+.system-params__form-item {
+  margin-bottom: 0;
+
+  :deep(.el-form-item__label) {
+    margin-bottom: 4px;
+    padding-bottom: 0;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  :deep(.el-form-item__content) {
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 1200px) {
+  .system-params__form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .system-params__form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1600px) {
+  .system-params__form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+</style>

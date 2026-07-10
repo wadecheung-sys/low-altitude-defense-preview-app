@@ -33,7 +33,8 @@ const archiveTreeData: ArchiveTreeNode[] = [
       { id: 'radar', label: '雷达档案' },
       { id: 'radio', label: '无线电侦测档案' },
       { id: 'counter', label: '反制装备档案' },
-      { id: 'eo', label: '光电跟踪档案' }
+      { id: 'eo', label: '光电跟踪档案' },
+      { id: 'camera', label: '监控摄像机档案' }
     ]
   }
 ]

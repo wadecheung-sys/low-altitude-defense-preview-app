@@ -9,6 +9,7 @@ import type {
   DictTypeSavePayload
 } from './types'
 import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
+import { LAD_DEVICE_TYPE_ENTRIES } from '@/constants/deviceTypes'
 
 function formatNow() {
   const d = new Date()
@@ -43,8 +44,8 @@ const dictTypesSeed: DictTypeItem[] = [
     id: 'dt-004',
     dictCode: 'device_type',
     dictName: '设备类型',
-    remark: '探测与反制装备分类（雷达/光电/无线电/高功率微波/激光）',
-    itemCount: 5,
+    remark: '与设备档案、设备信息一致的装备分类枚举',
+    itemCount: LAD_DEVICE_TYPE_ENTRIES.length,
     updatedAt: '2026-06-30 10:00:00'
   },
   {
@@ -162,46 +163,14 @@ const dictEntriesSeed: DictEntryItem[] = [
     sort: 4,
     updatedAt: '2026-05-21 10:00:00'
   },
-  {
-    id: 'de-012',
+  ...LAD_DEVICE_TYPE_ENTRIES.map((entry, index) => ({
+    id: `de-device-type-${String(index + 1).padStart(2, '0')}`,
     dictTypeId: 'dt-004',
-    label: '雷达',
-    value: 'radar',
-    sort: 1,
-    updatedAt: '2026-05-19 14:00:00'
-  },
-  {
-    id: 'de-013',
-    dictTypeId: 'dt-004',
-    label: '光电',
-    value: 'eo',
-    sort: 2,
-    updatedAt: '2026-05-19 14:00:00'
-  },
-  {
-    id: 'de-014',
-    dictTypeId: 'dt-004',
-    label: '无线电',
-    value: 'rf',
-    sort: 3,
-    updatedAt: '2026-05-19 14:00:00'
-  },
-  {
-    id: 'de-015',
-    dictTypeId: 'dt-004',
-    label: '高功率微波',
-    value: 'hpm',
-    sort: 4,
-    updatedAt: '2026-06-30 10:00:00'
-  },
-  {
-    id: 'de-016',
-    dictTypeId: 'dt-004',
-    label: '激光',
-    value: 'laser',
-    sort: 5,
-    updatedAt: '2026-06-30 10:00:00'
-  },
+    label: entry.label,
+    value: entry.dictValue,
+    sort: index + 1,
+    updatedAt: '2026-07-10 14:00:00'
+  })),
   ...LAD_TARGET_MODELS.map((item, index) => ({
     id: `de-target-model-${String(index + 1).padStart(2, '0')}`,
     dictTypeId: 'dt-008',

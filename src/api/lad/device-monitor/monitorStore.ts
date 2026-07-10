@@ -1,6 +1,7 @@
 import { queryDeviceArchiveDetail } from '../device/archiveStore'
 import { queryDeviceInfoDetail, queryDeviceInfoList } from '../device-info/infoStore'
 import type { DeviceInfoItem } from '../device-info/types'
+import { LAD_MONITOR_EXCLUDED_DEVICE_TYPES } from '@/constants/deviceTypes'
 import type {
   DeviceMonitorItem,
   DeviceMonitorListResult,
@@ -8,8 +9,8 @@ import type {
   DeviceOnlineStatus
 } from './types'
 
-/** 监控页不展示周边类设备（摄像头、ADS-B） */
-const MONITOR_EXCLUDED_TYPES = new Set(['监控摄像头', 'ADS-B 监视'])
+/** 监控页不展示周边类设备 */
+const MONITOR_EXCLUDED_TYPES = new Set(LAD_MONITOR_EXCLUDED_DEVICE_TYPES)
 
 const VENDOR_BY_TYPE: Record<string, string> = {
   雷达: '华诺智感',

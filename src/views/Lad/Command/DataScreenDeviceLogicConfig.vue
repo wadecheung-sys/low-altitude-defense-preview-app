@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { DeviceArchiveConfigurableItem } from '@/api/lad/device/types'
 import { getDeviceInfoDetailApi, saveDeviceInfoApi } from '@/api/lad/device-info'
 import type { DeviceInfoDetail } from '@/api/lad/device-info/types'
@@ -53,10 +53,7 @@ function toArchiveConfigurableItems(
   }))
 }
 
-function syncDeviceConfigDefaults(
-  items: DeviceArchiveConfigurableItem[],
-  preserve = true
-) {
+function syncDeviceConfigDefaults(items: DeviceArchiveConfigurableItem[], preserve = true) {
   const next: Record<string, string> = preserve ? { ...deviceConfigValues.value } : {}
   items
     .filter((item) => item.scope === 'device')

@@ -6,11 +6,19 @@
   width: 100% !important;
 }
 
-// 弹窗表单底部按钮居中，确认在前、取消在后
-.el-dialog__footer {
+// 弹窗 / 确认框底部按钮：居中；主操作（确认/保存）在前，取消在后
+.el-dialog__footer,
+.el-message-box__btns {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 12px;
   text-align: center;
+}
+
+// Element Plus MessageBox 默认 DOM 顺序为「取消 → 确定」，通过 row-reverse 呈现为确认在前
+.el-message-box__btns {
+  flex-direction: row-reverse;
+  width: 100%;
+  padding-right: 0;
 }

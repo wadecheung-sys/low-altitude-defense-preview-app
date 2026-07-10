@@ -39,3 +39,7 @@ export const LAD_RESOLVABLE_TARGET_PROFILES = LAD_TARGET_PROFILES.filter(
 export function findTargetProfileByTargetId(targetId: string): LadTargetProfile | undefined {
   return LAD_TARGET_PROFILES.find((profile) => profile.targetId === targetId)
 }
+
+export function findTargetProfileByUavSn(uavSn: string): LadTargetProfile | undefined {
+  return LAD_TARGET_PROFILES.find((profile) => profile.uavSn === uavSn)
+}

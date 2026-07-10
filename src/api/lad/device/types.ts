@@ -1,5 +1,5 @@
 /** 档案树分类（左侧树） */
-export type DeviceArchiveCategory = 'all' | 'radar' | 'radio' | 'counter' | 'eo'
+export type DeviceArchiveCategory = 'all' | 'radar' | 'radio' | 'counter' | 'eo' | 'camera'
 
 /** 列表记录 */
 export interface DeviceArchiveItem {

@@ -18,8 +18,7 @@ import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import {
-  getHistoryEventListApi,
-  updateHistoryEventListTypeApi
+  getHistoryEventListApi
 } from '@/api/lad/incident'
 import { HISTORY_TARGET_TYPE_OPTIONS, historyTargetTypeTagType } from '@/api/lad/incident/historyTargetType'
 import type { HistoryEventItem } from '@/api/lad/incident/types'
@@ -64,7 +63,6 @@ const exportVisible = ref(false)
 const exportRange = ref<HistoryEventExportRange>('query')
 const exportFormat = ref<HistoryEventExportFormat>('excel')
 const exportLoading = ref(false)
-const listLoading = ref(false)
 
 const setSearchParams = (params: Recordable) => {
   const range = params.discoveredAtRange as string[] | undefined
@@ -129,7 +127,7 @@ const goUavRegistry = (row: HistoryEventItem) => {
   if (row.uavSn === '未解析') return
   push({
     path: '/lad/list/black-white',
-    query: { sn: row.uavSn, targetId: row.targetId, openDetail: '1' }
+    query: { sn: row.uavSn, openDetail: '1' }
   })
 }
 
@@ -143,25 +141,24 @@ const onConfirmSuccess = () => {
   getList()
 }
 
-const openExportDialog = async () => {
+const openExportDialog = () => {
   exportFormat.value = 'excel'
-  const elTableExpose = await getElTableExpose()
-  const selected = elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined
-  exportRange.value = selected?.length ? 'selected' : 'query'
+  exportRange.value = 'query'
   exportVisible.value = true
 }
 
 const exportReport = async () => {
-  const elTableExpose = await getElTableExpose()
-  const selected = (elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined) ?? []
   let rangeLabel = ''
+  let selected: HistoryEventItem[] = []
 
   if (exportRange.value === 'selected') {
-    rangeLabel = '所选数据'
+    const elTableExpose = await getElTableExpose()
+    selected = (elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined) || []
     if (!selected.length) {
-      ElMessage.warning('请先勾选要导出的记录')
+      ElMessage.warning('请先勾选要导出的历史事件')
       return
     }
+    rangeLabel = '所选数据'
   } else if (exportRange.value === 'query') {
     rangeLabel = '查询结果'
     if (!unref(total)) {
@@ -174,11 +171,7 @@ const exportReport = async () => {
 
   exportLoading.value = true
   try {
-    const rows = await fetchHistoryEventsForExport(
-      exportRange.value,
-      unref(searchParams),
-      selected
-    )
+    const rows = await fetchHistoryEventsForExport(exportRange.value, unref(searchParams), selected)
     if (!rows.length) {
       ElMessage.warning('没有可导出的历史事件记录')
       return
@@ -191,26 +184,6 @@ const exportReport = async () => {
     ElMessage.error(error instanceof Error ? error.message : '导出失败，请稍后重试')
   } finally {
     exportLoading.value = false
-  }
-}
-
-const addList = async (listType: '黑名单' | '白名单') => {
-  const elTableExpose = await getElTableExpose()
-  const selected = elTableExpose?.getSelectionRows() as HistoryEventItem[] | undefined
-  const selectedIds = selected?.map((item) => item.id) || []
-  if (!selectedIds.length) {
-    ElMessage.warning(`请先勾选要加入${listType}的记录`)
-    return
-  }
-
-  listLoading.value = true
-  try {
-    await updateHistoryEventListTypeApi({ ids: selectedIds, listType })
-    ElMessage.success(`已将选中的 ${selectedIds.length} 条记录设为${listType}`)
-    await getList()
-    elTableExpose?.clearSelection()
-  } finally {
-    listLoading.value = false
   }
 }
 
@@ -243,19 +216,11 @@ const crudSchemas = reactive<CrudSchema[]>([
       }
     },
     table: {
-      showOverflowTooltip: true,
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
-          <>
-            <ElLink type="primary" underline={false} onClick={() => filterByTargetId(row.targetId)}>
-              {row.targetId}
-            </ElLink>
-            {row.relatedEventCount > 1 ? (
-              <ElTag size="small" class="ml-6px" type="warning">
-                共{row.relatedEventCount}条
-              </ElTag>
-            ) : null}
-          </>
+          <ElLink type="primary" underline={false} onClick={() => filterByTargetId(row.targetId)}>
+            {row.targetId}
+          </ElLink>
         )
       }
     }
@@ -571,12 +536,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     />
 
     <div class="mb-10px">
-      <BaseButton type="danger" :loading="listLoading" @click="addList('黑名单')"
-        >添加至黑名单</BaseButton
-      >
-      <BaseButton type="success" :loading="listLoading" @click="addList('白名单')"
-        >添加至白名单</BaseButton
-      >
       <BaseButton type="primary" @click="openExportDialog">导出</BaseButton>
     </div>
 

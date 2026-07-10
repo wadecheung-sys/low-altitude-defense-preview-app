@@ -27,7 +27,7 @@ const PARAM_SEED: SystemParam[] = [
   {
     id: 'sp-007',
     paramKey: 'map.default.lng',
-    paramName: '地图默认经度',
+    paramName: '地图默认经度（°）',
     group: '地图',
     valueType: 'number',
     paramValue: 116.397128,
@@ -36,7 +36,7 @@ const PARAM_SEED: SystemParam[] = [
   {
     id: 'sp-008',
     paramKey: 'map.default.lat',
-    paramName: '地图默认纬度',
+    paramName: '地图默认纬度（°）',
     group: '地图',
     valueType: 'number',
     paramValue: 39.916527,
@@ -54,72 +54,112 @@ const PARAM_SEED: SystemParam[] = [
   {
     id: 'sp-010',
     paramKey: 'data.retention.days',
-    paramName: '历史数据保留天数',
-    group: '数据',
+    paramName: '历史数据保留（天）',
+    group: '存储',
     valueType: 'number',
     paramValue: 90,
     remark: '飞行记录与日志保留周期',
     updatedAt: '2026-05-20 11:00:00'
   },
   {
+    id: 'sp-020',
+    paramKey: 'storage.local.record.max.duration.seconds',
+    paramName: '本地录制默认最大时长（秒）',
+    group: '存储',
+    valueType: 'number',
+    paramValue: 30,
+    updatedAt: '2026-05-20 11:00:00'
+  },
+  {
     id: 'sp-011',
     paramKey: 'control.intrusion.grace.seconds',
-    paramName: '真实入侵宽容时间',
+    paramName: '真实入侵宽容时间（秒）',
     group: '管制',
     valueType: 'number',
     paramValue: 30,
-    remark: '单位：秒。低于该时长不视为真实进入更高级别管制区域',
+    remark: '低于该时长不视为真实进入更高级别管制区域',
     updatedAt: '2026-06-01 09:00:00'
   },
   {
     id: 'sp-012',
-    paramKey: 'device.control.safety.lock.minutes',
-    paramName: '设备控制安全锁默认有效时间',
-    group: '安全',
+    paramKey: 'control.target.lost.judge.seconds',
+    paramName: '目标丢失判定时间（秒）',
+    group: '管制',
     valueType: 'number',
-    paramValue: 15,
-    remark: '单位：分钟。一次输入密码后，默认该时长内设备控制操作有效',
+    paramValue: 30,
+    remark:
+      '目标自离/驱离/反制后，连续丢失飞行特征信息超过本时间，则视为目标丢失，可应用于「目标结果」判定是否处置完成。',
     updatedAt: '2026-06-01 09:00:00'
   },
   {
     id: 'sp-013',
     paramKey: 'simulate.temperature',
-    paramName: '模拟温度',
+    paramName: '模拟温度（℃）',
     group: '模拟',
     valueType: 'number',
     paramValue: null,
-    remark: '单位：℃。留空不触发；填写数值后参与环境演算',
+    remark: '留空不触发；填写数值后参与环境演算',
     updatedAt: '2026-06-01 10:00:00'
   },
   {
     id: 'sp-014',
     paramKey: 'simulate.humidity',
-    paramName: '模拟湿度',
+    paramName: '模拟湿度（%）',
     group: '模拟',
     valueType: 'number',
     paramValue: null,
-    remark: '单位：%。留空不触发；填写数值后参与环境演算',
+    remark: '留空不触发；填写数值后参与环境演算',
     updatedAt: '2026-06-01 10:00:00'
   },
   {
     id: 'sp-015',
     paramKey: 'simulate.wind',
-    paramName: '模拟风力',
+    paramName: '模拟风力（m/s）',
     group: '模拟',
     valueType: 'number',
     paramValue: null,
-    remark: '单位：级。留空不触发；填写数值后参与环境演算',
+    remark: '留空不触发；填写数值后参与环境演算',
     updatedAt: '2026-06-01 10:00:00'
   },
   {
     id: 'sp-016',
     paramKey: 'simulate.rainfall',
-    paramName: '模拟雨量',
+    paramName: '模拟雨量（mm/h）',
     group: '模拟',
     valueType: 'number',
     paramValue: null,
-    remark: '单位：mm/h。留空不触发；填写数值后参与环境演算',
+    remark: '留空不触发；填写数值后参与环境演算',
     updatedAt: '2026-06-01 10:00:00'
+  },
+  {
+    id: 'sp-017',
+    paramKey: 'alarm.audio.file',
+    paramName: '告警音频',
+    group: '告警',
+    valueType: 'string',
+    paramValue: '蜂鸣.wav',
+    remark: '上传告警音频文件，支持 mp3 / wav / aac',
+    updatedAt: '2026-06-15 09:00:00'
+  },
+  {
+    id: 'sp-018',
+    paramKey: 'alarm.audio.max.duration.seconds',
+    paramName: '持续时间（秒）',
+    group: '告警',
+    valueType: 'number',
+    paramValue: 30,
+    remark: '告警音频播放的最长持续时间',
+    updatedAt: '2026-06-15 09:00:00'
+  },
+  {
+    id: 'sp-019',
+    paramKey: 'alarm.visual.mode',
+    paramName: '告警视觉表现形式',
+    group: '告警',
+    valueType: 'string',
+    paramValue: '闪烁',
+    remark: '可选：闪烁、常亮',
+    updatedAt: '2026-06-15 09:00:00'
   }
 ]
 
@@ -128,6 +168,17 @@ function cloneParamSeed(): SystemParam[] {
 }
 
 let allParams: SystemParam[] = cloneParamSeed()
+
+export const SYSTEM_PARAM_STORE_VERSION = 6
+
+function ensureStoreVersion() {
+  const g = globalThis as { __ladSystemParamStoreVer?: number }
+  if (g.__ladSystemParamStoreVer === SYSTEM_PARAM_STORE_VERSION) return
+  g.__ladSystemParamStoreVer = SYSTEM_PARAM_STORE_VERSION
+  allParams = cloneParamSeed()
+}
+
+ensureStoreVersion()
 
 function filterParams(params: SystemParamQuery): SystemParam[] {
   let rows = [...allParams]
@@ -152,6 +203,7 @@ function filterParams(params: SystemParamQuery): SystemParam[] {
 }
 
 export function querySystemParamList(params: SystemParamQuery): SystemParamListResult {
+  ensureStoreVersion()
   const pageIndex = Number(params.pageIndex) || 1
   const pageSize = Number(params.pageSize) || 10
   const filtered = filterParams(params)
@@ -196,6 +248,8 @@ export function saveSystemParam(body: SystemParamSavePayload): SystemParam {
 }
 
 export function restoreSystemParamsToDefaults(): true {
+  const g = globalThis as { __ladSystemParamStoreVer?: number }
+  g.__ladSystemParamStoreVer = SYSTEM_PARAM_STORE_VERSION
   allParams = cloneParamSeed()
   return true
 }

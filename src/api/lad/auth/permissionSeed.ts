@@ -441,27 +441,6 @@ export const LAD_PERMISSION_SEED: AuthPermissionNode[] = [
                 status: 'enabled'
               }
             ]
-          },
-          {
-            id: 'pm-system-sound',
-            parentId: 'pm-system',
-            name: '声光报警',
-            permCode: 'lad:system:sound',
-            nodeType: 'menu',
-            path: '/lad/system/sound-alarm',
-            sort: 4,
-            status: 'enabled',
-            children: [
-              {
-                id: 'pm-system-sound-save',
-                parentId: 'pm-system-sound',
-                name: '配置',
-                permCode: 'lad:system:sound:save',
-                nodeType: 'button',
-                sort: 1,
-                status: 'enabled'
-              }
-            ]
           }
         ]
       },

@@ -14,7 +14,7 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     pageKey: 'data-screen',
     pageType: 'map',
     reqModule: '1',
-    prototypeRef: 'preview-app/public/prototypes/data-screen-03/index.html',
+    prototypeRef: 'preview-app/public/prototypes/data-screen-03/数据大屏03.html',
     phaseNote: '指挥控制中心数据大屏。'
   },
   'incident-history': {
@@ -94,12 +94,6 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     pageType: 'form',
     reqModule: '5-edit',
     phaseNote: '区域新增与编辑。'
-  },
-  'system-sound-alarm': {
-    pageKey: 'system-sound-alarm',
-    pageType: 'form',
-    reqModule: '8-声光',
-    phaseNote: '声光报警配置。'
   },
   'threat-assessment': {
     pageKey: 'threat-assessment',

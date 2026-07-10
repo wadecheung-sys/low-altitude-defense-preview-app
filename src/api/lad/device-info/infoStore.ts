@@ -2,7 +2,6 @@ import { deviceSupportsSelfCheck, runDeviceSelfCheck } from './deviceSelfCheck'
 import type { DeviceSelfCheckResult } from './deviceSelfCheck'
 import {
   DEVICE_ARCHIVE_ID_BY_MODEL,
-  DEVICE_CAMERA_ARCHIVE_ID,
   queryDeviceArchiveDetail
 } from '../device/archiveStore'
 import { ALL_DEVICE_CAPABILITY_CATALOG } from '@/constants/deviceCatalog'
@@ -47,7 +46,10 @@ function nextExtendId() {
 function resolveCatalogVendor(row: DeviceInfoItem): string {
   const entry = ALL_DEVICE_CAPABILITY_CATALOG.find((d) => d.demo.deviceId === row.deviceId)
   if (entry) return entry.vendor
-  if (row.deviceType === '监控摄像头') return '通用'
+  if (row.deviceType === '监控摄像机') {
+    const arch = row.archiveId ? queryDeviceArchiveDetail(row.archiveId) : null
+    return arch?.vendor ?? '海康威视'
+  }
   return '凡双科技'
 }
 
@@ -135,7 +137,9 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
     latitude: o.lat,
     mapX: o.mapX,
     mapY: o.mapY,
-    deviceIcon: row.deviceType.includes('雷达') || row.deviceType.includes('Remote-ID')
+    deviceIcon: row.deviceType === '监控摄像机'
+      ? 'eo'
+      : row.deviceType.includes('雷达') || row.deviceType.includes('Remote-ID')
       ? 'radar'
       : row.deviceType.includes('光电')
         ? 'eo'
@@ -145,7 +149,9 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
             ? 'jammer'
             : 'counter',
     controlRangeM:
-      row.deviceType === '雷达'
+      row.deviceType === '监控摄像机'
+        ? 120
+        : row.deviceType === '雷达'
         ? 800
         : row.deviceType === 'Remote-ID 监视'
           ? 2500
@@ -232,137 +238,163 @@ const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
   catalogSeedRow('TBD-SLA', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' })
 ]
 
-/** 设备组演示：主设备周边监控摄像头 */
+/** 主设备周边监控摄像机（设备关联演示数据） */
 const peripheralCameraSeedRows: Omit<DeviceInfoItem, 'id'>[] = [
   {
     deviceId: 'CAM-N-E01',
-    deviceName: 'FG310F压制-东向监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
-    deployLocation: '核心区制高点',
+    deviceName: '核心区东围墙筒机',
+    archiveInfo: '400万星光筒型网络摄像机档案',
+    archiveId: 'da-10010',
+    deviceType: '监控摄像机',
+    deployLocation: '核心区东围墙',
     ipAddress: '192.168.1.101',
-    serialNo: 'CAM-2025-N01',
+    serialNo: 'HK-DS2CD3T46-2025-001',
     lastHeartbeat: '2026-05-20 14:32:18',
     personInCharge: '张工',
     updatedAt: '2026-05-20 14:32:18'
   },
   {
     deviceId: 'CAM-N-S01',
-    deviceName: 'FG310F压制-南向监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
-    deployLocation: '核心区制高点',
+    deviceName: '核心区南围墙筒机',
+    archiveInfo: '400万星光筒型网络摄像机档案',
+    archiveId: 'da-10010',
+    deviceType: '监控摄像机',
+    deployLocation: '核心区南围墙',
     ipAddress: '192.168.1.102',
-    serialNo: 'CAM-2025-N02',
+    serialNo: 'HK-DS2CD3T46-2025-002',
     lastHeartbeat: '2026-05-20 14:32:18',
     personInCharge: '张工',
     updatedAt: '2026-05-20 14:32:18'
   },
   {
     deviceId: 'CAM-N-W01',
-    deviceName: 'FG310F压制-西向监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
-    deployLocation: '核心区制高点',
+    deviceName: '核心区西围墙枪机',
+    archiveInfo: '800万红外枪型网络摄像机档案',
+    archiveId: 'da-10012',
+    deviceType: '监控摄像机',
+    deployLocation: '核心区西围墙',
     ipAddress: '192.168.1.103',
-    serialNo: 'CAM-2025-N03',
+    serialNo: 'DH-HFW5831-2025-001',
     lastHeartbeat: '2026-05-20 14:32:18',
     personInCharge: '张工',
     updatedAt: '2026-05-20 14:32:18'
   },
   {
     deviceId: 'CAM-R-N01',
-    deviceName: 'PL671F侦测-北侧监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
+    deviceName: '东侧瞭望台北向枪机',
+    archiveInfo: '800万红外枪型网络摄像机档案',
+    archiveId: 'da-10012',
+    deviceType: '监控摄像机',
     deployLocation: '东侧瞭望台',
     ipAddress: '192.168.1.201',
-    serialNo: 'CAM-2025-R01',
+    serialNo: 'DH-HFW5831-2025-002',
     lastHeartbeat: '2026-05-20 14:28:05',
     personInCharge: '周工',
     updatedAt: '2026-05-20 14:28:05'
   },
   {
     deviceId: 'CAM-R-S01',
-    deviceName: 'PL671F侦测-南侧监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
+    deviceName: '东侧瞭望台南向枪机',
+    archiveInfo: '800万红外枪型网络摄像机档案',
+    archiveId: 'da-10012',
+    deviceType: '监控摄像机',
     deployLocation: '东侧瞭望台',
     ipAddress: '192.168.1.202',
-    serialNo: 'CAM-2025-R02',
+    serialNo: 'DH-HFW5831-2025-003',
     lastHeartbeat: '2026-05-20 14:28:05',
     personInCharge: '周工',
     updatedAt: '2026-05-20 14:28:05'
   },
   {
     deviceId: 'CAM-EO-E01',
-    deviceName: '光电跟踪-东侧监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
+    deviceName: '南门岗云台-东侧',
+    archiveInfo: '200万高速云台球机档案',
+    archiveId: 'da-10013',
+    deviceType: '监控摄像机',
     deployLocation: '南门岗哨',
     ipAddress: '192.168.2.101',
-    serialNo: 'CAM-2025-E01',
+    serialNo: 'HK-2DE4423-2025-001',
     lastHeartbeat: '2026-05-20 13:55:40',
     personInCharge: '王工',
     updatedAt: '2026-05-20 13:55:40'
   },
   {
     deviceId: 'CAM-EO-W01',
-    deviceName: '光电跟踪-西侧监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
+    deviceName: '南门岗云台-西侧',
+    archiveInfo: '200万高速云台球机档案',
+    archiveId: 'da-10013',
+    deviceType: '监控摄像机',
     deployLocation: '南门岗哨',
     ipAddress: '192.168.2.102',
-    serialNo: 'CAM-2025-E02',
+    serialNo: 'HK-2DE4423-2025-002',
     lastHeartbeat: '2026-05-20 13:55:40',
     personInCharge: '王工',
     updatedAt: '2026-05-20 13:55:40'
   },
   {
     deviceId: 'CAM-EO-G01',
-    deviceName: '光电跟踪-岗哨全景监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
+    deviceName: '南门岗全景摄像机',
+    archiveInfo: '400万全景广角摄像机档案',
+    archiveId: 'da-10014',
+    deviceType: '监控摄像机',
     deployLocation: '南门岗哨',
     ipAddress: '192.168.2.103',
-    serialNo: 'CAM-2025-E03',
+    serialNo: 'DH-PFW3849-2025-001',
     lastHeartbeat: '2026-05-20 13:55:40',
     personInCharge: '王工',
     updatedAt: '2026-05-20 13:55:40'
   },
   {
     deviceId: 'CAM-W-N01',
-    deviceName: 'DY506F诱骗-机房入口监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
+    deviceName: '西区机房入口枪机',
+    archiveInfo: '400万星光筒型网络摄像机档案',
+    archiveId: 'da-10010',
+    deviceType: '监控摄像机',
     deployLocation: '西区机房',
     ipAddress: '192.168.3.101',
-    serialNo: 'CAM-2025-W01',
+    serialNo: 'HK-DS2CD3T46-2025-003',
     lastHeartbeat: '2026-05-20 12:10:22',
     personInCharge: '赵工',
     updatedAt: '2026-05-20 12:10:22'
   },
   {
     deviceId: 'CAM-W-O01',
-    deviceName: 'DY506F诱骗-外围监控',
-    archiveInfo: '固定监控摄像头档案',
-    archiveId: DEVICE_CAMERA_ARCHIVE_ID,
-    deviceType: '监控摄像头',
+    deviceName: '西区机房外围筒机',
+    archiveInfo: '800万红外枪型网络摄像机档案',
+    archiveId: 'da-10012',
+    deviceType: '监控摄像机',
     deployLocation: '西区机房',
     ipAddress: '192.168.3.102',
-    serialNo: 'CAM-2025-W02',
+    serialNo: 'DH-HFW5831-2025-004',
     lastHeartbeat: '2026-05-20 12:10:22',
     personInCharge: '赵工',
     updatedAt: '2026-05-20 12:10:22'
+  },
+  {
+    deviceId: 'CAM-G-A01',
+    deviceName: '北门岗固定枪机',
+    archiveInfo: '800万红外枪型网络摄像机档案',
+    archiveId: 'da-10012',
+    deviceType: '监控摄像机',
+    deployLocation: '北门岗哨',
+    ipAddress: '192.168.4.101',
+    serialNo: 'DH-HFW5831-2025-005',
+    lastHeartbeat: '2026-05-20 11:45:00',
+    personInCharge: '李工',
+    updatedAt: '2026-05-20 11:45:00'
+  },
+  {
+    deviceId: 'CAM-G-B01',
+    deviceName: '补给站通道筒机',
+    archiveInfo: '400万星光筒型网络摄像机档案',
+    archiveId: 'da-10010',
+    deviceType: '监控摄像机',
+    deployLocation: '补给站通道',
+    ipAddress: '192.168.4.102',
+    serialNo: 'HK-DS2CD3T46-2025-004',
+    lastHeartbeat: '2026-05-20 11:45:00',
+    personInCharge: '李工',
+    updatedAt: '2026-05-20 11:45:00'
   }
 ]
 

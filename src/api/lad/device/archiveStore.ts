@@ -31,19 +31,125 @@ const categoryPrefixes: Record<Exclude<DeviceArchiveCategory, 'all'>, string> = 
   radar: 'D-LAD-RAD',
   radio: 'D-LAD-RF',
   counter: 'D-LAD-CM',
-  eo: 'D-LAD-EO'
+  eo: 'D-LAD-EO',
+  camera: 'D-LAD-CAM'
 }
 
-const CAMERA_ARCHIVE: Omit<DeviceArchiveItem, 'id'> = {
-  archiveNo: 'D-LAD-CAM0001',
-  archiveName: '固定监控摄像头档案',
-  deviceType: '监控摄像头',
-  vendor: '通用',
-  deviceModel: 'IPC-通用',
-  enabled: true,
-  category: 'eo',
-  updatedAt: '2026-03-16 11:10:00'
+interface CameraArchiveSeed {
+  id: string
+  row: Omit<DeviceArchiveItem, 'id'>
+  detail: {
+    remark: string
+    specifications: Omit<DeviceArchiveIndicator, 'id'>[]
+    configurableItems?: DeviceArchiveConfigurableItem[]
+  }
 }
+
+const CAMERA_ARCHIVE_SEEDS: CameraArchiveSeed[] = [
+  {
+    id: 'da-10010',
+    row: {
+      archiveNo: 'D-LAD-CAM0001',
+      archiveName: '400万星光筒型网络摄像机档案',
+      deviceType: '监控摄像机',
+      vendor: '海康威视',
+      deviceModel: 'DS-2CD3T46WDV3-I3',
+      enabled: true,
+      category: 'camera',
+      updatedAt: '2026-03-16 11:10:00'
+    },
+    detail: {
+      remark: '海康威视筒型网络摄像机，适用于围墙、制高点等固定监控点位。',
+      specifications: [
+        { item: '分辨率', unit: '', value: '400万像素' },
+        { item: '最低照度', unit: 'Lux', value: '0.005（星光级）' },
+        { item: '红外补光距离', unit: 'm', value: '80' },
+        { item: '防护等级', unit: '', value: 'IP67' },
+        { item: '编码协议', unit: '', value: 'H.265 / H.264' }
+      ]
+    }
+  },
+  {
+    id: 'da-10012',
+    row: {
+      archiveNo: 'D-LAD-CAM0002',
+      archiveName: '800万红外枪型网络摄像机档案',
+      deviceType: '监控摄像机',
+      vendor: '大华',
+      deviceModel: 'DH-IPC-HFW5831E-Z',
+      enabled: true,
+      category: 'camera',
+      updatedAt: '2026-03-16 11:20:00'
+    },
+    detail: {
+      remark: '大华枪型网络摄像机，适用于开阔区域、机房外围等中远距离监控。',
+      specifications: [
+        { item: '分辨率', unit: '', value: '800万像素' },
+        { item: '镜头焦距', unit: 'mm', value: '2.7-13.5（电动变焦）' },
+        { item: '红外补光距离', unit: 'm', value: '100' },
+        { item: '防护等级', unit: '', value: 'IP67' },
+        { item: '宽动态', unit: '', value: '120dB' }
+      ]
+    }
+  },
+  {
+    id: 'da-10013',
+    row: {
+      archiveNo: 'D-LAD-CAM0003',
+      archiveName: '200万高速云台球机档案',
+      deviceType: '监控摄像机',
+      vendor: '海康威视',
+      deviceModel: 'DS-2DE4423IW-DE',
+      enabled: true,
+      category: 'camera',
+      updatedAt: '2026-03-16 11:30:00'
+    },
+    detail: {
+      remark: '海康威视云台球机，适用于门岗、广场等需要云台巡航与联动跟踪的点位。',
+      specifications: [
+        { item: '分辨率', unit: '', value: '200万像素' },
+        { item: '光学变倍', unit: '倍', value: '23' },
+        { item: '水平转速', unit: '°/s', value: '0.1-120' },
+        { item: '红外补光距离', unit: 'm', value: '150' },
+        { item: '防护等级', unit: '', value: 'IP66' }
+      ],
+      configurableItems: [
+        {
+          id: 'da-10013-cfg-1',
+          key: 'preset_count',
+          label: '预置位数量',
+          unit: '个',
+          scope: 'device',
+          hint: '1~256',
+          defaultValue: '16'
+        }
+      ]
+    }
+  },
+  {
+    id: 'da-10014',
+    row: {
+      archiveNo: 'D-LAD-CAM0004',
+      archiveName: '400万全景广角摄像机档案',
+      deviceType: '监控摄像机',
+      vendor: '大华',
+      deviceModel: 'DH-IPC-PFW3849-AS',
+      enabled: true,
+      category: 'camera',
+      updatedAt: '2026-03-16 11:40:00'
+    },
+    detail: {
+      remark: '大华全景广角摄像机，适用于门岗、通道等需要大范围覆盖的固定点位。',
+      specifications: [
+        { item: '分辨率', unit: '', value: '400万像素' },
+        { item: '水平视场角', unit: '°', value: '180' },
+        { item: '最低照度', unit: 'Lux', value: '0.01' },
+        { item: '防护等级', unit: '', value: 'IP67' },
+        { item: '音频输入', unit: '', value: '支持' }
+      ]
+    }
+  }
+]
 
 function buildSpecifications(
   entry: DeviceCatalogEntry,
@@ -123,26 +229,24 @@ if (slaCatalogEntry) {
   detailExt['da-10011'] = buildArchiveDetailExt(slaCatalogEntry, 'da-10011')
 }
 
-detailExt['da-10010'] = {
-  remark: '周边监控摄像头通用档案。',
-  imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
-  specifications: [
-    {
-      id: 'da-10010-spec-1',
-      item: '分辨率',
-      unit: '',
-      value: '1080P'
-    }
-  ],
-  configurableItems: []
-}
+CAMERA_ARCHIVE_SEEDS.forEach((seed) => {
+  detailExt[seed.id] = {
+    remark: seed.detail.remark,
+    imageUrl: DEVICE_ARCHIVE_PLACEHOLDER,
+    specifications: seed.detail.specifications.map((item, index) => ({
+      ...item,
+      id: `${seed.id}-spec-${index + 1}`
+    })),
+    configurableItems: seed.detail.configurableItems ?? []
+  }
+})
 
 let allList: DeviceArchiveItem[] = [
   ...ALL_CATALOG_DEVICES.map((entry, index) =>
     catalogToArchiveRow(entry, catalogArchiveIds[index]!)
   ),
   ...(slaCatalogEntry ? [catalogToArchiveRow(slaCatalogEntry, 'da-10011')] : []),
-  { ...CAMERA_ARCHIVE, id: 'da-10010' }
+  ...CAMERA_ARCHIVE_SEEDS.map((seed) => ({ ...seed.row, id: seed.id }))
 ]
 
 function filterList(params: DeviceArchiveQuery): DeviceArchiveItem[] {
@@ -310,7 +414,14 @@ export const DEVICE_ARCHIVE_ID_BY_MODEL: Record<string, string> = {
   ...Object.fromEntries(
     ALL_CATALOG_DEVICES.map((entry, index) => [entry.model, catalogArchiveIds[index]!])
   ),
-  'TBD-SLA': 'da-10011'
+  'TBD-SLA': 'da-10011',
+  'DS-2CD3T46WDV3-I3': 'da-10010',
+  'DH-IPC-HFW5831E-Z': 'da-10012',
+  'DS-2DE4423IW-DE': 'da-10013',
+  'DH-IPC-PFW3849-AS': 'da-10014'
 }
 
+/** 默认监控摄像机档案（筒型枪机） */
 export const DEVICE_CAMERA_ARCHIVE_ID = 'da-10010'
+
+export const CAMERA_ARCHIVE_IDS = CAMERA_ARCHIVE_SEEDS.map((seed) => seed.id)

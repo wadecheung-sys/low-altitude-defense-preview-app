@@ -19,7 +19,8 @@ import {
 import { matchValidUntilRange, normalizeValidUntil } from './validUntilUtils'
 import {
   LAD_RESOLVABLE_TARGET_PROFILES,
-  findTargetProfileByTargetId
+  findTargetProfileByTargetId,
+  findTargetProfileByUavSn
 } from '@/api/lad/shared/targetProfiles'
 
 const listTypes: ListType[] = ['黑名单', '白名单']
@@ -137,7 +138,10 @@ function buildTargetDetail(row: BlackWhiteListItem): BlackWhiteTargetDetail {
     disposalDetail,
     lastObservedAt: row.updatedAt,
     pilotLocatedAt: pilotLocated ? row.updatedAt : '—',
-    eventCount: findTargetProfileByTargetId(row.targetId)?.eventCount ?? 2
+    eventCount:
+      findTargetProfileByUavSn(row.sn)?.eventCount ??
+      findTargetProfileByTargetId(row.targetId)?.eventCount ??
+      2
   }
 }
 
@@ -147,9 +151,6 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
     .filter((row): row is BlackWhiteListItem => row !== null && hasResolvableSn(row.sn))
   if (params.listType) {
     rows = rows.filter((r) => r.listType === params.listType)
-  }
-  if (params.targetId?.trim()) {
-    rows = rows.filter((r) => r.targetId.includes(params.targetId!.trim()))
   }
   if (params.sn?.trim()) {
     const kw = params.sn.trim().toLowerCase()
@@ -283,6 +284,13 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     throw new Error('请填写有效识别码')
   }
 
+  const targetId =
+    payload.targetId?.trim() ||
+    (payload.id ? allList.find((row) => row.id === payload.id)?.targetId : undefined) ||
+    findTargetProfileByUavSn(normalized.sn)?.targetId ||
+    `TG-BW-${normalized.sn.trim()}`
+  const withTargetId = { ...normalized, targetId }
+
   if (payload.id) {
     const idx = allList.findIndex((row) => row.id === payload.id)
     if (idx < 0) {
@@ -290,7 +298,7 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     }
     allList[idx] = {
       ...allList[idx],
-      ...normalized,
+      ...withTargetId,
       updatedAt: ts
     }
     return allList[idx]
@@ -301,7 +309,7 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     discoveredAt: ts,
     updatedAt: ts,
     duration: '00:00:00',
-    ...normalized
+    ...withTargetId
   }
   allList.unshift(row)
   return row

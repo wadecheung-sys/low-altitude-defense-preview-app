@@ -1,34 +1,28 @@
 import type { DeviceInfoItem } from '@/api/lad/device-info/types'
 import type { DeviceGroupType } from './types'
+import {
+  isCameraDeviceType,
+  isMasterDeviceType,
+  isPeripheralDeviceType,
+  LAD_CAMERA_DEVICE_TYPE,
+  LAD_MASTER_DEVICE_TYPES,
+  LAD_PERIPHERAL_DEVICE_TYPES
+} from '@/constants/deviceTypes'
 
-/** 关联设备：监控摄像头 */
-export const CAMERA_DEVICE_TYPE = '监控摄像头'
-
-/** 主设备：侦测 / 反制类设备类型 */
-export const MASTER_DEVICE_TYPES = [
-  '雷达',
-  '无线电侦测',
-  'Remote-ID 监视',
-  '无线电干扰',
-  '导航诱骗',
-  '激光打击',
-  '高功率微波',
-  '光电跟踪'
-] as const
-
-/** 周边设备：不可作为设备组主设备 */
-export const PERIPHERAL_DEVICE_TYPES = ['监控摄像头', 'ADS-B 监视'] as const
+export { LAD_CAMERA_DEVICE_TYPE as CAMERA_DEVICE_TYPE }
+export { LAD_MASTER_DEVICE_TYPES as MASTER_DEVICE_TYPES }
+export { LAD_PERIPHERAL_DEVICE_TYPES as PERIPHERAL_DEVICE_TYPES }
 
 export function isCameraDevice(device: Pick<DeviceInfoItem, 'deviceType'>): boolean {
-  return device.deviceType === CAMERA_DEVICE_TYPE
+  return isCameraDeviceType(device.deviceType)
 }
 
 export function isPeripheralDevice(device: Pick<DeviceInfoItem, 'deviceType'>): boolean {
-  return (PERIPHERAL_DEVICE_TYPES as readonly string[]).includes(device.deviceType)
+  return isPeripheralDeviceType(device.deviceType)
 }
 
 export function isMasterDevice(device: Pick<DeviceInfoItem, 'deviceType'>): boolean {
-  return !isCameraDevice(device) && !isPeripheralDevice(device)
+  return isMasterDeviceType(device.deviceType)
 }
 
 export function deriveGroupType(deviceType: string): DeviceGroupType {

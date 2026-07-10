@@ -1,4 +1,4 @@
-/** 登录后默认进入独立数据大屏 */
+/** 登录后默认进入数据大屏 */
 export const LAD_HOME_PATH = '/lad/data-screen'
 
 /** 从数据大屏进入后台管理的首页 */

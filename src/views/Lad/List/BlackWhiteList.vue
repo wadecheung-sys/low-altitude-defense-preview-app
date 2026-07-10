@@ -1,7 +1,7 @@
 <script setup lang="tsx">
 import { computed, onMounted, reactive, ref, unref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElDivider, ElLink, ElMessage, ElMessageBox, ElTabPane, ElTabs, ElTag } from 'element-plus'
+import { ElDivider, ElMessage, ElMessageBox, ElTabPane, ElTabs, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
@@ -35,7 +35,6 @@ const activeListTab = ref<ListTab>(
 
 const searchParams = ref<Recordable>({
   sn: (route.query.sn as string) || undefined,
-  targetId: (route.query.targetId as string) || undefined,
   listType: activeListTab.value === 'all' ? undefined : activeListTab.value
 })
 const formVisible = ref(false)
@@ -45,7 +44,6 @@ const setSearchParams = (params: Recordable) => {
   const range = params.validUntilRange as string[] | undefined
   searchParams.value = {
     listType: activeListTab.value === 'all' ? undefined : activeListTab.value,
-    targetId: params.targetId,
     sn: params.sn,
     model: params.model,
     validUntilStart: range?.[0] || undefined,
@@ -82,7 +80,7 @@ const goDetail = (row: BlackWhiteListItem) => {
 
 const tryOpenDetailFromQuery = () => {
   const openDetail = route.query.openDetail === '1'
-  const hasQuery = Boolean(route.query.targetId || route.query.sn)
+  const hasQuery = Boolean(route.query.sn)
   if (!openDetail && !hasQuery) return
   if (dataList.value.length >= 1) {
     goDetail(dataList.value[0])
@@ -212,33 +210,31 @@ const crudSchemas = reactive<CrudSchema[]>([
     }
   },
   {
-    field: 'historyTargetType',
-    label: '目标类型',
-    search: { hidden: true },
-    table: { hidden: true },
-    form: { hidden: true },
-    detail: { hidden: true }
-  },
-  {
-    field: 'targetId',
-    label: '目标ID',
-    minWidth: 138,
+    field: 'sn',
+    label: '识别码',
+    minWidth: 130,
     search: {
       component: 'Input',
       componentProps: {
-        placeholder: '融合目标编号'
+        placeholder: '请输入识别码'
       }
     },
     table: {
       showOverflowTooltip: true,
       slots: {
         default: ({ row }: { row: BlackWhiteListItem }) => (
-          <ElLink type="primary" underline={false} title="查看无人机详情" onClick={() => goDetail(row)}>
-            {row.targetId}
-          </ElLink>
+          <span>{displayResolvableSn(row.sn)}</span>
         )
       }
     }
+  },
+  {
+    field: 'historyTargetType',
+    label: '目标类型',
+    search: { hidden: true },
+    table: { hidden: true },
+    form: { hidden: true },
+    detail: { hidden: true }
   },
   {
     field: 'validUntil',
@@ -279,25 +275,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     minWidth: 120,
     search: { hidden: true },
     table: { showOverflowTooltip: true }
-  },
-  {
-    field: 'sn',
-    label: '识别码',
-    minWidth: 130,
-    search: {
-      component: 'Input',
-      componentProps: {
-        placeholder: '请输入识别码'
-      }
-    },
-    table: {
-      showOverflowTooltip: true,
-      slots: {
-        default: ({ row }: { row: BlackWhiteListItem }) => (
-          <span>{displayResolvableSn(row.sn)}</span>
-        )
-      }
-    }
   },
   {
     field: 'targetType',
@@ -402,7 +379,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
     <ContentWrap class="black-white-list-page__search">
       <Search
         :schema="allSchemas.searchSchema"
-        :model="{ sn: route.query.sn, targetId: route.query.targetId }"
+        :model="{ sn: route.query.sn }"
         @search="setSearchParams"
         @reset="setSearchParams"
       />

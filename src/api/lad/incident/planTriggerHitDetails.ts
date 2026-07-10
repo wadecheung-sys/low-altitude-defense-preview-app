@@ -129,7 +129,7 @@ export function buildDisposalExecutionStageDetails(
 
   if (row.disposalExecutionSource === 'manual') {
     return [
-      { label: '执行来源', value: '数据大屏人工操作' },
+      { label: '执行来源', value: '人工操作' },
       { label: '操作人', value: row.disposalOperator || '值班员' },
       { label: '选中设备', value: options.countermeasureDevice },
       {

@@ -38,7 +38,6 @@ export interface BlackWhiteListQuery {
   pageIndex?: number
   pageSize?: number
   listType?: ListType
-  targetId?: string
   sn?: string
   model?: string
   historyTargetType?: BlackWhiteTargetKindFilter
@@ -59,7 +58,6 @@ export interface BlackWhiteListResult {
 export type BlackWhiteFormPayload = Pick<
   BlackWhiteListItem,
   | 'listType'
-  | 'targetId'
   | 'historyTargetType'
   | 'targetType'
   | 'validUntil'
@@ -71,7 +69,7 @@ export type BlackWhiteFormPayload = Pick<
   | 'latitude'
   | 'entryMethod'
   | 'remark'
-> & { id?: string }
+> & { id?: string; targetId?: string }
 
 /**
  * 黑白名单「目标详情」— 融合无人机主数据 + 最近一次态势摘要

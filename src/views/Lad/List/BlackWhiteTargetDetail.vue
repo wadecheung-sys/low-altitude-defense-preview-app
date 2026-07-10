@@ -92,7 +92,7 @@ async function fetchLatestEvent() {
   const res = await getHistoryEventListApi({
     pageIndex: 1,
     pageSize: 100,
-    targetId: d.targetId
+    uavSn: d.sn
   })
   const list = res.data.list
   latestEvent.value = list.length
@@ -125,7 +125,7 @@ const eventQueryParams = computed(() => {
   if (!d) return {}
   const range = eventFilters.discoveredAtRange
   return {
-    targetId: d.targetId,
+    uavSn: d.sn,
     discoveredAtStart: range?.[0],
     discoveredAtEnd: range?.[1],
     zoneName: eventFilters.zoneName || undefined,
@@ -168,9 +168,9 @@ const resetEventFilters = () => {
 }
 
 watch(
-  () => detail.value?.targetId,
-  (id) => {
-    if (id) {
+  () => detail.value?.sn,
+  (sn) => {
+    if (sn) {
       currentPage.value = 1
       getList()
       fetchLatestEvent()
@@ -351,7 +351,16 @@ watch(
 <template>
   <ContentDetailWrap v-loading="loading" title="">
     <template #header>
-      <BaseButton @click="goBackList">返回列表</BaseButton>
+      <div class="target-detail-header">
+        <BaseButton @click="goBackList">返回列表</BaseButton>
+        <BaseButton
+          v-if="detail"
+          :type="removeButtonType"
+          @click="onRemoveFromList"
+        >
+          {{ removeListLabel }}
+        </BaseButton>
+      </div>
     </template>
 
     <template v-if="detail">
@@ -374,7 +383,6 @@ watch(
           label-width="128px"
           class="target-detail-descriptions"
         >
-          <ElDescriptionsItem label="目标 ID">{{ detail.targetId }}</ElDescriptionsItem>
           <ElDescriptionsItem label="品牌型号">{{ detail.model }}</ElDescriptionsItem>
           <ElDescriptionsItem label="识别码">{{ detail.sn }}</ElDescriptionsItem>
 
@@ -449,11 +457,6 @@ watch(
 
         <div class="target-detail-events__list-head-row">
           <span class="target-detail-events__list-head">全部历史记录</span>
-          <div class="target-detail-events__actions">
-            <BaseButton :type="removeButtonType" @click="onRemoveFromList">
-              {{ removeListLabel }}
-            </BaseButton>
-          </div>
         </div>
         <div class="target-detail-events__toolbar mb-10px">
           <ElForm inline class="target-detail-events__filters">
@@ -523,6 +526,15 @@ watch(
 </template>
 
 <style scoped lang="less">
+.target-detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
 .target-detail-descriptions {
   width: 100%;
 
@@ -604,7 +616,6 @@ watch(
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
-    justify-content: space-between;
     margin: 0 0 12px;
   }
 
@@ -620,13 +631,6 @@ watch(
 
   &__filters {
     width: 100%;
-  }
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    flex-shrink: 0;
   }
 }
 </style>

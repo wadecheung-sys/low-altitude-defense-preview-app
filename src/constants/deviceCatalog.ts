@@ -28,12 +28,8 @@ export interface DeviceCatalogEntry {
   tier: DeviceCatalogTier
   /** 相对 DEVICE_DOCS_ROOT 的文件名 */
   docFile?: string
-  /** 数据大屏弹窗优先展示（1 最高） */
-  screenPriority?: number
   /** 是否可作为设备组主设备 */
   groupMasterEligible: boolean
-  /** 是否出现在数据大屏设备弹窗 */
-  dataScreenVisible: boolean
   archiveName: string
   archiveNo: string
   /** 设备规格：说明书固定参数 */
@@ -99,9 +95,6 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '无线电干扰',
     tier: 'confirmed',
     docFile: '使用说明书_固定式转台无线电压制设备FG310F.pdf',
-    screenPriority: 1,
-    groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: '核心区转台无线电压制设备档案',
     archiveNo: 'D-LAD-JAM0001',
     specifications: [
@@ -151,9 +144,6 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '导航诱骗',
     tier: 'confirmed',
     docFile: '使用说明书_固定式反无人机无线电主动防御设备DY506F.pdf',
-    screenPriority: 2,
-    groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: '西区导航主动防御设备档案',
     archiveNo: 'D-LAD-SPF0001',
     specifications: [
@@ -184,9 +174,6 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '无线电侦测',
     tier: 'confirmed',
     docFile: '使用说明书_固定式无线电侦测设备PL671F.pdf',
-    screenPriority: 3,
-    groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: '东侧无线电侦测站档案',
     archiveNo: 'D-LAD-RF0001',
     specifications: [
@@ -217,9 +204,6 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: 'Remote-ID 监视',
     tier: 'confirmed',
     docFile: '使用说明书_远程识别监视设备RDS200.pdf',
-    screenPriority: 4,
-    groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: 'Remote-ID 监视站档案',
     archiveNo: 'D-LAD-RID0001',
     specifications: [
@@ -250,7 +234,6 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     tier: 'peripheral',
     docFile: 'EXD55-LS ADS-B接收机手册V1.3.pdf',
     groupMasterEligible: false,
-    dataScreenVisible: false,
     archiveName: 'ADS-B 地面站接收机档案',
     archiveNo: 'D-LAD-ADS0001',
     specifications: [
@@ -274,7 +257,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
   }
 ]
 
-/** 扩展选型设备（大屏 tab 与设备组保留） */
+/** 扩展选型设备（设备组与演示保留） */
 export const PENDING_DEVICES: DeviceCatalogEntry[] = [
   {
     model: 'TBD-RAD',
@@ -282,7 +265,6 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '雷达',
     tier: 'pending',
     groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: '低空监视雷达档案',
     archiveNo: 'D-LAD-RAD0001',
     specifications: [
@@ -313,7 +295,6 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '光电跟踪',
     tier: 'pending',
     groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: '光电跟踪转台档案',
     archiveNo: 'D-LAD-EO0001',
     specifications: [
@@ -345,7 +326,6 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '激光打击',
     tier: 'pending',
     groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: '激光反制设备档案',
     archiveNo: 'D-LAD-LSR0001',
     specifications: [
@@ -376,7 +356,6 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '高功率微波',
     tier: 'pending',
     groupMasterEligible: true,
-    dataScreenVisible: true,
     archiveName: '高功率微波设备档案',
     archiveNo: 'D-LAD-HPM0001',
     specifications: [
@@ -411,7 +390,6 @@ export const INTERNAL_PLACEHOLDER_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '声光驱离',
     tier: 'pending',
     groupMasterEligible: false,
-    dataScreenVisible: false,
     archiveName: '声光驱离设备档案',
     archiveNo: 'D-LAD-SLA0001',
     specifications: [
@@ -444,13 +422,10 @@ export const ALL_DEVICE_CAPABILITY_CATALOG = [
   ...INTERNAL_PLACEHOLDER_DEVICES
 ]
 
-export const DATA_SCREEN_PRIORITY_DEVICES = CONFIRMED_DEVICES.filter(
-  (d) => d.dataScreenVisible
-).sort((a, b) => (a.screenPriority ?? 99) - (b.screenPriority ?? 99))
-
 export function catalogCategoryFromDeviceType(
   deviceType: string
-): 'radar' | 'radio' | 'counter' | 'eo' {
+): 'radar' | 'radio' | 'counter' | 'eo' | 'camera' {
+  if (deviceType === '监控摄像机') return 'camera'
   if (deviceType === '雷达' || deviceType === 'ADS-B 监视') return 'radar'
   if (deviceType === '无线电侦测' || deviceType === 'Remote-ID 监视') return 'radio'
   if (deviceType === '光电跟踪') return 'eo'
@@ -550,9 +525,6 @@ export function isDemoExecutableDeviceModel(model?: string): boolean {
   if (!model) return true
   const binding = Object.values(COUNTERMEASURE_DEVICE_BINDINGS).find((item) => item.model === model)
   if (binding) return binding.demoExecutable
-  // 大屏可见的扩展型号在 mock 阶段允许指令下发，前台呈现与在网设备一致
-  const pending = PENDING_DEVICES.find((item) => item.model === model)
-  if (pending?.dataScreenVisible) return true
   if (model === 'TBD-SLA') return true
   return !model.startsWith('TBD-')
 }

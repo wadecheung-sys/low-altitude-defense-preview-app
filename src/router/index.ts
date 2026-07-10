@@ -68,6 +68,12 @@ export const constantRouterMap: AppRouteRecordRaw[] = [
     meta: { hidden: true, noTagsView: true }
   },
   {
+    path: '/lad/data-screen-nav',
+    redirect: '/lad/data-screen',
+    name: 'LadLegacyDataScreenNav',
+    meta: { hidden: true, noTagsView: true }
+  },
+  {
     path: '/personal',
     component: Layout,
     redirect: '/personal/personal-center',
@@ -127,8 +133,14 @@ export const constantRouterMap: AppRouteRecordRaw[] = [
   },
   {
     path: '/lad/threat/sound-alarm',
-    redirect: '/lad/system/sound-alarm',
+    redirect: '/lad/system/params',
     name: 'LadLegacyThreatSoundAlarm',
+    meta: { hidden: true, noTagsView: true }
+  },
+  {
+    path: '/lad/system/sound-alarm',
+    redirect: '/lad/system/params',
+    name: 'LadLegacySystemSoundAlarm',
     meta: { hidden: true, noTagsView: true }
   }
 ]

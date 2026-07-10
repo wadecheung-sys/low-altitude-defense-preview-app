@@ -70,7 +70,6 @@ function parseFrequencyBands(frequency?: string): FrequencyBand[] {
 function createDefaultForm() {
   return {
     listType: '黑名单' as ManagedListType,
-    targetId: '',
     validUntil: '',
     model: modelOptions[0],
     frequencyBands: [createFrequencyBand(2.4), createFrequencyBand(5.8)] as FrequencyBand[],
@@ -114,7 +113,6 @@ watch(
       form.value = {
         ...createDefaultForm(),
         listType: props.row.listType === '白名单' ? '白名单' : '黑名单',
-        targetId: props.row.targetId,
         validUntil:
           props.row.validUntil === '永久' ? '' : normalizeValidUntil(props.row.validUntil),
         model: props.row.model || '其他',
@@ -152,16 +150,17 @@ const onSubmit = async () => {
 
   loading.value = true
   try {
+    const sn = form.value.sn.trim()
     await saveBlackWhiteApi({
       id: props.row?.id,
       listType: form.value.listType,
-      targetId: form.value.targetId,
+      targetId: props.row?.targetId || `TG-BW-${sn}`,
       historyTargetType: COOPERATIVE_DRONE_KIND,
       targetType: props.row?.targetType || '多旋翼',
       validUntil: normalizeValidUntil(form.value.validUntil || '永久'),
       model: form.value.model,
       frequency,
-      sn: form.value.sn.trim(),
+      sn,
       zoneName: form.value.zoneName,
       longitude: form.value.longitude,
       latitude: form.value.latitude,
@@ -193,9 +192,6 @@ const onSubmit = async () => {
             :value="item.value"
           />
         </ElSelect>
-      </ElFormItem>
-      <ElFormItem label="目标 ID" required>
-        <ElInput v-model="form.targetId" placeholder="融合目标编号" />
       </ElFormItem>
       <ElFormItem label="识别码" required>
         <ElInput v-model="form.sn" placeholder="请输入合作式无人机识别码" />

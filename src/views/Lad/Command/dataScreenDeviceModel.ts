@@ -22,7 +22,6 @@ export interface DataScreenDeviceView {
   model: string
   deviceType: string
   vendor: string
-  /** 内部标记：confirmed / pending / peripheral，仅代码层使用 */
   tier: DeviceCatalogTier
   deviceRecordId?: string
   deviceCode?: string
@@ -41,18 +40,18 @@ export interface DataScreenDeviceView {
   runtimeConfigItems: Array<DeviceConfigurableItemTemplate & { currentValue: string }>
 }
 
-/** u325 各状态「查看更多」按钮 → 选型型号 */
+/** u324 各状态「查看更多」按钮 → 选型型号（数据大屏03.html） */
 export const DATA_SCREEN_VIEW_MORE_BUTTONS: Record<string, string> = {
-  u326: 'TBD-RAD',
-  u337: 'TBD-EO',
-  u347: 'PL671F',
-  u357: 'RDS200',
-  u367: 'FG310F',
-  u378: 'DY506F',
-  u389: 'TBD-LSR',
-  u402: 'TBD-HPM',
-  u415: 'TBD-SLA',
-  u424: 'EXD55-LS'
+  u325: 'TBD-RAD',
+  u330: 'TBD-EO',
+  u335: 'PL671F',
+  u340: 'RDS200',
+  u345: 'FG310F',
+  u351: 'DY506F',
+  u357: 'TBD-LSR',
+  u363: 'TBD-HPM',
+  u369: 'TBD-SLA',
+  u375: 'EXD55-LS'
 }
 
 interface SummaryFieldSync {
@@ -175,7 +174,6 @@ function mockLiveMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
   }
 }
 
-/** 按设备类型给出前台可见的运行状态（不暴露选型阶段） */
 function resolveRunStatus(entry: DeviceCatalogEntry): string {
   switch (entry.deviceType) {
     case '雷达':
@@ -200,7 +198,7 @@ function resolveRunStatus(entry: DeviceCatalogEntry): string {
 function mockOverviewMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
   const runStatus = resolveRunStatus(entry)
   return [
-    { label: '在线状态', value: '在线', emphasis: true },
+    { label: '设备状态', value: '在线', emphasis: true },
     { label: '运行状态', value: runStatus },
     { label: '健康状态', value: '正常' },
     { label: '部署位置', value: entry.demo.deployLocation },
@@ -283,149 +281,27 @@ function labelLine(label: string, value: string) {
   return `${label}：${value}`
 }
 
-function metricText(view: DataScreenDeviceView, label: string, displayLabel = label) {
-  const item = view.liveMetrics.find((metric) => metric.label === label)
-  if (!item) return labelLine(displayLabel, '—')
-  return labelLine(displayLabel, item.unit ? `${item.value} ${item.unit}` : item.value)
-}
-
-function angleText(
-  view: DataScreenDeviceView,
-  sourceLabel: string,
-  displayLabel: '方向角' | '俯仰角' | '转台方位' | '转台俯仰'
-) {
-  const item = view.liveMetrics.find((metric) => metric.label === sourceLabel)
-  return labelLine(displayLabel, item ? `${item.value}°` : '—')
-}
-
-function nameTypeDeploy(ids: [string, string, string]): SummaryFieldSync[] {
+function summaryFields(nameId: string, typeId: string, deployId: string, onlineId: string): SummaryFieldSync[] {
   return [
-    { elementId: ids[0], render: (v) => labelLine('设备名称', v.deviceName) },
-    { elementId: ids[1], render: (v) => labelLine('设备类型', v.deviceType) },
-    { elementId: ids[2], render: (v) => labelLine('部署位置', v.deployLocation) }
+    { elementId: nameId, render: (v) => labelLine('设备名称', v.deviceName) },
+    { elementId: typeId, render: (v) => labelLine('设备类型', v.deviceType) },
+    { elementId: deployId, render: (v) => labelLine('部署位置', v.deployLocation) },
+    { elementId: onlineId, render: (v) => labelLine('设备状态', v.onlineStatus) }
   ]
 }
 
-/** 同步 u325 设备概要面板文案 */
+/** 同步 u324 设备概要面板文案（每状态 4 个字段） */
 export const DATA_SCREEN_SUMMARY_PANELS: SummaryPanelSync[] = [
-  {
-    model: 'TBD-RAD',
-    fields: [
-      ...nameTypeDeploy(['u327', 'u328', 'u329']),
-      { elementId: 'u330', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u331', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u332', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u333', render: (v) => metricText(v, '锁定目标') },
-      { elementId: 'u334', render: (v) => metricText(v, '探测距离') },
-      { elementId: 'u335', render: (v) => metricText(v, '扫描周期') },
-      { elementId: 'u336', render: (v) => metricText(v, '发现目标数') }
-    ]
-  },
-  {
-    model: 'TBD-EO',
-    fields: [
-      ...nameTypeDeploy(['u338', 'u339', 'u340']),
-      { elementId: 'u341', render: (v) => angleText(v, '转台方位角', '方向角') },
-      { elementId: 'u342', render: (v) => angleText(v, '转台俯仰角', '俯仰角') },
-      { elementId: 'u343', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u344', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u345', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u346', render: (v) => metricText(v, '跟踪目标', '锁定目标') }
-    ]
-  },
-  {
-    model: 'PL671F',
-    fields: [
-      ...nameTypeDeploy(['u348', 'u349', 'u350']),
-      { elementId: 'u351', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u352', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u353', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u354', render: (v) => metricText(v, '侦测目标数', '锁定目标') },
-      { elementId: 'u355', render: (v) => angleText(v, '转台方位角', '方向角') },
-      { elementId: 'u356', render: (v) => angleText(v, '转台俯仰角', '俯仰角') }
-    ]
-  },
-  {
-    model: 'RDS200',
-    fields: [
-      ...nameTypeDeploy(['u358', 'u359', 'u360']),
-      { elementId: 'u361', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u362', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u363', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u364', render: (v) => metricText(v, 'RID 目标数', '锁定目标') },
-      { elementId: 'u365', render: (v) => angleText(v, '转台方位角', '方向角') },
-      { elementId: 'u366', render: (v) => angleText(v, '转台俯仰角', '俯仰角') }
-    ]
-  },
-  {
-    model: 'FG310F',
-    fields: [
-      ...nameTypeDeploy(['u368', 'u369', 'u370']),
-      { elementId: 'u371', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u372', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u373', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u374', render: (v) => metricText(v, '锁定目标') },
-      { elementId: 'u375', render: (v) => angleText(v, '转台方位角', '方向角') },
-      { elementId: 'u376', render: (v) => angleText(v, '转台俯仰角', '俯仰角') }
-    ]
-  },
-  {
-    model: 'DY506F',
-    fields: [
-      ...nameTypeDeploy(['u379', 'u380', 'u381']),
-      { elementId: 'u382', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u383', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u384', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u385', render: (v) => metricText(v, '锁定目标') },
-      { elementId: 'u386', render: (v) => angleText(v, '转台方位角', '方向角') },
-      { elementId: 'u387', render: (v) => angleText(v, '转台俯仰角', '俯仰角') }
-    ]
-  },
-  {
-    model: 'TBD-LSR',
-    fields: [
-      ...nameTypeDeploy(['u390', 'u391', 'u392']),
-      { elementId: 'u393', render: (v) => labelLine('就绪状态', '就绪') },
-      { elementId: 'u394', render: (v) => labelLine('安全联锁', '安全复核') },
-      { elementId: 'u395', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u396', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u397', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u398', render: (v) => metricText(v, '瞄准目标', '锁定目标') },
-      { elementId: 'u399', render: (v) => angleText(v, '转台方位角', '方向角') },
-      { elementId: 'u400', render: (v) => angleText(v, '转台俯仰角', '俯仰角') }
-    ]
-  },
-  {
-    model: 'TBD-HPM',
-    fields: [
-      ...nameTypeDeploy(['u403', 'u404', 'u405']),
-      { elementId: 'u406', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u407', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u408', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u409', render: (v) => metricText(v, '锁定目标') },
-      { elementId: 'u410', render: (v) => labelLine('就绪状态', '就绪') }
-    ]
-  },
-  {
-    model: 'TBD-SLA',
-    fields: [
-      ...nameTypeDeploy(['u416', 'u417', 'u418']),
-      { elementId: 'u419', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u420', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u421', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u422', render: (v) => metricText(v, '锁定目标') }
-    ]
-  },
-  {
-    model: 'EXD55-LS',
-    fields: [
-      ...nameTypeDeploy(['u425', 'u426', 'u427']),
-      { elementId: 'u428', render: (v) => labelLine('在线状态', v.onlineStatus) },
-      { elementId: 'u429', render: (v) => labelLine('运行状态', v.runStatus) },
-      { elementId: 'u430', render: (v) => labelLine('健康状态', v.healthStatus) },
-      { elementId: 'u431', render: (v) => metricText(v, '1090ES 报文', '接收报文') }
-    ]
-  }
+  { model: 'TBD-RAD', fields: summaryFields('u326', 'u327', 'u328', 'u329') },
+  { model: 'TBD-EO', fields: summaryFields('u331', 'u332', 'u333', 'u334') },
+  { model: 'PL671F', fields: summaryFields('u336', 'u337', 'u338', 'u339') },
+  { model: 'RDS200', fields: summaryFields('u341', 'u342', 'u343', 'u344') },
+  { model: 'FG310F', fields: summaryFields('u346', 'u347', 'u348', 'u349') },
+  { model: 'DY506F', fields: summaryFields('u352', 'u353', 'u354', 'u355') },
+  { model: 'TBD-LSR', fields: summaryFields('u358', 'u359', 'u360', 'u361') },
+  { model: 'TBD-HPM', fields: summaryFields('u364', 'u365', 'u366', 'u367') },
+  { model: 'TBD-SLA', fields: summaryFields('u370', 'u371', 'u372', 'u373') },
+  { model: 'EXD55-LS', fields: summaryFields('u376', 'u377', 'u378', 'u379') }
 ]
 
 export function setPrototypeLabelText(doc: Document, elementId: string, text: string) {

@@ -68,6 +68,45 @@ const dronePx = computed(() => toPx(currentSample.value))
 const pilotPx = computed(() => toPx(props.detail.pilotPos))
 const devicePx = computed(() => toPx(props.detail.devicePos))
 
+function resolvePlaybackDurationSec(discoveredAt: string, endedAt: string, duration: string) {
+  const beginMs = Date.parse(discoveredAt.replace(/-/g, '/'))
+  const endMs = Date.parse(endedAt.replace(/-/g, '/'))
+  if (Number.isFinite(beginMs) && Number.isFinite(endMs) && endMs > beginMs) {
+    return Math.round((endMs - beginMs) / 1000)
+  }
+
+  const parts = duration.split(':').map(Number)
+  if (parts.length === 3 && parts.every((value) => Number.isFinite(value))) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2]
+  }
+
+  return 60
+}
+
+function formatPlaybackClock(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '00:00'
+  const total = Math.floor(seconds)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  const mm = String(m).padStart(2, '0')
+  const ss = String(s).padStart(2, '0')
+  return h > 0 ? `${String(h).padStart(2, '0')}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+const playbackDurationSec = computed(() =>
+  resolvePlaybackDurationSec(props.detail.discoveredAt, props.detail.endedAt, props.detail.duration)
+)
+
+const playbackCurrentSec = computed(() =>
+  Math.round((playbackDurationSec.value * progress.value) / 100)
+)
+
+const playbackTimeLabel = computed(
+  () =>
+    `${formatPlaybackClock(playbackCurrentSec.value)} / ${formatPlaybackClock(playbackDurationSec.value)}`
+)
+
 const tick = (ts: number) => {
   if (!playing.value) return
   if (!lastTs) lastTs = ts
@@ -226,7 +265,7 @@ defineExpose({ play, pause, togglePlay })
         <ElSelect v-model="speed" size="small" class="trajectory-replay__speed-select">
           <ElOption v-for="s in speedOptions" :key="s" :label="`${s}X`" :value="s" />
         </ElSelect>
-        <span class="trajectory-replay__progress-text">{{ progress.toFixed(0) }}%</span>
+        <span class="trajectory-replay__progress-text">{{ playbackTimeLabel }}</span>
       </div>
     </div>
   </div>

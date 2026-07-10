@@ -24,7 +24,6 @@ const authPermissionPage = () => import('@/views/Lad/Auth/AuthPermission.vue')
 const authRolePage = () => import('@/views/Lad/Auth/AuthRole.vue')
 const authLogPage = () => import('@/views/Lad/Auth/AuthLog.vue')
 const threatRuleListPage = () => import('@/views/Lad/Threat/ThreatRuleList.vue')
-const threatSoundAlarmPage = () => import('@/views/Lad/Threat/ThreatSoundAlarm.vue')
 const planStrategyListPage = () => import('@/views/Lad/Plan/PlanStrategyList.vue')
 const messageCenterListPage = () => import('@/views/Lad/Message/MessageCenterList.vue')
 
@@ -421,14 +420,6 @@ export const ladAsyncRouterMap: AppRouteRecordRaw[] = [
         component: systemParamsPage,
         meta: ladMeta('system-params', {
           title: '参数配置'
-        })
-      },
-      {
-        path: 'sound-alarm',
-        name: 'LadSystemSoundAlarm',
-        component: threatSoundAlarmPage,
-        meta: ladMeta('system-sound-alarm', {
-          title: '声光报警'
         })
       },
       {
