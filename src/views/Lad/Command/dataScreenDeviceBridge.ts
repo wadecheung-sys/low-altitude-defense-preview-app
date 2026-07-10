@@ -41,6 +41,16 @@ export function syncDataScreenDeviceSummary(doc: Document) {
   })
 }
 
+function resolveViewMoreModel(target: EventTarget | null): string | undefined {
+  let element = target as HTMLElement | null
+  while (element) {
+    const model = DATA_SCREEN_VIEW_MORE_BUTTONS[element.id]
+    if (model) return model
+    element = element.parentElement
+  }
+  return undefined
+}
+
 export function bindDataScreenDeviceBridge(
   doc: Document,
   onOpenDetail: (model: string) => void
@@ -59,6 +69,20 @@ export function bindDataScreenDeviceBridge(
     )
     if (cleanup) cleanups.push(cleanup)
   })
+
+  const summaryPanel = doc.getElementById('u325')
+  if (summaryPanel) {
+    const handlePanelClick = (event: Event) => {
+      const model = resolveViewMoreModel(event.target)
+      if (!model) return
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      onOpenDetail(model)
+    }
+    summaryPanel.addEventListener('click', handlePanelClick, true)
+    cleanups.push(() => summaryPanel.removeEventListener('click', handlePanelClick, true))
+  }
 
   return () => {
     cleanups.forEach((cleanup) => cleanup())

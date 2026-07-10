@@ -6,7 +6,7 @@ import DataScreenDeviceDetailModal from './DataScreenDeviceDetailModal.vue'
 import { bindDataScreenDeviceBridge } from './dataScreenDeviceBridge'
 import { bindDataScreenDisposalBridge } from './dataScreenDisposalBridge'
 import { bindDataScreenLinkageBridge } from './dataScreenLinkageBridge'
-import { resolvePrototypeDocument } from './dataScreenPrototypeDoc'
+import { observePrototypeDocument, resolvePrototypeDocument } from './dataScreenPrototypeDoc'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -19,8 +19,8 @@ const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/inde
 
 const BACKEND_ENTRY_BUTTON_ID = 'u18'
 const HISTORY_EVENT_LINK_ID = 'u103'
-/** 消息区右侧「更多」，非设备列表区的「查看更多」(u170) */
-const MESSAGE_CENTER_LINK_ID = 'u206'
+/** 消息区右侧「更多」，非设备概要区的「查看更多」 */
+const MESSAGE_CENTER_LINK_ID = 'u194'
 
 type Cleanup = () => void
 
@@ -36,6 +36,7 @@ const deviceDetailModel = ref('')
 let bindRetryTimer: number | undefined
 let resizeObserver: ResizeObserver | undefined
 let cleanupPrototypeBindings: Cleanup | undefined
+let cleanupPrototypeObserver: Cleanup | undefined
 
 const viewportStyle = computed(() => ({
   width: `${PROTOTYPE_WIDTH * stageScale.value}px`,
@@ -108,47 +109,53 @@ function bindClickableElement(
   return () => element.removeEventListener('click', handleClick, true)
 }
 
+const bindOptionalLink = (
+  doc: Document,
+  cleanups: Cleanup[],
+  elementId: string,
+  onClick: () => void,
+  options: { role: string; ariaLabel: string }
+) => {
+  const cleanup = bindClickableElement(doc, elementId, onClick, options)
+  if (cleanup) cleanups.push(cleanup)
+}
+
 function bindPrototypeInteractions() {
   cleanupPrototypeBindings?.()
   cleanupPrototypeBindings = undefined
 
   const doc = getPrototypeDocument()
-  if (!doc) return false
+  if (!doc?.getElementById('base')) return false
 
   const cleanups: Cleanup[] = []
 
-  const backendEntryCleanup = bindClickableElement(
+  bindOptionalLink(
     doc,
+    cleanups,
     BACKEND_ENTRY_BUTTON_ID,
     () => {
       void router.push(LAD_BACKEND_HOME_PATH)
     },
     { role: 'button', ariaLabel: '进入控制台' }
   )
-  if (!backendEntryCleanup) return false
-  cleanups.push(backendEntryCleanup)
-
-  const historyLinkCleanup = bindClickableElement(
+  bindOptionalLink(
     doc,
+    cleanups,
     HISTORY_EVENT_LINK_ID,
     () => {
       void router.push(LAD_BACKEND_HOME_PATH)
     },
     { role: 'link', ariaLabel: '历史事件' }
   )
-  if (!historyLinkCleanup) return false
-  cleanups.push(historyLinkCleanup)
-
-  const messageLinkCleanup = bindClickableElement(
+  bindOptionalLink(
     doc,
+    cleanups,
     MESSAGE_CENTER_LINK_ID,
     () => {
       void router.push(LAD_MESSAGE_CENTER_PATH)
     },
     { role: 'link', ariaLabel: '消息中心' }
   )
-  if (!messageLinkCleanup) return false
-  cleanups.push(messageLinkCleanup)
 
   cleanups.push(
     bindDataScreenDeviceBridge(doc, (model) => {
@@ -164,7 +171,7 @@ function bindPrototypeInteractions() {
     cleanups.forEach((cleanup) => cleanup())
   }
 
-  return true
+  return Boolean(doc.getElementById('u325'))
 }
 
 const schedulePrototypeBinding = () => {
@@ -190,7 +197,16 @@ const handleFrameLoad = () => {
   })
 }
 
+const startPrototypeObserver = () => {
+  cleanupPrototypeObserver?.()
+  cleanupPrototypeObserver = observePrototypeDocument(iframeRef.value, () => {
+    normalizePrototypeSurface()
+    schedulePrototypeBinding()
+  })
+}
+
 onMounted(() => {
+  startPrototypeObserver()
   updateStageScale()
 
   const container = containerRef.value
@@ -205,6 +221,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  cleanupPrototypeObserver?.()
+  cleanupPrototypeObserver = undefined
   cleanupPrototypeBindings?.()
   cleanupPrototypeBindings = undefined
   resizeObserver?.disconnect()
