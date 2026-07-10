@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  LAD_BACKEND_HOME_PATH,
-  LAD_MESSAGE_CENTER_PATH
-} from '@/constants/lad'
+import { LAD_BACKEND_HOME_PATH, LAD_MESSAGE_CENTER_PATH } from '@/constants/lad'
 import DataScreenDeviceDetailModal from './DataScreenDeviceDetailModal.vue'
 import { bindDataScreenDeviceBridge } from './dataScreenDeviceBridge'
 import { bindDataScreenDisposalBridge } from './dataScreenDisposalBridge'
 import { bindDataScreenLinkageBridge } from './dataScreenLinkageBridge'
+import { resolvePrototypeDocument } from './dataScreenPrototypeDoc'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -66,8 +64,10 @@ const updateStageScale = () => {
   stageScale.value = Math.max(nextScale, 0.1)
 }
 
+const getPrototypeDocument = () => resolvePrototypeDocument(iframeRef.value)
+
 const normalizePrototypeSurface = () => {
-  const doc = iframeRef.value?.contentDocument
+  const doc = getPrototypeDocument()
   if (!doc) return
 
   doc.documentElement.style.overflow = 'hidden'
@@ -112,7 +112,7 @@ function bindPrototypeInteractions() {
   cleanupPrototypeBindings?.()
   cleanupPrototypeBindings = undefined
 
-  const doc = iframeRef.value?.contentDocument
+  const doc = getPrototypeDocument()
   if (!doc) return false
 
   const cleanups: Cleanup[] = []
@@ -233,10 +233,7 @@ onBeforeUnmount(() => {
       <p>数据大屏加载中...</p>
     </div>
 
-    <DataScreenDeviceDetailModal
-      v-model="deviceDetailVisible"
-      :device-model="deviceDetailModel"
-    />
+    <DataScreenDeviceDetailModal v-model="deviceDetailVisible" :device-model="deviceDetailModel" />
   </section>
 </template>
 
