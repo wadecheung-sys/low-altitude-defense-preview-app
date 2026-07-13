@@ -25,33 +25,6 @@ const PARAM_SEED: SystemParam[] = [
     updatedAt: '2026-05-18 09:00:00'
   },
   {
-    id: 'sp-007',
-    paramKey: 'map.default.lng',
-    paramName: '地图默认经度（°）',
-    group: '地图',
-    valueType: 'number',
-    paramValue: 116.397128,
-    updatedAt: '2026-05-20 08:00:00'
-  },
-  {
-    id: 'sp-008',
-    paramKey: 'map.default.lat',
-    paramName: '地图默认纬度（°）',
-    group: '地图',
-    valueType: 'number',
-    paramValue: 39.916527,
-    updatedAt: '2026-05-20 08:00:00'
-  },
-  {
-    id: 'sp-009',
-    paramKey: 'map.zoom.scale',
-    paramName: '地图缩放比例',
-    group: '地图',
-    valueType: 'number',
-    paramValue: 1.0,
-    updatedAt: '2026-05-20 08:30:00'
-  },
-  {
     id: 'sp-010',
     paramKey: 'data.retention.days',
     paramName: '历史数据保留（天）',
@@ -169,7 +142,7 @@ function cloneParamSeed(): SystemParam[] {
 
 let allParams: SystemParam[] = cloneParamSeed()
 
-export const SYSTEM_PARAM_STORE_VERSION = 6
+export const SYSTEM_PARAM_STORE_VERSION = 7
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladSystemParamStoreVer?: number }

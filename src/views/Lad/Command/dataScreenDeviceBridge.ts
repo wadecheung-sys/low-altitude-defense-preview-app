@@ -70,7 +70,7 @@ export function bindDataScreenDeviceBridge(
     if (cleanup) cleanups.push(cleanup)
   })
 
-  const summaryPanel = doc.getElementById('u324')
+  const summaryPanel = doc.getElementById('u313')
   if (summaryPanel) {
     const handlePanelClick = (event: Event) => {
       const model = resolveViewMoreModel(event.target)

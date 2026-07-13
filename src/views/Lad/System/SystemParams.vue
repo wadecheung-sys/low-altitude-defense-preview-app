@@ -15,7 +15,7 @@ import SystemParamValueInput from './components/SystemParamValueInput.vue'
 
 defineOptions({ name: 'LadSystemParams' })
 
-const PARAM_GROUP_ORDER: ParamGroup[] = ['系统', '地图', '存储', '管制', '模拟', '告警']
+const PARAM_GROUP_ORDER: ParamGroup[] = ['系统', '存储', '管制', '模拟', '告警']
 
 const loading = ref(false)
 const editing = ref(false)

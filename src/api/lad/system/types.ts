@@ -71,7 +71,7 @@ export interface EventAttributeSavePayload {
 
 export type ParamValueType = 'string' | 'number' | 'boolean'
 
-export type ParamGroup = '系统' | '地图' | '存储' | '管制' | '安全' | '模拟' | '告警'
+export type ParamGroup = '系统' | '存储' | '管制' | '安全' | '模拟' | '告警'
 
 export interface SystemParam {
   id: string
