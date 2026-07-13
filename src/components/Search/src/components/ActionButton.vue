@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { useIcon } from '@/hooks/web/useIcon'
 import { propTypes } from '@/utils/propTypes'
-import { useI18n } from '@/hooks/web/useI18n'
 
 const emit = defineEmits(['search', 'reset', 'expand'])
-
-const { t } = useI18n()
 
 defineProps({
   showSearch: propTypes.bool.def(true),
@@ -37,7 +34,7 @@ const onExpand = () => {
     :icon="useIcon({ icon: 'vi-ep:search' })"
     @click="onSearch"
   >
-    {{ t('common.query') }}
+    查询
   </BaseButton>
   <BaseButton
     v-if="showReset"
@@ -46,7 +43,7 @@ const onExpand = () => {
     :icon="useIcon({ icon: 'vi-ep:refresh-right' })"
     @click="onReset"
   >
-    {{ t('common.reset') }}
+    重置
   </BaseButton>
   <BaseButton
     v-if="showExpand"
@@ -54,6 +51,6 @@ const onExpand = () => {
     text
     @click="onExpand"
   >
-    {{ t(visible ? 'common.shrink' : 'common.expand') }}
+    {{ visible ? '收起' : '展开' }}
   </BaseButton>
 </template>

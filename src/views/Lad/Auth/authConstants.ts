@@ -36,6 +36,9 @@ export const statusOptions = [
   { label: '停用', value: 'disabled' }
 ]
 
+/** 角色管理查询区栅格（与设备/威胁等列表页一致，span=6 每行 4 项） */
+export const AUTH_ROLE_SEARCH_COL = { span: 6 } as const
+
 export const logTypeOptions = [
   { label: '登录日志', value: 'login' },
   { label: '操作日志', value: 'operation' }

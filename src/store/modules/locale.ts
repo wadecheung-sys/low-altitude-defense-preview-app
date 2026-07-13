@@ -7,6 +7,16 @@ import { LocaleDropdownType } from '@/components/LocaleDropdown'
 
 const { getStorage, setStorage } = useStorage('localStorage')
 
+const DEFAULT_LANG = 'zh-CN' as const
+
+/** 低空防御平台统一中文界面，忽略历史英文偏好。 */
+function resolveLang(stored?: string | null): LocaleType {
+  if (stored !== DEFAULT_LANG) {
+    setStorage('lang', DEFAULT_LANG)
+  }
+  return DEFAULT_LANG
+}
+
 const elLocaleMap = {
   'zh-CN': zhCn,
   en: en
@@ -20,18 +30,14 @@ export const useLocaleStore = defineStore('locales', {
   state: (): LocaleState => {
     return {
       currentLocale: {
-        lang: getStorage('lang') || 'zh-CN',
-        elLocale: elLocaleMap[getStorage('lang') || 'zh-CN']
+        lang: resolveLang(getStorage('lang')),
+        elLocale: elLocaleMap[DEFAULT_LANG]
       },
       // 多语言
       localeMap: [
         {
           lang: 'zh-CN',
           name: '简体中文'
-        },
-        {
-          lang: 'en',
-          name: 'English'
         }
       ]
     }
@@ -46,10 +52,10 @@ export const useLocaleStore = defineStore('locales', {
   },
   actions: {
     setCurrentLocale(localeMap: LocaleDropdownType) {
-      // this.locale = Object.assign(this.locale, localeMap)
-      this.currentLocale.lang = localeMap?.lang
-      this.currentLocale.elLocale = elLocaleMap[localeMap?.lang]
-      setStorage('lang', localeMap?.lang)
+      const lang = resolveLang(localeMap?.lang)
+      this.currentLocale.lang = lang
+      this.currentLocale.elLocale = elLocaleMap[lang]
+      setStorage('lang', lang)
     }
   }
 })

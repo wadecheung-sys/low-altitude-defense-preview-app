@@ -1,6 +1,6 @@
 <script setup lang="tsx">
 import { Form, FormSchema, FormSetProps } from '@/components/Form'
-import { PropType, computed, unref, ref, watch, onMounted } from 'vue'
+import { PropType, computed, unref, ref, watch, onMounted, useSlots } from 'vue'
 import { propTypes } from '@/utils/propTypes'
 import { useForm } from '@/hooks/web/useForm'
 import { findIndex } from '@/utils'
@@ -51,6 +51,8 @@ const props = defineProps({
 
 const emit = defineEmits(['search', 'reset', 'register', 'validate'])
 
+const slots = useSlots()
+
 const visible = ref(props.expandDefault)
 
 const searchExpandConfig = computed(() => {
@@ -90,7 +92,7 @@ const newSchema = computed(() => {
           slots: {
             default: () => {
               return (
-                <div>
+                <div class="search-form-action">
                   <ActionButton
                     showSearch={propsComputed.showSearch}
                     showReset={propsComputed.showReset}
@@ -102,6 +104,7 @@ const newSchema = computed(() => {
                     onReset={reset}
                     onSearch={search}
                   />
+                  {slots.action?.()}
                 </div>
               )
             },
@@ -274,7 +277,7 @@ const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) =
   />
 
   <template v-if="layout === 'bottom'">
-    <div :style="bottomButtonStyle">
+    <div :style="bottomButtonStyle" class="search-form-action">
       <ActionButton
         :show-reset="getProps.showReset"
         :show-search="getProps.showSearch"
@@ -286,6 +289,7 @@ const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) =
         @reset="reset"
         @search="search"
       />
+      <slot name="action" />
     </div>
   </template>
 </template>
@@ -301,5 +305,12 @@ const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) =
   :deep(.el-form-item .el-date-editor) {
     width: 100%;
   }
+}
+
+.search-form-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 </style>

@@ -1,10 +1,12 @@
-import { useI18n } from '@/hooks/web/useI18n'
 import { PlaceholderModel, FormSchema, ComponentNameEnum, ColProps } from '../types'
 import { isFunction } from '@/utils/is'
 import { firstUpperCase, humpToDash } from '@/utils'
 import { set, get } from 'lodash-es'
 
-const { t } = useI18n()
+const INPUT_PLACEHOLDER = '请输入'
+const SELECT_PLACEHOLDER = '请选择'
+const START_TIME_PLACEHOLDER = '开始时间'
+const END_TIME_PLACEHOLDER = '结束时间'
 
 /**
  *
@@ -28,7 +30,7 @@ export const setTextPlaceholder = (schema: FormSchema): PlaceholderModel => {
   ]
   if (textMap.includes(schema?.component as ComponentNameEnum)) {
     return {
-      placeholder: t('common.inputText')
+      placeholder: INPUT_PLACEHOLDER
     }
   }
   if (selectMap.includes(schema?.component as ComponentNameEnum)) {
@@ -41,13 +43,13 @@ export const setTextPlaceholder = (schema: FormSchema): PlaceholderModel => {
       )
     ) {
       return {
-        startPlaceholder: t('common.startTimeText'),
-        endPlaceholder: t('common.endTimeText'),
+        startPlaceholder: START_TIME_PLACEHOLDER,
+        endPlaceholder: END_TIME_PLACEHOLDER,
         rangeSeparator: '-'
       }
     } else {
       return {
-        placeholder: t('common.selectText')
+        placeholder: SELECT_PLACEHOLDER
       }
     }
   }

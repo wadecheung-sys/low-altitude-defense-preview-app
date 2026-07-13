@@ -3,8 +3,6 @@ import { Table, TableExpose, TableProps, TableSetProps, TableColumn } from '@/co
 import { ElTable, ElMessageBox, ElMessage } from 'element-plus'
 import { ref, watch, unref, nextTick, onMounted } from 'vue'
 
-const { t } = useI18n()
-
 interface UseTableConfig {
   /**
    * 是否初始化的时候请求一次
@@ -151,6 +149,7 @@ export const useTable = (config: UseTableConfig) => {
     // }
     // 删除数据
     delList: async (idsLength: number) => {
+      const { t } = useI18n()
       const { fetchDelApi } = config
       if (!fetchDelApi) {
         console.warn('fetchDelApi is undefined')

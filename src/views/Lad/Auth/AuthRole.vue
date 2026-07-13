@@ -9,7 +9,7 @@ import { deleteAuthRoleApi, getAuthRoleListApi } from '@/api/lad/auth'
 import type { AuthRole } from '@/api/lad/auth/types'
 import RoleFormDialog from './components/RoleFormDialog.vue'
 import RolePermissionDialog from './components/RolePermissionDialog.vue'
-import { statusOptions, userTypeLabel } from './authConstants'
+import { statusOptions, userTypeLabel, AUTH_ROLE_SEARCH_COL } from './authConstants'
 import { reactive, ref, unref } from 'vue'
 import { ElMessage, ElMessageBox, ElTag } from 'element-plus'
 
@@ -22,6 +22,8 @@ const formRow = ref<AuthRole>()
 const permRow = ref<AuthRole>()
 
 const builtinIds = ['role-sys', 'role-sec', 'role-audit']
+
+const searchFieldStyle = { width: '100%' }
 
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
@@ -94,13 +96,29 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'roleCode',
     label: '角色编码',
-    search: { component: 'Input', componentProps: { clearable: true } },
+    search: {
+      component: 'Input',
+      colProps: AUTH_ROLE_SEARCH_COL,
+      componentProps: {
+        clearable: true,
+        placeholder: '请输入角色编码',
+        style: searchFieldStyle
+      }
+    },
     table: { minWidth: 160, showOverflowTooltip: true }
   },
   {
     field: 'roleName',
     label: '角色名称',
-    search: { component: 'Input', componentProps: { clearable: true } },
+    search: {
+      component: 'Input',
+      colProps: AUTH_ROLE_SEARCH_COL,
+      componentProps: {
+        clearable: true,
+        placeholder: '请输入角色名称',
+        style: searchFieldStyle
+      }
+    },
     table: { minWidth: 140 }
   },
   {
@@ -129,7 +147,16 @@ const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'status',
     label: '状态',
-    search: { component: 'Select', componentProps: { options: statusOptions, clearable: true } },
+    search: {
+      component: 'Select',
+      colProps: AUTH_ROLE_SEARCH_COL,
+      componentProps: {
+        options: statusOptions,
+        clearable: true,
+        placeholder: '全部',
+        style: searchFieldStyle
+      }
+    },
     table: {
       width: 90,
       slots: {
@@ -189,11 +216,14 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams">
-      <template #action>
-        <BaseButton type="primary" @click="openAdd">新增角色</BaseButton>
-      </template>
-    </Search>
+    <Search
+      :schema="allSchemas.searchSchema"
+      @search="setSearchParams"
+      @reset="setSearchParams"
+    />
+    <div class="mb-10px">
+      <BaseButton type="primary" @click="openAdd">新增角色</BaseButton>
+    </div>
     <Table
       v-model:pageSize="pageSize"
       v-model:currentPage="currentPage"
