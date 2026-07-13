@@ -495,9 +495,7 @@ export default {
     richText: 'Rich text',
     richTextDes: 'Secondary packaging based on wangeditor',
     jsonEditor: 'JSON Editor',
-    jsonEditorDes: 'Secondary packaging based on vue-json-pretty',
-    codeEditor: 'Code Editor',
-    codeEditorDes: 'Secondary packaging based on monaco-editor'
+    jsonEditorDes: 'Secondary packaging based on vue-json-pretty'
   },
   dialogDemo: {
     dialog: 'Dialog',

@@ -6,7 +6,7 @@
 
 | 路径 | 典型大小 | 是否进 Git | 说明 |
 |------|----------|------------|------|
-| `node_modules/` | **~900 MB–1 GB** | 否 | `npm install` 本地生成；Element Plus + 图标集 + 地图 + 编辑器等 |
+| `node_modules/` | **~440 MB** | 否 | `npm install` 本地生成；Element Plus + 图标集 + 地图 + 编辑器等 |
 | `src/` | ~7 MB | 是 | 业务与共享组件源码 |
 | `public/` | ~4 MB | 是 | 静态资源；含指挥大屏 Axure 原型 |
 | `reference/`（工作区） | ~2 MB | 否 | 上游参照，不含 node_modules |
@@ -18,7 +18,6 @@
 | 包 | 约占用 | 用途 |
 |----|--------|------|
 | `@iconify/json` | 按需临时安装 | `npm run icon` 时 `npm i -D @iconify/json` |
-| `monaco-editor` | ~95 MB | Form 基础设施（CodeEditor） |
 | `echarts` | ~50 MB | 图表组件（共享组件库保留） |
 | `element-plus` | ~40 MB | UI 框架 |
 | `leaflet` / `@amap/*` | 较小 | LAD 区域/设备 GIS |

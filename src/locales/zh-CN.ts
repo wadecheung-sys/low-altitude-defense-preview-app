@@ -485,9 +485,7 @@ export default {
     richText: '富文本',
     richTextDes: '基于 wangeditor 二次封装',
     jsonEditor: 'JSON编辑器',
-    jsonEditorDes: '基于 vue-json-pretty 二次封装',
-    codeEditor: '代码编辑器',
-    codeEditorDes: '基于 monaco-editor 二次封装'
+    jsonEditorDes: '基于 vue-json-pretty 二次封装'
   },
   dialogDemo: {
     dialog: '弹窗',
