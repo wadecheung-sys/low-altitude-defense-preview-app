@@ -1,9 +1,6 @@
 import { deviceSupportsSelfCheck, runDeviceSelfCheck } from './deviceSelfCheck'
 import type { DeviceSelfCheckResult } from './deviceSelfCheck'
-import {
-  DEVICE_ARCHIVE_ID_BY_MODEL,
-  queryDeviceArchiveDetail
-} from '../device/archiveStore'
+import { DEVICE_ARCHIVE_ID_BY_MODEL, queryDeviceArchiveDetail } from '../device/archiveStore'
 import { ALL_DEVICE_CAPABILITY_CATALOG } from '@/constants/deviceCatalog'
 import type {
   DeviceExtendedField,
@@ -137,37 +134,38 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
     latitude: o.lat,
     mapX: o.mapX,
     mapY: o.mapY,
-    deviceIcon: row.deviceType === '监控摄像机'
-      ? 'eo'
-      : row.deviceType.includes('雷达') || row.deviceType.includes('Remote-ID')
-      ? 'radar'
-      : row.deviceType.includes('光电')
+    deviceIcon:
+      row.deviceType === '监控摄像机'
         ? 'eo'
-        : row.deviceType.includes('ADS-B')
+        : row.deviceType.includes('雷达') || row.deviceType.includes('Remote-ID')
           ? 'radar'
-          : row.deviceType.includes('干扰')
-            ? 'jammer'
-            : 'counter',
+          : row.deviceType.includes('光电')
+            ? 'eo'
+            : row.deviceType.includes('ADS-B')
+              ? 'radar'
+              : row.deviceType.includes('干扰')
+                ? 'jammer'
+                : 'counter',
     controlRangeM:
       row.deviceType === '监控摄像机'
         ? 120
         : row.deviceType === '雷达'
-        ? 800
-        : row.deviceType === 'Remote-ID 监视'
-          ? 2500
-          : row.deviceType === 'ADS-B 监视'
-            ? 50000
-            : row.deviceType === '无线电侦测'
-              ? 5000
-              : row.deviceType === '无线电干扰'
-                ? 3000
-                : row.deviceType === '导航诱骗'
-                  ? 800
-                  : row.deviceType === '高功率微波'
-                    ? 1200
-                    : row.deviceType === '光电跟踪'
-                      ? 600
-                      : 500,
+          ? 800
+          : row.deviceType === 'Remote-ID 监视'
+            ? 2500
+            : row.deviceType === 'ADS-B 监视'
+              ? 50000
+              : row.deviceType === '无线电侦测'
+                ? 5000
+                : row.deviceType === '无线电干扰'
+                  ? 3000
+                  : row.deviceType === '导航诱骗'
+                    ? 800
+                    : row.deviceType === '高功率微波'
+                      ? 1200
+                      : row.deviceType === '光电跟踪'
+                        ? 600
+                        : 500,
     contactPhone: `138${String(10000000 + index).slice(-8)}`,
     extendedFields: [],
     deviceConfigValues: buildDefaultDeviceConfigValues(row.archiveId)
@@ -205,8 +203,7 @@ function catalogSeedRow(
   model: string,
   overrides?: Partial<Omit<DeviceInfoItem, 'id'>>
 ): Omit<DeviceInfoItem, 'id'> {
-  const entry =
-    ALL_DEVICE_CAPABILITY_CATALOG.find((d) => d.model === model)
+  const entry = ALL_DEVICE_CAPABILITY_CATALOG.find((d) => d.model === model)
   if (!entry) throw new Error(`Unknown catalog model: ${model}`)
   const archiveId = DEVICE_ARCHIVE_ID_BY_MODEL[model]
   return {
@@ -227,15 +224,42 @@ function catalogSeedRow(
 
 const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
   catalogSeedRow('FG310F'),
-  catalogSeedRow('PL671F', { lastHeartbeat: '2026-05-20 14:28:05', updatedAt: '2026-05-20 14:28:05' }),
-  catalogSeedRow('TBD-EO', { lastHeartbeat: '2026-05-20 13:55:40', updatedAt: '2026-05-20 13:55:40' }),
-  catalogSeedRow('DY506F', { lastHeartbeat: '2026-05-20 12:10:22', updatedAt: '2026-05-20 12:10:22' }),
-  catalogSeedRow('RDS200', { lastHeartbeat: '2026-05-20 14:30:00', updatedAt: '2026-05-20 14:30:00' }),
-  catalogSeedRow('EXD55-LS', { lastHeartbeat: '2026-05-20 11:20:00', updatedAt: '2026-05-20 11:20:00' }),
-  catalogSeedRow('TBD-RAD', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
-  catalogSeedRow('TBD-LSR', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
-  catalogSeedRow('TBD-HPM', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' }),
-  catalogSeedRow('TBD-SLA', { lastHeartbeat: '2026-05-20 10:00:00', updatedAt: '2026-05-20 10:00:00' })
+  catalogSeedRow('PL671F', {
+    lastHeartbeat: '2026-05-20 14:28:05',
+    updatedAt: '2026-05-20 14:28:05'
+  }),
+  catalogSeedRow('TBD-EO', {
+    lastHeartbeat: '2026-05-20 13:55:40',
+    updatedAt: '2026-05-20 13:55:40'
+  }),
+  catalogSeedRow('DY506F', {
+    lastHeartbeat: '2026-05-20 12:10:22',
+    updatedAt: '2026-05-20 12:10:22'
+  }),
+  catalogSeedRow('RDS200', {
+    lastHeartbeat: '2026-05-20 14:30:00',
+    updatedAt: '2026-05-20 14:30:00'
+  }),
+  catalogSeedRow('EXD55-LS', {
+    lastHeartbeat: '2026-05-20 11:20:00',
+    updatedAt: '2026-05-20 11:20:00'
+  }),
+  catalogSeedRow('TBD-RAD', {
+    lastHeartbeat: '2026-05-20 10:00:00',
+    updatedAt: '2026-05-20 10:00:00'
+  }),
+  catalogSeedRow('TBD-LSR', {
+    lastHeartbeat: '2026-05-20 10:00:00',
+    updatedAt: '2026-05-20 10:00:00'
+  }),
+  catalogSeedRow('TBD-HPM', {
+    lastHeartbeat: '2026-05-20 10:00:00',
+    updatedAt: '2026-05-20 10:00:00'
+  }),
+  catalogSeedRow('TBD-SLA', {
+    lastHeartbeat: '2026-05-20 10:00:00',
+    updatedAt: '2026-05-20 10:00:00'
+  })
 ]
 
 /** 主设备周边监控摄像机（设备关联演示数据） */
@@ -410,7 +434,7 @@ allList.forEach((row, i) => {
       ...defaultExtForRow(row, i),
       extendedFields: defaultExtendedFields(row, i)
     }
-  } else   if (!detailExt[row.id]!.extendedFields?.length) {
+  } else if (!detailExt[row.id]!.extendedFields?.length) {
     detailExt[row.id]!.extendedFields = defaultExtendedFields(row, i)
   }
   if (!row.archiveId) {

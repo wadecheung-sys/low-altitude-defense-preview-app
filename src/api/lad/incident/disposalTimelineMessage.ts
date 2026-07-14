@@ -104,7 +104,7 @@ function formatStayDuration(seconds: number): string {
 }
 
 export function assessmentConditionsForLevel(
-  row: HistoryEventItem,
+  _row: HistoryEventItem,
   level: ThreatLevel
 ): RuleCondition[] {
   if (level === '无危' || level === '低危') return []
@@ -174,7 +174,7 @@ export function assessmentRuleNameForLevel(row: HistoryEventItem, level: ThreatL
   return escalationHighAssessRuleName(row)
 }
 
-export function assessmentReasonForLevel(row: HistoryEventItem, level: ThreatLevel): string {
+export function assessmentReasonForLevel(_row: HistoryEventItem, level: ThreatLevel): string {
   if (level === '无危') {
     return '无（任意场景）'
   }

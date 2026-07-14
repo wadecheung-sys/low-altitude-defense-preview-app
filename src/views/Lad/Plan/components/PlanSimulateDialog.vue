@@ -71,7 +71,11 @@ async function onRun() {
 <template>
   <Dialog v-model="visible" :title="UI.dialogSimulate" width="720px" max-height="85vh">
     <PlanSimulateForm :form="form" />
-    <PlanSimulateResultPanel :result="result" :input-threat-level="form.threatLevel" class="mt-12px" />
+    <PlanSimulateResultPanel
+      :result="result"
+      :input-threat-level="form.threatLevel"
+      class="mt-12px"
+    />
 
     <div class="plan-simulate-dialog__actions">
       <BaseButton type="primary" :loading="loading" @click="onRun">

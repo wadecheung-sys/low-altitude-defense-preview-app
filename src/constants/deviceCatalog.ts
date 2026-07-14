@@ -4,10 +4,7 @@
  *
  * 版本标记：v2-selection — 与初版 mock 数据区分，便于回滚对照
  */
-import type {
-  DeviceArchiveIndicator,
-  DeviceConfigItemScope
-} from '@/api/lad/device/types'
+import type { DeviceArchiveIndicator, DeviceConfigItemScope } from '@/api/lad/device/types'
 
 export const DEVICE_CATALOG_VERSION = 'v2-selection'
 
@@ -95,6 +92,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '无线电干扰',
     tier: 'confirmed',
     docFile: '使用说明书_固定式转台无线电压制设备FG310F.pdf',
+    groupMasterEligible: true,
     archiveName: '核心区转台无线电压制设备档案',
     archiveNo: 'D-LAD-JAM0001',
     specifications: [
@@ -112,20 +110,8 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     configurableItems: [
       cfg('jam_default_band', '默认压制频段', 'MHz', 'device', '选自工作频段子集', '2400-2485'),
       cfg('link_track_mode', '联动跟踪模式', '', 'device', '自动 / 手动', '自动'),
-      cfg(
-        'turntable_azimuth',
-        '转台方位角',
-        '°',
-        'runtime',
-        '0~360，指挥大屏实时控制'
-      ),
-      cfg(
-        'turntable_elevation',
-        '转台俯仰角',
-        '°',
-        'runtime',
-        '-10~+60，指挥大屏实时控制'
-      )
+      cfg('turntable_azimuth', '转台方位角', '°', 'runtime', '0~360，指挥大屏实时控制'),
+      cfg('turntable_elevation', '转台俯仰角', '°', 'runtime', '-10~+60，指挥大屏实时控制')
     ],
     demo: {
       deviceId: 'DEV-FG310-01',
@@ -144,6 +130,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '导航诱骗',
     tier: 'confirmed',
     docFile: '使用说明书_固定式反无人机无线电主动防御设备DY506F.pdf',
+    groupMasterEligible: true,
     archiveName: '西区导航主动防御设备档案',
     archiveNo: 'D-LAD-SPF0001',
     specifications: [
@@ -174,6 +161,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: '无线电侦测',
     tier: 'confirmed',
     docFile: '使用说明书_固定式无线电侦测设备PL671F.pdf',
+    groupMasterEligible: true,
     archiveName: '东侧无线电侦测站档案',
     archiveNo: 'D-LAD-RF0001',
     specifications: [
@@ -204,6 +192,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     deviceType: 'Remote-ID 监视',
     tier: 'confirmed',
     docFile: '使用说明书_远程识别监视设备RDS200.pdf',
+    groupMasterEligible: false,
     archiveName: 'Remote-ID 监视站档案',
     archiveNo: 'D-LAD-RID0001',
     specifications: [
@@ -213,9 +202,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
       ind('刷新时间', 's', '≤1'),
       ind('侦测模式', '', 'RID 广播报文解析')
     ],
-    configurableItems: [
-      cfg('refresh_policy', '监测刷新策略', '', 'device', '实时 / 节能', '实时')
-    ],
+    configurableItems: [cfg('refresh_policy', '监测刷新策略', '', 'device', '实时 / 节能', '实时')],
     demo: {
       deviceId: 'DEV-RDS200-01',
       deviceName: '北侧Remote-ID监视-RDS200',

@@ -1,5 +1,5 @@
 import type { AreaRegionType } from '@/api/lad/area/types'
-import type { ThreatLevelLabel, ThreatLevelScope } from './threatLevelUtils'
+import type { ThreatLevelScope } from './threatLevelUtils'
 
 export type { ThreatLevelLabel, ThreatLevelScope } from './threatLevelUtils'
 
@@ -85,6 +85,9 @@ export interface ThreatSimulateInput {
   stayMinutes?: number
   intrusionCount?: number
   swarmCount?: number
+  altitude?: number
+  signalStrength?: number
+  locatedArea?: string
   targetType?: string
   targetModel?: string
   areaRegionType?: string

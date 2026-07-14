@@ -125,11 +125,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search
-      :schema="allSchemas.searchSchema"
-      @search="setSearchParams"
-      @reset="setSearchParams"
-    />
+    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
 
     <div v-loading="loading" class="device-monitor-list mb-10px">
       <div v-if="dataList.length" class="device-monitor-list__grid">

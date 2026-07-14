@@ -1,14 +1,12 @@
 <script setup lang="ts">
+/* eslint-disable vue/no-mutating-props */
 import { onMounted, ref } from 'vue'
 import { ElCascader, ElForm, ElFormItem, ElOption, ElSelect } from 'element-plus'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import { THREAT_LEVEL_OPTIONS } from '@/api/lad/threat/threatLevelUtils'
 import { UI } from '../planConstants'
 import { allOption } from '../../shared/ladOptionConstants'
-import {
-  buildPlanAreaCascaderOptions,
-  type PlanAreaCascaderOption
-} from '../planAreaOptions'
+import { buildPlanAreaCascaderOptions, type PlanAreaCascaderOption } from '../planAreaOptions'
 import type { PlanSimulateFormState } from '../simulateFormUtils'
 import PlanWeatherConditionEditor from './PlanWeatherConditionEditor.vue'
 

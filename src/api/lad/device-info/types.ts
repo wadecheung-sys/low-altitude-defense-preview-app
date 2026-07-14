@@ -1,7 +1,4 @@
-import type {
-  DeviceArchiveConfigurableItem,
-  DeviceArchiveIndicator
-} from '../device/types'
+import type { DeviceArchiveConfigurableItem, DeviceArchiveIndicator } from '../device/types'
 import type { LadDeviceTypeLabel } from '@/constants/deviceTypes'
 
 /** 设备类型（筛选项 / 列表展示） */

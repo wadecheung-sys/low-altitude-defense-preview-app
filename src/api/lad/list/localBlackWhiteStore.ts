@@ -28,12 +28,7 @@ const targetTypes = ['多旋翼', '固定翼', '行业级']
 const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
 const zones = ['核心保护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
 const entryMethods: EntryMethod[] = ['自动录入', '人工录入', '自动+人工校验']
-const validOptions = [
-  '永久',
-  '2026-12-31 23:59:59',
-  '2025-06-30 18:00:00',
-  '2024-12-31 08:30:00'
-]
+const validOptions = ['永久', '2026-12-31 23:59:59', '2025-06-30 18:00:00', '2024-12-31 08:30:00']
 
 function buildSeedList(): BlackWhiteListItem[] {
   const resolvableProfiles = LAD_RESOLVABLE_TARGET_PROFILES
@@ -119,9 +114,7 @@ function buildTargetDetail(row: BlackWhiteListItem): BlackWhiteTargetDetail {
   if (isHandlingEnded(handlingStatus)) {
     disposalDetail =
       row.remark ||
-      (listType === '白名单'
-        ? '白名单目标，探测后自动过滤告警'
-        : '黑名单重点监控，待联动处置')
+      (listType === '白名单' ? '白名单目标，探测后自动过滤告警' : '黑名单重点监控，待联动处置')
   }
 
   return {

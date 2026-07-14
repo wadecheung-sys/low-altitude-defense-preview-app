@@ -337,10 +337,10 @@ export const useAppStore = defineStore('app', {
 
       // 浅色模式保持深色侧栏，避免主题切换或持久化把菜单刷成白色
       if (!this.getIsDark) {
-        if (!colorIsDark(this.theme.leftMenuBgColor)) {
+        if (!colorIsDark(this.theme.leftMenuBgColor || CLASSIC_LIGHT_MENU_BG)) {
           this.setMenuTheme(CLASSIC_LIGHT_MENU_BG)
         }
-        if (colorIsDark(this.theme.topHeaderBgColor)) {
+        if (colorIsDark(this.theme.topHeaderBgColor || CLASSIC_LIGHT_HEADER_BG)) {
           this.setHeaderTheme(CLASSIC_LIGHT_HEADER_BG)
         }
       }

@@ -53,10 +53,7 @@ function statusLabel(status: DisposalTimelineNode['status']) {
         </template>
         <p v-else class="disposal-timeline__summary">{{ node.summary }}</p>
         <details
-          v-if="
-            node.key !== 'result' &&
-            (node.detailGroups?.length || node.details?.length)
-          "
+          v-if="node.key !== 'result' && (node.detailGroups?.length || node.details?.length)"
           class="disposal-timeline__details"
         >
           <summary>阶段详情</summary>

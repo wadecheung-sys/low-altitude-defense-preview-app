@@ -104,7 +104,7 @@ const newSchema = computed(() => {
                     onReset={reset}
                     onSearch={search}
                   />
-                  {slots.action?.()}
+                  {slots.action?.({})}
                 </div>
               )
             },
@@ -289,7 +289,7 @@ const onFormValidate = (prop: FormItemProp, isValid: boolean, message: string) =
         @reset="reset"
         @search="search"
       />
-      <slot name="action" />
+      <slot name="action"></slot>
     </div>
   </template>
 </template>

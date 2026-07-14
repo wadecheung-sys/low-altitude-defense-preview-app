@@ -3,10 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage, ElOption, ElSelect, ElTooltip } from 'element-plus'
 import { Icon } from '@/components/Icon'
 import deviceSiteCctv from '@/assets/imgs/device-site-cctv.png'
-import {
-  LAD_EO_DEFAULT_DURATION_SEC,
-  LAD_EO_PLAYBACK_RATES
-} from './ladVideoConstants'
+import { LAD_EO_DEFAULT_DURATION_SEC, LAD_EO_PLAYBACK_RATES } from './ladVideoConstants'
 
 const props = withDefaults(
   defineProps<{
@@ -56,7 +53,9 @@ let tickTimer: ReturnType<typeof setInterval> | null = null
 
 const posterSrc = computed(() => props.poster || deviceSiteCctv)
 
-const progressDuration = computed(() => resolveRecordDurationSec(props.recordStart, props.recordEnd))
+const progressDuration = computed(() =>
+  resolveRecordDurationSec(props.recordStart, props.recordEnd)
+)
 
 const statusTag = computed(() => (props.linked ? 'REPLAY' : 'DEMO'))
 

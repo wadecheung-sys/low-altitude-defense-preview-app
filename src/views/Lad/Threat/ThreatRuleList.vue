@@ -17,7 +17,12 @@ import type { ThreatRule } from '@/api/lad/threat/types'
 import ThreatRuleFormDialog from './components/ThreatRuleFormDialog.vue'
 import ThreatSimulateDialog from './components/ThreatSimulateDialog.vue'
 import ThreatRuleDetailDialog from './components/ThreatRuleDetailDialog.vue'
-import { THREAT_SEARCH_COL, buildThreatLevelSelectOptions, threatTargetModelFilterOptions, UI } from './threatConstants'
+import {
+  THREAT_SEARCH_COL,
+  buildThreatLevelSelectOptions,
+  threatTargetModelFilterOptions,
+  UI
+} from './threatConstants'
 import {
   LAD_DICT_THREAT_LEVEL,
   listTypeTagType,
@@ -25,10 +30,7 @@ import {
   threatLevelTagTypeForRule
 } from '../shared/ladDictHelpers'
 import { useLadDictOptions } from '../shared/useLadDictOptions'
-import {
-  listTypeOptions,
-  ruleStatusOptions
-} from '../shared/ladOptionConstants'
+import { listTypeOptions, ruleStatusOptions } from '../shared/ladOptionConstants'
 
 defineOptions({ name: 'LadThreatRuleList' })
 
@@ -329,11 +331,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search
-      :schema="allSchemas.searchSchema"
-      @search="setSearchParams"
-      @reset="setSearchParams"
-    />
+    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
     <div class="mb-10px">
       <BaseButton type="primary" @click="openAdd">新增规则</BaseButton>
       <BaseButton type="primary" class="ml-8px" @click="simulateVisible = true">

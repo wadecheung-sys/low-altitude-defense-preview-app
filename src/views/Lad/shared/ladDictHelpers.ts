@@ -31,19 +31,20 @@ export function areaRegionTypeDisplay(code: string, entries?: DictEntryItem[]): 
   }
 }
 
-export const THREAT_LEVEL_TAG_TYPE: Record<string, 'danger' | 'warning' | 'success' | 'info' | ''> =
-  {
-    全部: 'info',
-    高危: 'danger',
-    中危: 'warning',
-    低危: 'success',
-    无危: 'info',
-    高: 'danger',
-    中: 'warning',
-    低: 'success',
-    无: 'info',
-    未知: 'info'
-  }
+type LadTagType = 'danger' | 'warning' | 'success' | 'info'
+
+export const THREAT_LEVEL_TAG_TYPE: Record<string, LadTagType> = {
+  全部: 'info',
+  高危: 'danger',
+  中危: 'warning',
+  低危: 'success',
+  无危: 'info',
+  高: 'danger',
+  中: 'warning',
+  低: 'success',
+  无: 'info',
+  未知: 'info'
+}
 
 import {
   coerceThreatLevelLabel as coerceThreatLevelLabelFromApi,
@@ -71,14 +72,14 @@ export function threatLevelForRule(rule: { threatLevel?: string; enabled?: boole
 }
 
 /** 与黑白名单「名单类型」列一致：Element Plus 浅色小标签（size=small, effect=light） */
-export function threatLevelTagType(level?: string): 'danger' | 'warning' | 'success' | 'info' | '' {
+export function threatLevelTagType(level?: string): LadTagType {
   return THREAT_LEVEL_TAG_TYPE[threatLevelDisplay(level)] || 'info'
 }
 
 export function threatLevelTagTypeForRule(rule: {
   threatLevel?: string
   enabled?: boolean
-}): 'danger' | 'warning' | 'success' | 'info' | '' {
+}): LadTagType {
   return threatLevelTagType(threatLevelForRule(rule))
 }
 
@@ -88,19 +89,19 @@ export function listTypeTagType(type?: string): 'danger' | 'success' | 'info' {
   return 'info'
 }
 
-export const VERIFICATION_METHOD_OPTIONS: Array<{ label: VerificationMethod; value: VerificationMethod }> =
-  [
-    { label: '自动识别', value: '自动识别' },
-    { label: '人工核查', value: '人工核查' }
-  ]
+export const VERIFICATION_METHOD_OPTIONS: Array<{
+  label: VerificationMethod
+  value: VerificationMethod
+}> = [
+  { label: '自动识别', value: '自动识别' },
+  { label: '人工核查', value: '人工核查' }
+]
 
 export function verificationMethodOf(status?: ManualConfirmStatus): VerificationMethod {
   return status?.startsWith('人工-') ? '人工核查' : '自动识别'
 }
 
-export function verificationMethodTagType(
-  method: VerificationMethod
-): 'primary' | 'info' {
+export function verificationMethodTagType(method: VerificationMethod): 'primary' | 'info' {
   return method === '人工核查' ? 'primary' : 'info'
 }
 

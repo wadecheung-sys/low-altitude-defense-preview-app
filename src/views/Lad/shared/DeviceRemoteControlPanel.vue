@@ -130,7 +130,8 @@ const panelHint = computed(() => {
   if (panelMode.value === 'sound_light') return '声光警示用于近距驱离，请确认警戒区域内无无关人员。'
   if (panelMode.value === 'detect') return '探测类设备以监视为主，指令经供应商平台上报链路转发。'
   if (props.deviceModel === 'DY506F') return '导航诱骗：迫降 / 禁飞 / 驱离对应 DY506F 上位机能力。'
-  if (props.deviceModel === 'FG310F') return '无线电压制：压制效果可能触发目标自动返航；转台方位/俯仰请在指挥大屏实时控制。'
+  if (props.deviceModel === 'FG310F')
+    return '无线电压制：压制效果可能触发目标自动返航；转台方位/俯仰请在指挥大屏实时控制。'
   return '指令经平台上报链路转发。'
 })
 

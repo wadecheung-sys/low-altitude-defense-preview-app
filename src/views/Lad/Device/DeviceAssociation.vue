@@ -409,11 +409,7 @@ getList()
 
 <template>
   <ContentWrap>
-    <Search
-      :schema="allSchemas.searchSchema"
-      @search="setSearchParams"
-      @reset="setSearchParams"
-    />
+    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
 
     <div class="mb-10px">
       <BaseButton type="primary" @click="openCreate">新增</BaseButton>
@@ -503,7 +499,9 @@ getList()
         </ElAutocomplete>
       </div>
       <div class="device-group-dialog-field device-group-dialog-field--full">
-        <div class="device-group-dialog-label"><span class="is-required">*</span>关联监控摄像头</div>
+        <div class="device-group-dialog-label"
+          ><span class="is-required">*</span>关联监控摄像头</div
+        >
         <ElTransfer
           v-model="editForm.linkedDeviceIds"
           :data="transferData"

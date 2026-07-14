@@ -55,6 +55,7 @@ const isEditable = computed(() => !isViewMode.value)
 const hasArchiveImage = computed(() =>
   Boolean(imageUrl.value && imageUrl.value !== DEVICE_ARCHIVE_PLACEHOLDER)
 )
+const archiveImageSrc = computed(() => imageUrl.value || undefined)
 
 const recordId = computed(() => (route.params.id as string) || '')
 
@@ -265,7 +266,7 @@ watch(
         <div class="archive-detail-image">
           <ElImage
             v-if="hasArchiveImage"
-            :src="imageUrl"
+            :src="archiveImageSrc"
             fit="contain"
             class="archive-detail-image__img"
           />

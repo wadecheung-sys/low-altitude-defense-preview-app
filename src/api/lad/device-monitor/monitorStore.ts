@@ -103,8 +103,7 @@ function enrichMonitorRow(row: DeviceInfoItem): DeviceMonitorItem {
     onlineStatus,
     runtimeText: formatRuntime(runtimeSec),
     metrics,
-    manufacturer:
-      linkedArchive?.vendor || archive?.vendor || VENDOR_BY_TYPE[row.deviceType] || '—',
+    manufacturer: linkedArchive?.vendor || archive?.vendor || VENDOR_BY_TYPE[row.deviceType] || '—',
     deviceModel,
     personInCharge: row.personInCharge,
     lastHeartbeat: row.lastHeartbeat,
@@ -126,9 +125,7 @@ export function queryDeviceMonitorList(q: DeviceMonitorQuery): DeviceMonitorList
     deployLocation: q.deployLocation
   })
 
-  let rows = list
-    .filter((row) => !MONITOR_EXCLUDED_TYPES.has(row.deviceType))
-    .map(enrichMonitorRow)
+  let rows = list.filter((row) => !MONITOR_EXCLUDED_TYPES.has(row.deviceType)).map(enrichMonitorRow)
   if (q.onlineStatus) {
     rows = rows.filter((r) => r.onlineStatus === q.onlineStatus)
   }

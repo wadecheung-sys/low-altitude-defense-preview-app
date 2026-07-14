@@ -4,7 +4,12 @@ import { getHistoryEventListApi } from '@/api/lad/incident'
 
 import type { HistoryEventItem, HistoryEventQuery } from '@/api/lad/incident/types'
 
-import { threatLevelDisplay, verificationMethodOf, countermeasureDeviceDisplay, handlingStatusDisplay } from '../shared/ladDictHelpers'
+import {
+  threatLevelDisplay,
+  verificationMethodOf,
+  countermeasureDeviceDisplay,
+  handlingStatusDisplay
+} from '../shared/ladDictHelpers'
 
 export type HistoryEventExportRange = 'all' | 'query' | 'selected'
 
@@ -31,6 +36,7 @@ export const HISTORY_EVENT_EXPORT_HEADERS = [
 const EXCEL_TEMPLATE_URL = `${import.meta.env.BASE_URL}export-templates/历史事件.xlsx`
 const HEADER_ROW = 4
 const DATA_START_ROW = 5
+type ExcelJSModule = typeof import('exceljs')
 
 const THIN_BORDER = {
   top: { style: 'thin' as const, color: { argb: 'FFD7DFE8' } },
@@ -108,7 +114,7 @@ function buildMetaLine(rangeLabel: string, count: number) {
   return `导出范围：${rangeLabel}；导出时间：${time}；记录数：${count} 条`
 }
 
-async function loadExcelTemplateWorkbook(ExcelJS: typeof import('exceljs').default) {
+async function loadExcelTemplateWorkbook(ExcelJS: ExcelJSModule) {
   const response = await fetch(EXCEL_TEMPLATE_URL)
   if (!response.ok) {
     throw new Error('导出模板加载失败，请确认 public/export-templates/历史事件.xlsx 已部署')
@@ -165,10 +171,7 @@ async function exportHistoryEventsExcel(
   rows: HistoryEventItem[],
   rangeLabel: string
 ): Promise<void> {
-  const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
-    import('exceljs'),
-    import('file-saver')
-  ])
+  const [ExcelJS, { saveAs }] = await Promise.all([import('exceljs'), import('file-saver')])
 
   const workbook = await loadExcelTemplateWorkbook(ExcelJS)
   const sheet = workbook.getWorksheet('导出模板') ?? workbook.worksheets[0]

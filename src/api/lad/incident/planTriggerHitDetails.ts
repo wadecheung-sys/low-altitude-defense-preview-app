@@ -82,13 +82,11 @@ function buildPlanTriggerContext(row: HistoryEventItem): PlanTriggerContext {
   }
 }
 
-export function resolvePlanTriggerForEvent(row: HistoryEventItem):
-  | {
-      plan: PlanStrategy
-      triggerRule: PlanTriggerRule
-      ctx: PlanTriggerContext
-    }
-  | null {
+export function resolvePlanTriggerForEvent(row: HistoryEventItem): {
+  plan: PlanStrategy
+  triggerRule: PlanTriggerRule
+  ctx: PlanTriggerContext
+} | null {
   const threatRule = resolveMatchedThreatRule(row)
   if (!threatRule?.planId) return null
   const plan = getPlan(threatRule.planId)

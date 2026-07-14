@@ -21,7 +21,10 @@ export const filterBreadcrumb = (
     }
 
     // 保留完整父级链路；单子路由不再折叠（避免「预案策略配置」等缺一级面包屑）
-    const data: AppRouteRecordRaw = { ...route, children: route.children ? [...route.children] : undefined }
+    const data: AppRouteRecordRaw = {
+      ...route,
+      children: route.children ? [...route.children] : undefined
+    }
 
     data.path = pathResolve(parentPath, data.path)
 
@@ -63,8 +66,7 @@ function resolveWrapListChild(
 
   const wrapPath = record.path.startsWith('/') ? record.path : `/${record.path}`
   return flatRoutes.find(
-    (item) =>
-      item.path.startsWith(`${wrapPath}/`) && !item.path.includes(':') && !item.meta?.hidden
+    (item) => item.path.startsWith(`${wrapPath}/`) && !item.path.includes(':') && !item.meta?.hidden
   )
 }
 

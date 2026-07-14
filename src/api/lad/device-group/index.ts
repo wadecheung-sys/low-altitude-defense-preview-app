@@ -3,7 +3,6 @@ import { SUCCESS_CODE } from '@/constants'
 import { deleteDeviceGroupRecords, queryDeviceGroupList, saveDeviceGroupRecord } from './groupStore'
 import {
   deleteDeviceLinkageRecords,
-  getLinkageByMasterDeviceId,
   queryDeviceLinkageList,
   saveDeviceLinkageRecord
 } from './linkageStore'

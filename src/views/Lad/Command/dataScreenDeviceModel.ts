@@ -281,7 +281,12 @@ function labelLine(label: string, value: string) {
   return `${label}：${value}`
 }
 
-function summaryFields(nameId: string, typeId: string, deployId: string, onlineId: string): SummaryFieldSync[] {
+function summaryFields(
+  nameId: string,
+  typeId: string,
+  deployId: string,
+  onlineId: string
+): SummaryFieldSync[] {
   return [
     { elementId: nameId, render: (v) => labelLine('设备名称', v.deviceName) },
     { elementId: typeId, render: (v) => labelLine('设备类型', v.deviceType) },

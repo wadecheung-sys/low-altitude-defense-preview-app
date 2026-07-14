@@ -54,7 +54,7 @@ function nextGroupId() {
   const nums = allGroups
     .map((item) => parseInt(item.id.replace(/^dg-/, ''), 10))
     .filter((n) => !Number.isNaN(n))
-  return `dg-${(nums.length ? Math.max(...nums) + 1 : 1001)}`
+  return `dg-${nums.length ? Math.max(...nums) + 1 : 1001}`
 }
 
 function nextGroupCode(groupType: string) {

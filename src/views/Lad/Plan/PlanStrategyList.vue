@@ -271,11 +271,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search
-      :schema="allSchemas.searchSchema"
-      @search="setSearchParams"
-      @reset="setSearchParams"
-    />
+    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
     <div class="mb-10px">
       <BaseButton type="primary" @click="openAdd">{{ UI.btnAdd }}</BaseButton>
       <BaseButton type="primary" class="ml-8px" @click="simulateVisible = true">{{

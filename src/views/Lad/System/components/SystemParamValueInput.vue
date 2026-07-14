@@ -91,7 +91,11 @@ function clearAlarmAudio() {
 <template>
   <div class="system-param-value">
     <template v-if="readonly">
-      <ElTag v-if="param.valueType === 'boolean'" :type="modelValue ? 'success' : 'info'" size="small">
+      <ElTag
+        v-if="param.valueType === 'boolean'"
+        :type="modelValue ? 'success' : 'info'"
+        size="small"
+      >
         {{ displayText }}
       </ElTag>
       <span v-else class="system-param-value__readonly">{{ displayText }}</span>

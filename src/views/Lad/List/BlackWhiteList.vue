@@ -202,7 +202,11 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: {
       slots: {
         default: ({ row }: { row: BlackWhiteListItem }) => (
-          <ElTag type={listTypeTag(displayManagedListType(row.listType))} size="small" effect="light">
+          <ElTag
+            type={listTypeTag(displayManagedListType(row.listType))}
+            size="small"
+            effect="light"
+          >
             {displayManagedListType(row.listType)}
           </ElTag>
         )

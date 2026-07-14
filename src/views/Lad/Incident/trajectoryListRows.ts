@@ -41,7 +41,10 @@ function resolveDurationMs(discoveredAt: string, endedAt: string) {
   return { beginMs: beginMs || 0, durationMs: 0 }
 }
 
-export function sampleTrajectoryAtProgress(trajectory: TrajectoryPoint[], pct: number): TrajectoryPoint {
+export function sampleTrajectoryAtProgress(
+  trajectory: TrajectoryPoint[],
+  pct: number
+): TrajectoryPoint {
   if (!trajectory.length) {
     return { progress: pct, x: 0.5, y: 0.5, altitude: 0 }
   }
@@ -64,7 +67,10 @@ export function sampleTrajectoryAtProgress(trajectory: TrajectoryPoint[], pct: n
 
 function previousTrajectorySample(trajectory: TrajectoryPoint[], pct: number): TrajectoryPoint {
   if (!trajectory.length) return sampleTrajectoryAtProgress(trajectory, pct)
-  const index = Math.max(0, trajectory.findIndex((item) => item.progress >= pct))
+  const index = Math.max(
+    0,
+    trajectory.findIndex((item) => item.progress >= pct)
+  )
   return trajectory[Math.max(0, index - 1)] || sampleTrajectoryAtProgress(trajectory, pct)
 }
 
@@ -82,8 +88,7 @@ function buildSnapshotFromSample(
   const moveX = (sample.x - prev.x) * METER_PER_X
   const moveY = (sample.y - prev.y) * METER_PER_Y
   const horizontalMove = Math.sqrt(moveX * moveX + moveY * moveY)
-  const speed =
-    sample.progress <= 0 ? 0 : Math.round((horizontalMove / stepSec) * 10) / 10
+  const speed = sample.progress <= 0 ? 0 : Math.round((horizontalMove / stepSec) * 10) / 10
 
   const toDeviceX = (sample.x - devicePos.x) * METER_PER_X
   const toDeviceY = (sample.y - devicePos.y) * METER_PER_Y

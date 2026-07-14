@@ -23,11 +23,7 @@ import {
   PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS,
   planDisposalModeOptions
 } from '@/api/lad/plan/planDisposal'
-import type {
-  PlanDisposalMode,
-  PlanStrategy,
-  PlanTriggerRule
-} from '@/api/lad/plan/types'
+import type { PlanDisposalMode, PlanStrategy, PlanTriggerRule } from '@/api/lad/plan/types'
 import {
   createPlanWeatherCondition,
   normalizePlanWeatherConditions,
@@ -84,9 +80,7 @@ const { entries: countermeasureEntries, reload: reloadCountermeasureEntries } = 
   false
 )
 
-const countermeasureOptions = computed(() =>
-  listCountermeasureActions(countermeasureEntries.value)
-)
+const countermeasureOptions = computed(() => listCountermeasureActions(countermeasureEntries.value))
 
 function syncTriggerRuleOrder() {
   triggerRules.value = triggerRules.value.map((item, index) => ({

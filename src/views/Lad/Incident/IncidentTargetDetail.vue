@@ -1,9 +1,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElAlert, ElDescriptions, ElDescriptionsItem, ElMessage, ElPagination, ElTabPane, ElTabs, ElTag } from 'element-plus'
+import {
+  ElAlert,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElMessage,
+  ElPagination,
+  ElTabPane,
+  ElTabs,
+  ElTag
+} from 'element-plus'
 import { getHistoryEventDetailApi } from '@/api/lad/incident'
-import { historyTargetTypeTagType, resolveHistoryTargetType } from '@/api/lad/incident/historyTargetType'
+import {
+  historyTargetTypeTagType,
+  resolveHistoryTargetType
+} from '@/api/lad/incident/historyTargetType'
 import type {
   DisposalTimelineNode,
   HistoryEventDetail,
@@ -93,7 +105,9 @@ const viewDetail = computed<HistoryEventDetail | null>(() => {
     frequencyInfo: normalizeText(detail.value.frequencyInfo),
     targetType: normalizeText(detail.value.targetType),
     detectionDevice: normalizeText(detail.value.detectionDevice),
-    countermeasureDevice: countermeasureDeviceDisplay(normalizeText(detail.value.countermeasureDevice)),
+    countermeasureDevice: countermeasureDeviceDisplay(
+      normalizeText(detail.value.countermeasureDevice)
+    ),
     disposalDetail: normalizeText(detail.value.disposalDetail),
     remark: normalizeText(detail.value.remark),
     disposalTimeline: normalizedTimeline(detail.value.disposalTimeline)
@@ -308,7 +322,9 @@ watch(
             </ElDescriptionsItem>
 
             <ElDescriptionsItem label="频率信息">{{ viewDetail.frequencyInfo }}</ElDescriptionsItem>
-            <ElDescriptionsItem :label="targetAirframeLabel">{{ viewDetail.targetType }}</ElDescriptionsItem>
+            <ElDescriptionsItem :label="targetAirframeLabel">{{
+              viewDetail.targetType
+            }}</ElDescriptionsItem>
             <ElDescriptionsItem label="探测设备">{{
               viewDetail.detectionDevice
             }}</ElDescriptionsItem>
@@ -356,7 +372,9 @@ watch(
           <section class="detail-source-section">
             <div class="detail-source-section__header">
               <div class="detail-source-section__title">航迹列表</div>
-              <BaseButton type="primary" size="small" @click="exportTrajectoryList">导出</BaseButton>
+              <BaseButton type="primary" size="small" @click="exportTrajectoryList"
+                >导出</BaseButton
+              >
             </div>
             <div class="detail-source-section__table-wrap">
               <table class="detail-source-table">

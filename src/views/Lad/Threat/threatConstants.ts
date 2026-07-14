@@ -21,10 +21,7 @@ export const threatTargetModelFilterOptions = [allOption, ...threatTargetModelOp
 
 /** 列表筛选：首项「全部」表示不过滤 */
 export function buildThreatLevelFilterOptions(entries: DictEntryItem[]) {
-  return [
-    allOption,
-    ...entries.map((item) => ({ label: item.label, value: item.label }))
-  ]
+  return [allOption, ...entries.map((item) => ({ label: item.label, value: item.label }))]
 }
 
 /** @deprecated 使用 buildThreatLevelFilterOptions */

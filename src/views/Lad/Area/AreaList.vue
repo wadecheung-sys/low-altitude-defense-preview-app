@@ -91,7 +91,7 @@ const { tableRegister, tableState, tableMethods } = useTable({
 })
 
 const { loading, dataList, total, currentPage, pageSize } = tableState
-const { getList, delList } = tableMethods
+const { getList } = tableMethods
 const delLoading = ref(false)
 
 function onTreeNodeClick(node: AreaSiteTreeNode) {

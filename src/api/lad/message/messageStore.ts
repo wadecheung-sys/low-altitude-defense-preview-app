@@ -1,10 +1,6 @@
 import { buildMessageCenterSeed } from './buildMessageSeed'
 import { messageDescriptionText } from './messageTemplateRender'
-import type {
-  MessageCenterItem,
-  MessageCenterListResult,
-  MessageCenterQuery
-} from './types'
+import type { MessageCenterItem, MessageCenterListResult, MessageCenterQuery } from './types'
 
 /** 递增以清空旧版消息数据并重新生成 */
 export const MESSAGE_STORE_VERSION = 12

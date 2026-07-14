@@ -13,7 +13,17 @@ import productImage from '@/assets/imgs/counter-uas-device.png'
 import deviceSiteCctv from '@/assets/imgs/device-site-cctv.png'
 import { BaseButton } from '@/components/Button'
 import { Link, TopRight, View } from '@element-plus/icons-vue'
-import { ElCard, ElDialog, ElIcon, ElImage, ElOption, ElPagination, ElPopover, ElSelect, ElTooltip } from 'element-plus'
+import {
+  ElCard,
+  ElDialog,
+  ElIcon,
+  ElImage,
+  ElOption,
+  ElPagination,
+  ElPopover,
+  ElSelect,
+  ElTooltip
+} from 'element-plus'
 import { computed, ref, watch } from 'vue'
 
 const VIDEO_GRID_SIZE = 4
@@ -230,7 +240,10 @@ watch(
                 </div>
               </div>
             </div>
-            <p v-else-if="linkedArchive && !archiveLoading" class="device-monitor-detail-popover__empty">
+            <p
+              v-else-if="linkedArchive && !archiveLoading"
+              class="device-monitor-detail-popover__empty"
+            >
               暂无设备规格
             </p>
             <p v-else-if="!archiveLoading" class="device-monitor-detail-popover__empty">

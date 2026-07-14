@@ -86,7 +86,11 @@ function buildItems(row: DeviceInfoItem, online: boolean): DeviceSelfCheckItem[]
   }
   if (type === 'Remote-ID 监视') {
     return [
-      { name: 'RID 报文解析', status: pickStatus(online, 'pass'), detail: '2.4G/5.8G 广播解析正常' },
+      {
+        name: 'RID 报文解析',
+        status: pickStatus(online, 'pass'),
+        detail: '2.4G/5.8G 广播解析正常'
+      },
       { name: '多目标跟踪', status: pickStatus(online, 'pass'), detail: '轨迹刷新 ≤1s' },
       {
         name: '上报链路',

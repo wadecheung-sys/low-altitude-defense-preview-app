@@ -1,7 +1,4 @@
-import {
-  LAD_DEVICE_TYPE_OPTIONS,
-  LAD_MONITOR_DEVICE_TYPE_OPTIONS
-} from '@/constants/deviceTypes'
+import { LAD_DEVICE_TYPE_OPTIONS, LAD_MONITOR_DEVICE_TYPE_OPTIONS } from '@/constants/deviceTypes'
 
 export const DEVICE_INFO_SEARCH_COL = { span: 6 } as const
 

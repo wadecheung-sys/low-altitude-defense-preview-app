@@ -101,13 +101,7 @@ const disposalLabel = computed(() => {
       </ElDescriptions>
     </template>
 
-    <ElDescriptions
-      v-else
-      :column="1"
-      border
-      size="small"
-      class="plan-simulate-result__desc"
-    >
+    <ElDescriptions v-else :column="1" border size="small" class="plan-simulate-result__desc">
       <ElDescriptionsItem :label="UI.threatLevel">
         <ElTag :type="threatLevelTagType(displayThreatLevel)" size="small" effect="light">
           {{ displayThreatLevel }}

@@ -27,7 +27,15 @@ import {
 } from 'element-plus'
 import { computed, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { handlingStatusDisplay, threatLevelDisplay, threatLevelTagType, countermeasureDeviceDisplay, handlingStatusTagType, verificationMethodOf, verificationMethodTagType } from '../shared/ladDictHelpers'
+import {
+  handlingStatusDisplay,
+  threatLevelDisplay,
+  threatLevelTagType,
+  countermeasureDeviceDisplay,
+  handlingStatusTagType,
+  verificationMethodOf,
+  verificationMethodTagType
+} from '../shared/ladDictHelpers'
 
 defineOptions({
   name: 'LadBlackWhiteTargetDetail'
@@ -353,11 +361,7 @@ watch(
     <template #header>
       <div class="target-detail-header">
         <BaseButton @click="goBackList">返回列表</BaseButton>
-        <BaseButton
-          v-if="detail"
-          :type="removeButtonType"
-          @click="onRemoveFromList"
-        >
+        <BaseButton v-if="detail" :type="removeButtonType" @click="onRemoveFromList">
           {{ removeListLabel }}
         </BaseButton>
       </div>

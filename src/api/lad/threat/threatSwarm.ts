@@ -41,7 +41,7 @@ const LEVEL_KEY_TO_LABEL: Record<'high' | 'mid' | 'low', ThreatLevelLabel> = {
 export function deriveThreatLevel(
   rule: Pick<ThreatRule, 'enabled' | 'priority' | 'targetType'>
 ): ThreatLevelLabel {
-  if (!rule.enabled) return '无'
+  if (!rule.enabled) return '无危'
   return LEVEL_KEY_TO_LABEL[resolveThreatLevelKey(rule as ThreatRule)]
 }
 

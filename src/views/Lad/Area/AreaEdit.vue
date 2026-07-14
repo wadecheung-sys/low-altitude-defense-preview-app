@@ -145,6 +145,10 @@ function onColorChange(color: string | null) {
   syncShapeColors(color)
 }
 
+function onParentIdChange(value: string | number | undefined) {
+  form.value.parentId = value ? String(value) : null
+}
+
 function setTool(tool: AreaShapeType) {
   drawTool.value = drawTool.value === tool ? null : tool
 }
@@ -257,11 +261,12 @@ watch(
           </ElFormItem>
           <ElFormItem label="上级区域">
             <ElSelect
-              v-model="form.parentId"
+              :model-value="form.parentId ?? undefined"
               class="w-100%"
               clearable
               filterable
               placeholder="请选择上级区域"
+              @update:model-value="onParentIdChange"
             >
               <ElOption
                 v-for="site in siteOptions.filter((item) => item.id !== recordId)"
@@ -305,7 +310,9 @@ watch(
               />
               <span class="area-color-field__value">{{ form.color }}</span>
             </div>
-            <p class="area-field-tip">用于地图范围填充色；切换区域类型时将恢复为默认色，可再手动调整。</p>
+            <p class="area-field-tip"
+              >用于地图范围填充色；切换区域类型时将恢复为默认色，可再手动调整。</p
+            >
           </ElFormItem>
           <ElFormItem label="范围绘制">
             <div class="area-draw-toolbar" role="toolbar" aria-label="范围绘制工具">

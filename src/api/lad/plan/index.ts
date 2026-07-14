@@ -39,8 +39,6 @@ export function togglePlanEnabledApi(data: {
   return request.post({ url: '/mock/lad/plan/toggle', data })
 }
 
-export function simulatePlanApi(
-  data: PlanSimulateInput
-): Promise<IResponse<PlanSimulateResult>> {
+export function simulatePlanApi(data: PlanSimulateInput): Promise<IResponse<PlanSimulateResult>> {
   return request.post({ url: '/mock/lad/plan/simulate', data })
 }

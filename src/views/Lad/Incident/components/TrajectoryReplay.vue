@@ -3,10 +3,7 @@ import type { HistoryEventDetail, TrajectoryPoint } from '@/api/lad/incident/typ
 import { BaseButton } from '@/components/Button'
 import { ElOption, ElSelect, ElSlider } from 'element-plus'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import {
-  getTrajectorySnapshotAtProgress,
-  sampleTrajectoryAtProgress
-} from '../trajectoryListRows'
+import { getTrajectorySnapshotAtProgress, sampleTrajectoryAtProgress } from '../trajectoryListRows'
 
 const props = defineProps<{
   detail: HistoryEventDetail
@@ -34,8 +31,8 @@ function sampleAt(pct: number): TrajectoryPoint {
 
 const currentSample = computed(() => sampleAt(progress.value))
 
-const trajectorySnapshot = computed(
-  () => getTrajectorySnapshotAtProgress(props.detail, progress.value)
+const trajectorySnapshot = computed(() =>
+  getTrajectorySnapshotAtProgress(props.detail, progress.value)
 )
 
 const pathD = computed(() => {

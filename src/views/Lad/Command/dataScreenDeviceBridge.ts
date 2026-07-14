@@ -61,12 +61,9 @@ export function bindDataScreenDeviceBridge(
 
   Object.entries(DATA_SCREEN_VIEW_MORE_BUTTONS).forEach(([buttonId, model]) => {
     const view = buildDataScreenDeviceView(model)
-    const cleanup = bindClickableElement(
-      doc,
-      buttonId,
-      () => onOpenDetail(model),
-      { ariaLabel: `查看${view?.deviceName ?? model}详情` }
-    )
+    const cleanup = bindClickableElement(doc, buttonId, () => onOpenDetail(model), {
+      ariaLabel: `查看${view?.deviceName ?? model}详情`
+    })
     if (cleanup) cleanups.push(cleanup)
   })
 

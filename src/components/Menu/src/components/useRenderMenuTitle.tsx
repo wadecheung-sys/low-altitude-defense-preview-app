@@ -12,9 +12,9 @@ export const useRenderMenuTitle = () => {
 
     return (
       <>
-        {IconComponent ? (
-          h(ElIcon, { class: 'v-menu__icon', size: 16 }, { default: () => h(IconComponent) })
-        ) : null}
+        {IconComponent
+          ? h(ElIcon, { class: 'v-menu__icon', size: 16 }, { default: () => h(IconComponent) })
+          : null}
         <span class="v-menu__title overflow-hidden overflow-ellipsis whitespace-nowrap">
           {t(title as string)}
         </span>

@@ -30,11 +30,7 @@ export function toValidUntilMs(value: string): number | null {
  * - 仅止：失效时间 ≤ 止（含永久）
  * - 起止均有：失效落在闭区间 [起, 止]（不含永久）
  */
-export function matchValidUntilRange(
-  validUntil: string,
-  start?: string,
-  end?: string
-): boolean {
+export function matchValidUntilRange(validUntil: string, start?: string, end?: string): boolean {
   if (!start && !end) return true
 
   const isPermanent = validUntil === '永久'

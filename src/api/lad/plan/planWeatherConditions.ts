@@ -90,7 +90,9 @@ function createPlanWeatherConditionWithDefaults(
   }
 }
 
-export function resolveRuleWeatherConditions(rule: Partial<PlanTriggerRule>): PlanWeatherCondition[] {
+export function resolveRuleWeatherConditions(
+  rule: Partial<PlanTriggerRule>
+): PlanWeatherCondition[] {
   if (rule.weatherConditions?.length) {
     return rule.weatherConditions.map((item) => ({ ...item }))
   }

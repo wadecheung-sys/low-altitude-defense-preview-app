@@ -21,10 +21,7 @@ export function latLngToPercent(lat: number, lng: number): { x: number; y: numbe
 }
 
 /** 拖动时用经纬度增量换算为示意坐标增量，避免逐点 clamp 导致形变或拖不动。 */
-export function latLngDeltaToPercentDelta(
-  dLat: number,
-  dLng: number
-): { dx: number; dy: number } {
+export function latLngDeltaToPercentDelta(dLat: number, dLng: number): { dx: number; dy: number } {
   return {
     dx: Math.round((dLng / LNG_PER_PERCENT) * 10) / 10,
     dy: Math.round((-dLat / LAT_PER_PERCENT) * 10) / 10

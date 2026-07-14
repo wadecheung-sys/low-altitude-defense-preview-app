@@ -185,6 +185,7 @@ function legacyBuildSummary(conditions: RuleCondition[], logic: RuleConditionLog
     })
     .join(joiner)
 }
+void legacyBuildSummary
 
 function evalCondition(c: RuleCondition, input: ThreatSimulateInput): boolean {
   const num = Number(c.value)
@@ -247,15 +248,12 @@ function ruleMatches(rule: ThreatRule, input: ThreatSimulateInput): boolean {
   return evalConditions(rule.conditions, input)
 }
 
-function normalizeThreatLevel(
+function normalizeRuleThreatLevel(
   level: string | undefined,
   rule: ThreatRuleSavePayload
 ): ThreatLevelScope {
   if (level?.trim() === '全部') return '全部'
-  const coerced = coerceThreatLevelLabel(level) as ThreatLevelLabel | undefined
-  if (coerced && coerced !== '\u65e0') return coerced
-  if (coerced === '\u65e0' && !rule.enabled) return '\u65e0'
-  return deriveThreatLevel(rule)
+  return coerceThreatLevelLabel(level) ?? deriveThreatLevel(rule)
 }
 
 function normalizePriority(value: unknown) {
@@ -295,7 +293,7 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
       | ThreatLevelLabel
       | undefined
     const enabled = Boolean(row.enabled)
-    if (!coerced || (coerced === '\u65e0' && enabled)) {
+    if (!coerced) {
       threatLevel = deriveThreatLevel({
         enabled,
         priority: row.priority as number,
@@ -319,7 +317,10 @@ function migrateLegacyRule(row: ThreatRule & Record<string, unknown>): ThreatRul
   } as ThreatRule
 }
 
-type SeedRow = Omit<ThreatRule, 'conditionSummary'> & { conditions: RuleCondition[] }
+type SeedRow = Omit<ThreatRule, 'conditionSummary' | 'conditionLogic'> & {
+  conditions: RuleCondition[]
+  conditionLogic?: RuleConditionLogic
+}
 
 function buildSeedRow(row: SeedRow): ThreatRule {
   const conditionLogic = normalizeConditionLogic(row.conditionLogic)
@@ -393,7 +394,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'PLAN-004',
     ruleName: '试飞区-仅告警',
     areaRegionType: 'testflight',
-    threatLevel: '无',
+    threatLevel: '无危',
     targetType: '全部',
     targetModel: '未知型号',
     areaName: '试飞区',
@@ -566,7 +567,7 @@ const seed: ThreatRule[] = [
     ruleCode: 'MONITOR-001',
     ruleName: '无人机设备监测',
     areaRegionType: '全部',
-    threatLevel: '无',
+    threatLevel: '无危',
     targetType: '全部',
     targetModel: '全部型号',
     areaName: '全部',
@@ -740,7 +741,7 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
       ruleCode,
       ruleName: body.ruleName.trim(),
       areaRegionType: body.areaRegionType,
-      threatLevel: normalizeThreatLevel(body.threatLevel, body),
+      threatLevel: normalizeRuleThreatLevel(body.threatLevel, body),
       targetType: normalizeThreatTargetType(body.targetType),
       targetModel:
         body.targetModel?.trim() ||
@@ -768,7 +769,7 @@ export function saveThreatRule(body: ThreatRuleSavePayload): ThreatRule {
     ruleCode,
     ruleName: body.ruleName.trim(),
     areaRegionType: body.areaRegionType,
-    threatLevel: normalizeThreatLevel(body.threatLevel, body),
+    threatLevel: normalizeRuleThreatLevel(body.threatLevel, body),
     targetType: normalizeThreatTargetType(body.targetType),
     targetModel:
       body.targetModel?.trim() ||
@@ -802,8 +803,11 @@ export function toggleThreatRuleEnabled(id: string, enabled: boolean) {
   if (idx < 0) throw new Error('\u89c4\u5219\u4e0d\u5b58\u5728')
   const row = allRules[idx]
   const threatLevel =
-    enabled && (row.threatLevel === '\u65e0' || !coerceThreatLevelLabel(row.threatLevel))
-      ? normalizeThreatLevel(seedThreatLevelById[id] ?? row.threatLevel, { ...row, enabled: true })
+    enabled && (!row.threatLevel || !coerceThreatLevelLabel(row.threatLevel))
+      ? normalizeRuleThreatLevel(seedThreatLevelById[id] ?? row.threatLevel, {
+          ...row,
+          enabled: true
+        })
       : row.threatLevel
   allRules[idx] = { ...row, enabled, threatLevel, updatedAt: formatNow() }
 }

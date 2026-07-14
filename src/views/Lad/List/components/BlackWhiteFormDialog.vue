@@ -3,7 +3,11 @@ import { computed, ref, watch } from 'vue'
 import { Dialog } from '@/components/Dialog'
 import { BaseButton } from '@/components/Button'
 import { saveBlackWhiteApi } from '@/api/lad/list'
-import { MANAGED_LIST_TYPE_OPTIONS, COOPERATIVE_DRONE_KIND, type ManagedListType } from '@/api/lad/list/listTargetKind'
+import {
+  MANAGED_LIST_TYPE_OPTIONS,
+  COOPERATIVE_DRONE_KIND,
+  type ManagedListType
+} from '@/api/lad/list/listTargetKind'
 import type { BlackWhiteListItem, EntryMethod } from '@/api/lad/list/types'
 import { normalizeValidUntil } from '@/api/lad/list/validUntilUtils'
 import { targetModelOptions } from '../../shared/ladOptionConstants'
@@ -91,7 +95,9 @@ function formatFrequencyValue(value: number) {
 function buildFrequencyText() {
   return form.value.frequencyBands
     .map((item) => item.value)
-    .filter((value): value is number => Number.isFinite(value) && value > 0)
+    .filter(
+      (value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0
+    )
     .map((value) => `${formatFrequencyValue(value)}GHz`)
     .join(' + ')
 }

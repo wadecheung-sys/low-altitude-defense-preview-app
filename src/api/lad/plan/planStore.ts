@@ -1,10 +1,5 @@
 import { functionLabel } from './planDeviceCatalog'
-import {
-  formatDisposalModeDetail,
-  normalizePlanDisposal,
-  planRequiresManualConfirm,
-  PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS
-} from './planDisposal'
+import { normalizePlanDisposal, planRequiresManualConfirm } from './planDisposal'
 import {
   formatTriggerCondition,
   formatTriggerRuleAreaLevel,
@@ -578,8 +573,10 @@ function filterPlans(q: PlanStrategyQuery): PlanStrategy[] {
     const kw = q.updatedBy.trim().toLowerCase()
     rows = rows.filter((r) => r.updatedBy.toLowerCase().includes(kw))
   }
-  if (q.updatedAtStart) rows = rows.filter((r) => r.updatedAt >= q.updatedAtStart)
-  if (q.updatedAtEnd) rows = rows.filter((r) => r.updatedAt <= q.updatedAtEnd)
+  const updatedAtStart = q.updatedAtStart
+  if (updatedAtStart) rows = rows.filter((r) => r.updatedAt >= updatedAtStart)
+  const updatedAtEnd = q.updatedAtEnd
+  if (updatedAtEnd) rows = rows.filter((r) => r.updatedAt <= updatedAtEnd)
   rows.sort((a, b) => b.priority - a.priority)
   return rows
 }

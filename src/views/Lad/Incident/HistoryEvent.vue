@@ -1,15 +1,7 @@
 <script setup lang="tsx">
 import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  ElLink,
-  ElMessage,
-  ElOption,
-  ElRadio,
-  ElRadioGroup,
-  ElSelect,
-  ElTag
-} from 'element-plus'
+import { ElLink, ElMessage, ElOption, ElRadio, ElRadioGroup, ElSelect, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Dialog } from '@/components/Dialog'
 import { Search } from '@/components/Search'
@@ -17,10 +9,11 @@ import { Table } from '@/components/Table'
 import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
+import { getHistoryEventListApi } from '@/api/lad/incident'
 import {
-  getHistoryEventListApi
-} from '@/api/lad/incident'
-import { HISTORY_TARGET_TYPE_OPTIONS, historyTargetTypeTagType } from '@/api/lad/incident/historyTargetType'
+  HISTORY_TARGET_TYPE_OPTIONS,
+  historyTargetTypeTagType
+} from '@/api/lad/incident/historyTargetType'
 import type { HistoryEventItem } from '@/api/lad/incident/types'
 import ManualConfirmDialog from './components/ManualConfirmDialog.vue'
 import {
@@ -509,7 +502,8 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: HistoryEventItem }) => (
           <>
-            {!row.manualConfirmStatus.startsWith('人工-') && !isHandlingEnded(row.handlingStatus) ? (
+            {!row.manualConfirmStatus.startsWith('人工-') &&
+            !isHandlingEnded(row.handlingStatus) ? (
               <BaseButton type="primary" onClick={() => openManualConfirm(row)}>
                 人工核查
               </BaseButton>
@@ -529,11 +523,7 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search
-      :schema="allSchemas.searchSchema"
-      @search="setSearchParams"
-      @reset="setSearchParams"
-    />
+    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
 
     <div class="mb-10px">
       <BaseButton type="primary" @click="openExportDialog">导出</BaseButton>
@@ -565,7 +555,11 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
         <div class="export-dialog__row">
           <div class="export-dialog__label">导出格式</div>
-          <ElSelect v-model="exportFormat" class="export-dialog__select" placeholder="请选择导出格式">
+          <ElSelect
+            v-model="exportFormat"
+            class="export-dialog__select"
+            placeholder="请选择导出格式"
+          >
             <ElOption label="Excel" value="excel" />
             <ElOption label="Word" value="word" />
           </ElSelect>
@@ -573,7 +567,9 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       </div>
 
       <template #footer>
-        <BaseButton type="primary" :loading="exportLoading" @click="exportReport">确定导出</BaseButton>
+        <BaseButton type="primary" :loading="exportLoading" @click="exportReport"
+          >确定导出</BaseButton
+        >
         <BaseButton @click="exportVisible = false">取消</BaseButton>
       </template>
     </Dialog>

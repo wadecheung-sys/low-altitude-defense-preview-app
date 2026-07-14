@@ -48,9 +48,7 @@ const startPercent = ref({ x: 0, y: 0 })
 const polygonDraft = ref<{ x: number; y: number }[]>([])
 const previewShape = ref<AreaShape | null>(null)
 
-type EditDragMode =
-  | { kind: 'body' }
-  | { kind: 'handle'; index: number }
+type EditDragMode = { kind: 'body' } | { kind: 'handle'; index: number }
 
 const editDrag = ref<{
   mode: EditDragMode
@@ -132,7 +130,7 @@ function syncEditLayer() {
     onBodyMouseDown: startBodyDrag,
     onHandleMouseDown: startHandleDrag
   })
-  editLayer.bringToFront()
+  ;(editLayer as L.LayerGroup & { bringToFront?: () => void }).bringToFront?.()
 }
 
 function startBodyDrag(ev: L.LeafletMouseEvent) {

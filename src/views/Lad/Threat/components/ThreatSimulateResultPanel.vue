@@ -28,16 +28,18 @@ defineProps<{
       <ElDescriptions :column="1" border size="small" class="threat-simulate-result__desc">
         <ElDescriptionsItem :label="UI.simulateMatchedRule">
           <span class="threat-simulate-result__highlight">{{ result.ruleName }}</span>
-          <ElTag v-if="result.isMonitorCatchAll" type="info" size="small" effect="plain" class="ml-6px">
+          <ElTag
+            v-if="result.isMonitorCatchAll"
+            type="info"
+            size="small"
+            effect="plain"
+            class="ml-6px"
+          >
             {{ UI.fallbackTag }}
           </ElTag>
         </ElDescriptionsItem>
         <ElDescriptionsItem :label="UI.simulateThreatLevelConclusion">
-          <ElTag
-            :type="threatLevelTagTypeForRule(result.rule)"
-            size="default"
-            effect="dark"
-          >
+          <ElTag :type="threatLevelTagTypeForRule(result.rule)" size="default" effect="dark">
             {{ threatLevelForRule(result.rule) }}
           </ElTag>
         </ElDescriptionsItem>

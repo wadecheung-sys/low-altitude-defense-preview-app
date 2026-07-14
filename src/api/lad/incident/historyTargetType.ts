@@ -16,10 +16,7 @@ export function resolveHistoryTargetType(input: {
   manualConfirmStatus: string
 }): HistoryTargetType {
   if (input.historyTargetType) return input.historyTargetType
-  if (
-    input.manualConfirmStatus === '躁扰告警' ||
-    input.manualConfirmStatus === '人工-躁扰告警'
-  ) {
+  if (input.manualConfirmStatus === '躁扰告警' || input.manualConfirmStatus === '人工-躁扰告警') {
     return '躁扰信号-飞鸟'
   }
   if (input.uavSn === '未解析') {
@@ -28,9 +25,7 @@ export function resolveHistoryTargetType(input: {
   return '合作式无人机'
 }
 
-export function historyTargetTypeTagType(
-  value: HistoryTargetType
-): 'danger' | 'warning' | 'info' {
+export function historyTargetTypeTagType(value: HistoryTargetType): 'danger' | 'warning' | 'info' {
   const map: Record<HistoryTargetType, 'danger' | 'warning' | 'info'> = {
     黑飞无人机: 'danger',
     合作式无人机: 'warning',

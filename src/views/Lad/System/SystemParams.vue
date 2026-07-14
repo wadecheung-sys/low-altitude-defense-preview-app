@@ -78,7 +78,8 @@ function cancelEdit() {
 
 function validateParam(param: SystemParam, value: string | number | boolean | null): string | null {
   if (param.paramKey === ALARM_PARAM_KEYS.maxDurationSeconds) {
-    const duration = value === null || value === undefined || value === '' ? undefined : Number(value)
+    const duration =
+      value === null || value === undefined || value === '' ? undefined : Number(value)
     if (duration === undefined || !Number.isFinite(duration) || duration < 1) {
       return '持续时间须大于 0 秒'
     }

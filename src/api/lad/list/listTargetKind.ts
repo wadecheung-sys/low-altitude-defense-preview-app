@@ -25,10 +25,7 @@ export const BLACK_WHITE_TARGET_KIND_OPTIONS: { label: string; value: BlackWhite
 export const BLACK_WHITE_TARGET_KIND_SEARCH_OPTIONS: {
   label: string
   value: BlackWhiteTargetKindFilter
-}[] = [
-  ...BLACK_WHITE_TARGET_KIND_OPTIONS,
-  { label: '躁扰信号-飞鸟', value: '躁扰信号-飞鸟' }
-]
+}[] = [...BLACK_WHITE_TARGET_KIND_OPTIONS, { label: '躁扰信号-飞鸟', value: '躁扰信号-飞鸟' }]
 
 export function resolveBlackWhiteTargetKind(sn?: string): BlackWhiteTargetKind {
   const text = sn?.trim()
@@ -36,9 +33,7 @@ export function resolveBlackWhiteTargetKind(sn?: string): BlackWhiteTargetKind {
   return '合作式无人机'
 }
 
-export function historyTargetTypeTagType(
-  value?: BlackWhiteTargetKind
-): 'danger' | 'warning' {
+export function historyTargetTypeTagType(value?: BlackWhiteTargetKind): 'danger' | 'warning' {
   return value === '黑飞无人机' ? 'danger' : 'warning'
 }
 
@@ -75,7 +70,9 @@ export function displayResolvableSn(sn?: string): string {
 }
 
 /** 规范化为名单模块可展示/可管理的合作式记录；不可管理则返回 null */
-export function enrichManagedBlackWhiteListItem(row: BlackWhiteListItem): BlackWhiteListItem | null {
+export function enrichManagedBlackWhiteListItem(
+  row: BlackWhiteListItem
+): BlackWhiteListItem | null {
   if (!isManagedBlackWhiteListItem(row)) return null
   return {
     ...row,

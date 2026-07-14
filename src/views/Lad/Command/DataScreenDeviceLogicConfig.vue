@@ -86,7 +86,10 @@ function parseSelectOptions(hint?: string): string[] | null {
   if (!hint?.trim()) return null
   const normalized = hint.replace(/\s+/g, ' ').trim()
   if (!normalized.includes(' / ')) return null
-  const options = normalized.split(' / ').map((part) => part.trim()).filter(Boolean)
+  const options = normalized
+    .split(' / ')
+    .map((part) => part.trim())
+    .filter(Boolean)
   return options.length >= 2 ? options : null
 }
 
@@ -225,9 +228,7 @@ watch(
           <ElInputNumber
             v-else-if="isNumericConfig(item)"
             :model-value="
-              deviceConfigValues[item.key] === ''
-                ? undefined
-                : Number(deviceConfigValues[item.key])
+              deviceConfigValues[item.key] === '' ? undefined : Number(deviceConfigValues[item.key])
             "
             :min="numericBounds(item.hint).min"
             :max="numericBounds(item.hint).max"
@@ -260,12 +261,7 @@ watch(
       <p class="lad-device-detail-panel__hint">
         转台角度等运行时参数由「控制台」实时下发，不在此持久化。
       </p>
-      <ElTable
-        v-if="runtimeConfigItems.length"
-        :data="runtimeConfigItems"
-        border
-        size="small"
-      >
+      <ElTable v-if="runtimeConfigItems.length" :data="runtimeConfigItems" border size="small">
         <ElTableColumn prop="label" label="控制项" min-width="160" />
         <ElTableColumn prop="currentValue" label="当前值" min-width="140" />
         <ElTableColumn prop="unit" label="单位" width="80" />

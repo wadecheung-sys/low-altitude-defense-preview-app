@@ -665,9 +665,7 @@ watch(metricsTab, (tab) => {
             <p v-else-if="linkedArchive" class="device-detail-archive-empty">
               当前档案无设备级可配置项；运行时参数（如转台角度）由指挥大屏控制。
             </p>
-            <p v-else class="device-detail-archive-empty">
-              请先选择基础档案，再配置设备级参数。
-            </p>
+            <p v-else class="device-detail-archive-empty"> 请先选择基础档案，再配置设备级参数。 </p>
           </div>
 
           <ElFormItem v-show="false" prop="deployAreaId">
@@ -735,7 +733,9 @@ watch(metricsTab, (tab) => {
             </p>
             <template v-else>
               <p class="device-detail-metrics-tip">
-                以下指标来自基础档案「{{ linkedArchive.archiveName }}」，为说明书固定参数，只读展示。
+                以下指标来自基础档案「{{
+                  linkedArchive.archiveName
+                }}」，为说明书固定参数，只读展示。
               </p>
               <ElTable
                 :data="linkedArchive.specifications"

@@ -1,9 +1,6 @@
 import request from '@/axios'
 import { SUCCESS_CODE } from '@/constants'
-import {
-  isNewFormatMessageList,
-  queryMessageCenterList
-} from './messageStore'
+import { isNewFormatMessageList, queryMessageCenterList } from './messageStore'
 import type { MessageCenterListResult, MessageCenterQuery } from './types'
 
 function wrapLocalResponse<T>(data: T): IResponse<T> {

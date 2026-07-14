@@ -3,10 +3,7 @@ import { onMounted, ref } from 'vue'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import type { RuleCondition, RuleConditionLogic } from '@/api/lad/threat/types'
 import { BaseButton } from '@/components/Button'
-import {
-  conditionOperatorOptions,
-  conditionPropertyOptions
-} from '../../shared/ladOptionConstants'
+import { conditionOperatorOptions, conditionPropertyOptions } from '../../shared/ladOptionConstants'
 import { ElInput, ElLink, ElOption, ElSelect } from 'element-plus'
 
 type AreaOption = { label: string; value: string }

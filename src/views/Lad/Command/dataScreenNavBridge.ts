@@ -33,10 +33,7 @@ function bindClickableElement(
   return () => element.removeEventListener('click', handleClick, true)
 }
 
-export function bindDataScreenNavBridge(
-  doc: Document,
-  router: Router
-): DataScreenNavBridgeCleanup {
+export function bindDataScreenNavBridge(doc: Document, router: Router): DataScreenNavBridgeCleanup {
   const cleanups = NAV_LINKS.map((link) =>
     bindClickableElement(
       doc,

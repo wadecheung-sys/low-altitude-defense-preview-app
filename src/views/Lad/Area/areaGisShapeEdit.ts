@@ -108,7 +108,11 @@ function normalizeRect(x: number, y: number, w: number, h: number) {
   }
 }
 
-function updateRectCorner(shape: AreaShape, cornerIndex: number, point: { x: number; y: number }): AreaShape {
+function updateRectCorner(
+  shape: AreaShape,
+  cornerIndex: number,
+  point: { x: number; y: number }
+): AreaShape {
   const x = shape.x ?? 0
   const y = shape.y ?? 0
   const w = shape.width ?? 0
