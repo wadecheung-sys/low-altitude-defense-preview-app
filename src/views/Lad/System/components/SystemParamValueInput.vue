@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   ElInput,
   ElInputNumber,
@@ -16,7 +16,13 @@ import {
   ALARM_PARAM_KEYS,
   ALARM_VISUAL_MODE_OPTIONS
 } from '@/api/lad/system/alarmParams'
+import { getDictEntriesByCodeApi } from '@/api/lad/system'
 import type { SystemParam } from '@/api/lad/system/types'
+import {
+  LAD_DATA_SOURCE_DICT_CODE,
+  LAD_DATA_SOURCE_OPTIONS,
+  LAD_DEFAULT_DATA_SOURCE_PARAM_KEY
+} from '@/constants/ladDataSources'
 
 const props = defineProps<{
   param: SystemParam
@@ -39,7 +45,13 @@ const isAlarmVisualParam = computed(() => props.param.paramKey === ALARM_PARAM_K
 const isAlarmMaxDurationParam = computed(
   () => props.param.paramKey === ALARM_PARAM_KEYS.maxDurationSeconds
 )
+const isDefaultDataSourceParam = computed(
+  () => props.param.paramKey === LAD_DEFAULT_DATA_SOURCE_PARAM_KEY
+)
 const allowsEmptyNumber = computed(() => props.param.group === '模拟')
+const dataSourceOptions = ref<Array<{ label: string; value: string }>>(
+  LAD_DATA_SOURCE_OPTIONS.map((item) => ({ label: item.label, value: item.value }))
+)
 
 const stringValue = computed({
   get: () => String(props.modelValue ?? ''),
@@ -86,6 +98,34 @@ function clearAlarmAudio() {
   emit('update:modelValue', '')
   ElMessage.success('已清除告警音频')
 }
+
+async function loadDataSourceOptions() {
+  try {
+    const res = await getDictEntriesByCodeApi(LAD_DATA_SOURCE_DICT_CODE)
+    const options = res.data.map((item) => ({
+      label: item.label,
+      value: item.value || item.label
+    }))
+    if (options.length) dataSourceOptions.value = options
+  } catch {
+    dataSourceOptions.value = LAD_DATA_SOURCE_OPTIONS.map((item) => ({
+      label: item.label,
+      value: item.value
+    }))
+  }
+}
+
+onMounted(() => {
+  if (isDefaultDataSourceParam.value) {
+    void loadDataSourceOptions()
+  }
+})
+
+watch(isDefaultDataSourceParam, (active) => {
+  if (active) {
+    void loadDataSourceOptions()
+  }
+})
 </script>
 
 <template>
@@ -118,6 +158,21 @@ function clearAlarmAudio() {
         </div>
       </div>
     </template>
+
+    <ElSelect
+      v-else-if="isDefaultDataSourceParam"
+      v-model="stringValue"
+      class="system-param-value__control"
+      placeholder="请选择默认数据来源形式"
+      filterable
+    >
+      <ElOption
+        v-for="item in dataSourceOptions"
+        :key="item.value"
+        :label="item.label"
+        :value="item.value"
+      />
+    </ElSelect>
 
     <ElSelect
       v-else-if="isAlarmVisualParam"

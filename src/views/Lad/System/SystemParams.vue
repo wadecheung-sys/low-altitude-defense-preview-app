@@ -10,6 +10,7 @@ import {
   saveSystemParamApi
 } from '@/api/lad/system'
 import { ALARM_PARAM_KEYS } from '@/api/lad/system/alarmParams'
+import { LAD_DEFAULT_DATA_SOURCE_PARAM_KEY } from '@/constants/ladDataSources'
 import type { ParamGroup, SystemParam } from '@/api/lad/system/types'
 import SystemParamValueInput from './components/SystemParamValueInput.vue'
 
@@ -87,6 +88,11 @@ function validateParam(param: SystemParam, value: string | number | boolean | nu
   if (param.paramKey === ALARM_PARAM_KEYS.visualMode) {
     if (!String(value ?? '').trim()) {
       return '请选择告警视觉表现形式'
+    }
+  }
+  if (param.paramKey === LAD_DEFAULT_DATA_SOURCE_PARAM_KEY) {
+    if (!String(value ?? '').trim()) {
+      return '请选择默认数据来源形式'
     }
   }
   return null

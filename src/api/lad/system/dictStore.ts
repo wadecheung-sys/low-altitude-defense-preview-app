@@ -10,6 +10,7 @@ import type {
 } from './types'
 import { LAD_TARGET_MODELS } from '@/constants/ladTargetModels'
 import { LAD_DEVICE_TYPE_ENTRIES } from '@/constants/deviceTypes'
+import { LAD_DATA_SOURCE_DICT_CODE, LAD_DATA_SOURCE_OPTIONS } from '@/constants/ladDataSources'
 
 function formatNow() {
   const d = new Date()
@@ -71,6 +72,14 @@ const dictTypesSeed: DictTypeItem[] = [
     remark: '预案联动与反制设备可执行的动作类型',
     itemCount: 5,
     updatedAt: '2026-06-30 09:30:00'
+  },
+  {
+    id: 'dt-010',
+    dictCode: LAD_DATA_SOURCE_DICT_CODE,
+    dictName: '历史事件数据来源',
+    remark: '按设备类型或设备组合维护历史事件的数据来源形式',
+    itemCount: LAD_DATA_SOURCE_OPTIONS.length,
+    updatedAt: '2026-07-14 18:00:00'
   }
 ]
 
@@ -290,11 +299,39 @@ const dictEntriesSeed: DictEntryItem[] = [
     value: 'laser_strike',
     sort: 5,
     updatedAt: '2026-06-30 09:30:00'
-  }
+  },
+  ...LAD_DATA_SOURCE_OPTIONS.map((entry, index) => ({
+    id: `de-history-source-${String(index + 1).padStart(2, '0')}`,
+    dictTypeId: 'dt-010',
+    label: entry.label,
+    value: entry.value,
+    sort: index + 1,
+    remark: entry.remark,
+    updatedAt: '2026-07-14 18:00:00'
+  }))
 ]
 
-let allTypes: DictTypeItem[] = dictTypesSeed.map((r) => ({ ...r }))
-let allEntries: DictEntryItem[] = dictEntriesSeed.map((r) => ({ ...r }))
+function cloneDictTypesSeed(): DictTypeItem[] {
+  return dictTypesSeed.map((r) => ({ ...r }))
+}
+
+function cloneDictEntriesSeed(): DictEntryItem[] {
+  return dictEntriesSeed.map((r) => ({ ...r }))
+}
+
+let allTypes: DictTypeItem[] = cloneDictTypesSeed()
+let allEntries: DictEntryItem[] = cloneDictEntriesSeed()
+
+const DICT_STORE_VERSION = 2
+
+function ensureStoreVersion() {
+  const g = globalThis as { __ladDictStoreVer?: number }
+  if (g.__ladDictStoreVer === DICT_STORE_VERSION) return
+  g.__ladDictStoreVer = DICT_STORE_VERSION
+  allTypes = cloneDictTypesSeed()
+  allEntries = cloneDictEntriesSeed()
+  syncTypeItemCount()
+}
 
 function syncTypeItemCount() {
   allTypes = allTypes.map((t) => ({
@@ -319,6 +356,7 @@ function filterTypes(params: DictTypeQuery): DictTypeItem[] {
 }
 
 export function queryDictTypeList(params: DictTypeQuery): DictTypeListResult {
+  ensureStoreVersion()
   const pageIndex = Number(params.pageIndex) || 1
   const pageSize = Number(params.pageSize) || 10
   const filtered = filterTypes(params)
@@ -330,11 +368,13 @@ export function queryDictTypeList(params: DictTypeQuery): DictTypeListResult {
 }
 
 export function getDictType(id: string): DictTypeItem | null {
+  ensureStoreVersion()
   const row = allTypes.find((t) => t.id === id)
   return row ? { ...row } : null
 }
 
 export function saveDictType(body: DictTypeSavePayload): DictTypeItem {
+  ensureStoreVersion()
   const now = formatNow()
   if (body.id) {
     const idx = allTypes.findIndex((t) => t.id === body.id)
@@ -369,6 +409,7 @@ export function saveDictType(body: DictTypeSavePayload): DictTypeItem {
 }
 
 export function deleteDictType(id: string) {
+  ensureStoreVersion()
   allTypes = allTypes.filter((t) => t.id !== id)
   allEntries = allEntries.filter((e) => e.dictTypeId !== id)
   syncTypeItemCount()
@@ -376,6 +417,7 @@ export function deleteDictType(id: string) {
 
 /** 按字典编码获取字典项（供业务下拉/展示） */
 export function queryDictEntriesByCode(dictCode: string): DictEntryItem[] {
+  ensureStoreVersion()
   const type = allTypes.find((t) => t.dictCode === dictCode)
   if (!type) return []
   return allEntries
@@ -385,6 +427,7 @@ export function queryDictEntriesByCode(dictCode: string): DictEntryItem[] {
 }
 
 export function queryDictEntryList(params: DictEntryQuery): DictEntryListResult {
+  ensureStoreVersion()
   const dictType = getDictType(params.dictTypeId)
   let rows = allEntries.filter((e) => e.dictTypeId === params.dictTypeId)
   if (params.label?.trim()) {
@@ -405,6 +448,7 @@ export function queryDictEntryList(params: DictEntryQuery): DictEntryListResult 
 }
 
 export function saveDictEntry(body: DictEntrySavePayload): DictEntryItem {
+  ensureStoreVersion()
   const now = formatNow()
   if (body.id) {
     const idx = allEntries.findIndex((e) => e.id === body.id)
@@ -436,11 +480,13 @@ export function saveDictEntry(body: DictEntrySavePayload): DictEntryItem {
 }
 
 export function deleteDictEntry(id: string) {
+  ensureStoreVersion()
   allEntries = allEntries.filter((e) => e.id !== id)
   syncTypeItemCount()
 }
 
 export function deleteDictEntries(ids: string[]) {
+  ensureStoreVersion()
   const set = new Set(ids)
   allEntries = allEntries.filter((e) => !set.has(e.id))
   syncTypeItemCount()

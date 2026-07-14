@@ -5,7 +5,13 @@ import type { ManagedListType } from '@/api/lad/list/listTargetKind'
 import { formatValidUntilDisplay } from '@/api/lad/list/validUntilUtils'
 import { displayManagedListType } from '@/api/lad/list/listTargetKind'
 import { getHistoryEventListApi } from '@/api/lad/incident'
-import type { HistoryEventItem } from '@/api/lad/incident/types'
+import { getDictEntriesByCodeApi } from '@/api/lad/system'
+import type {
+  HandlingStatus,
+  HistoryEventItem,
+  ThreatLevel,
+  VerificationMethod
+} from '@/api/lad/incident/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import { ContentWrap } from '@/components/ContentWrap'
@@ -25,9 +31,13 @@ import {
   ElSelect,
   ElTag
 } from 'element-plus'
-import { computed, reactive, ref, unref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { LAD_DATA_SOURCE_DICT_CODE, LAD_DATA_SOURCE_OPTIONS } from '@/constants/ladDataSources'
 import {
+  HANDLING_STATUS_OPTIONS,
+  THREAT_LEVEL_OPTIONS,
+  VERIFICATION_METHOD_OPTIONS,
   handlingStatusDisplay,
   threatLevelDisplay,
   threatLevelTagType,
@@ -52,28 +62,67 @@ const recordId = computed(() => route.params.id as string)
 
 const latestEvent = ref<HistoryEventItem | null>(null)
 
-const eventFilters = reactive({
+const eventFilters = reactive<{
+  discoveredAtRange: string[]
+  zoneName: string
+  dataSource: string
+  threatLevel: ThreatLevel | ''
+  verificationMethod: VerificationMethod | ''
+  detectionDevice: string
+  countermeasureDevice: string
+  handlingStatus: HandlingStatus | ''
+}>({
   discoveredAtRange: [] as string[],
   zoneName: '',
-  dataSource: ''
+  dataSource: '',
+  threatLevel: '',
+  verificationMethod: '',
+  detectionDevice: '',
+  countermeasureDevice: '',
+  handlingStatus: ''
 })
 
 const zoneOptions = [
   { label: '全部区域', value: '' },
-  { label: '核心保护区-A区', value: '核心保护区-A区' },
-  { label: '缓冲区-B区', value: '缓冲区-B区' },
-  { label: '管制空域-C区', value: '管制空域-C区' },
+  { label: '核心防护区A区', value: '核心防护区A区' },
+  { label: '缓冲区B区', value: '缓冲区B区' },
+  { label: '管制空域C区', value: '管制空域C区' },
   { label: '公共区域', value: '公共区域' }
 ]
 
-const dataSourceOptions = [
+const dataSourceOptions = ref([
   { label: '全部数据来源', value: '' },
-  { label: '雷达+无线电融合', value: '雷达+无线电融合' },
-  { label: '雷达单源', value: '雷达单源' },
-  { label: '无线电侦测', value: '无线电侦测' },
-  { label: '光电跟踪', value: '光电跟踪' },
-  { label: '多源融合节点', value: '多源融合节点' }
+  ...LAD_DATA_SOURCE_OPTIONS.map((item) => ({ label: item.label, value: item.value }))
+])
+
+const detectionDeviceOptions = [
+  { label: '全部探测设备', value: '' },
+  { label: '雷达-01 (2.4G)', value: '雷达-01 (2.4G)' },
+  { label: '无线电-02', value: '无线电-02' },
+  { label: '雷达-03 (5.8G)', value: '雷达-03 (5.8G)' },
+  { label: '光电-01', value: '光电-01' },
+  { label: '融合节点-A', value: '融合节点-A' }
 ]
+
+const countermeasureDeviceOptions = [
+  { label: '全部反制设备', value: '' },
+  { label: '--', value: '--' },
+  { label: '干扰-01', value: '干扰-01' },
+  { label: '诱骗-02', value: '诱骗-02' },
+  { label: '激光-01', value: '激光-01' },
+  { label: '光电-01', value: '光电-01' }
+]
+
+async function loadDataSourceOptions() {
+  const res = await getDictEntriesByCodeApi(LAD_DATA_SOURCE_DICT_CODE)
+  const options = res.data.map((item) => ({
+    label: item.label,
+    value: item.value || item.label
+  }))
+  if (options.length) {
+    dataSourceOptions.value = [{ label: '全部数据来源', value: '' }, ...options]
+  }
+}
 
 const threatTagType = threatLevelTagType
 
@@ -137,7 +186,12 @@ const eventQueryParams = computed(() => {
     discoveredAtStart: range?.[0],
     discoveredAtEnd: range?.[1],
     zoneName: eventFilters.zoneName || undefined,
-    dataSource: eventFilters.dataSource || undefined
+    dataSource: eventFilters.dataSource || undefined,
+    threatLevel: eventFilters.threatLevel || undefined,
+    verificationMethod: eventFilters.verificationMethod || undefined,
+    detectionDevice: eventFilters.detectionDevice || undefined,
+    countermeasureDevice: eventFilters.countermeasureDevice || undefined,
+    handlingStatus: eventFilters.handlingStatus || undefined
   }
 })
 
@@ -172,6 +226,11 @@ const resetEventFilters = () => {
   eventFilters.discoveredAtRange = []
   eventFilters.zoneName = ''
   eventFilters.dataSource = ''
+  eventFilters.threatLevel = ''
+  eventFilters.verificationMethod = ''
+  eventFilters.detectionDevice = ''
+  eventFilters.countermeasureDevice = ''
+  eventFilters.handlingStatus = ''
   applyEventFilters()
 }
 
@@ -236,6 +295,18 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'handledAt',
     label: '处置时间',
     minWidth: 168,
+    table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'zoneName',
+    label: '所在区域',
+    minWidth: 130,
+    table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'dataSource',
+    label: '数据来源',
+    minWidth: 128,
     table: { showOverflowTooltip: true }
   },
   {
@@ -347,6 +418,10 @@ const crudSchemas = reactive<CrudSchema[]>([
 
 const { allSchemas } = useCrudSchemas(crudSchemas)
 
+onMounted(() => {
+  void loadDataSourceOptions()
+})
+
 watch(
   recordId,
   () => {
@@ -443,6 +518,7 @@ watch(
               {{ handlingStatusDisplay(latestEvent.handlingStatus) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="所在区域">{{ latestEvent.zoneName }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="数据来源">{{ latestEvent.dataSource }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="无人机最后位置" :span="2">
               {{ latestEvent.targetLocation }}
@@ -464,7 +540,7 @@ watch(
         </div>
         <div class="target-detail-events__toolbar mb-10px">
           <ElForm inline class="target-detail-events__filters">
-            <ElFormItem label="时间范围">
+            <ElFormItem label="发现时间">
               <ElDatePicker
                 v-model="eventFilters.discoveredAtRange"
                 type="daterange"
@@ -501,6 +577,86 @@ watch(
                 <ElOption
                   v-for="opt in dataSourceOptions"
                   :key="opt.value || 'all-src'"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="威胁等级">
+              <ElSelect
+                v-model="eventFilters.threatLevel"
+                placeholder="全部威胁等级"
+                clearable
+                style="width: 150px"
+              >
+                <ElOption label="全部威胁等级" value="" />
+                <ElOption
+                  v-for="opt in THREAT_LEVEL_OPTIONS"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="验证方式">
+              <ElSelect
+                v-model="eventFilters.verificationMethod"
+                placeholder="全部验证方式"
+                clearable
+                style="width: 150px"
+              >
+                <ElOption label="全部验证方式" value="" />
+                <ElOption
+                  v-for="opt in VERIFICATION_METHOD_OPTIONS"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="探测设备">
+              <ElSelect
+                v-model="eventFilters.detectionDevice"
+                placeholder="全部探测设备"
+                clearable
+                filterable
+                style="width: 170px"
+              >
+                <ElOption
+                  v-for="opt in detectionDeviceOptions"
+                  :key="opt.value || 'all-detection'"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="反制设备">
+              <ElSelect
+                v-model="eventFilters.countermeasureDevice"
+                placeholder="全部反制设备"
+                clearable
+                filterable
+                style="width: 160px"
+              >
+                <ElOption
+                  v-for="opt in countermeasureDeviceOptions"
+                  :key="opt.value || 'all-countermeasure'"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="处置状态">
+              <ElSelect
+                v-model="eventFilters.handlingStatus"
+                placeholder="全部处置状态"
+                clearable
+                style="width: 150px"
+              >
+                <ElOption label="全部处置状态" value="" />
+                <ElOption
+                  v-for="opt in HANDLING_STATUS_OPTIONS"
+                  :key="opt.value"
                   :label="opt.label"
                   :value="opt.value"
                 />

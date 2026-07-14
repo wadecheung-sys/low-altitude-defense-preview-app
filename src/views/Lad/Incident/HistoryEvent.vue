@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { reactive, ref, unref } from 'vue'
+import { onMounted, reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElLink, ElMessage, ElOption, ElRadio, ElRadioGroup, ElSelect, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
@@ -10,6 +10,8 @@ import { BaseButton } from '@/components/Button'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { getHistoryEventListApi } from '@/api/lad/incident'
+import { getDictEntriesByCodeApi } from '@/api/lad/system'
+import { LAD_DATA_SOURCE_DICT_CODE, LAD_DATA_SOURCE_OPTIONS } from '@/constants/ladDataSources'
 import {
   HISTORY_TARGET_TYPE_OPTIONS,
   historyTargetTypeTagType
@@ -56,6 +58,10 @@ const exportVisible = ref(false)
 const exportRange = ref<HistoryEventExportRange>('query')
 const exportFormat = ref<HistoryEventExportFormat>('excel')
 const exportLoading = ref(false)
+const dataSourceOptions = ref([
+  { label: '全部数据来源', value: '' },
+  ...LAD_DATA_SOURCE_OPTIONS.map((item) => ({ label: item.label, value: item.value }))
+])
 
 const setSearchParams = (params: Recordable) => {
   const range = params.discoveredAtRange as string[] | undefined
@@ -68,6 +74,7 @@ const setSearchParams = (params: Recordable) => {
     threatLevel: params.threatLevel,
     handlingStatus: params.handlingStatus,
     verificationMethod: params.verificationMethod,
+    dataSource: params.dataSource,
     detectionDevice: params.detectionDevice,
     countermeasureDevice: params.countermeasureDevice,
     discoveredAtStart: range?.[0],
@@ -85,6 +92,17 @@ const countermeasureOptions = [
 ]
 
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
+
+async function loadDataSourceOptions() {
+  const res = await getDictEntriesByCodeApi(LAD_DATA_SOURCE_DICT_CODE)
+  const options = res.data.map((item) => ({
+    label: item.label,
+    value: item.value || item.label
+  }))
+  if (options.length) {
+    dataSourceOptions.value = [{ label: '全部数据来源', value: '' }, ...options]
+  }
+}
 
 const filterByTargetId = (targetId: string) => {
   searchParams.value = { ...unref(searchParams), targetId }
@@ -111,6 +129,10 @@ const { loading, dataList, total, currentPage, pageSize } = tableState
 const { getList, getElTableExpose } = tableMethods
 
 getList()
+
+onMounted(() => {
+  void loadDataSourceOptions()
+})
 
 const goDetail = (row: HistoryEventItem) => {
   push(`/lad/incident/target/${row.id}`)
@@ -267,6 +289,32 @@ const crudSchemas = reactive<CrudSchema[]>([
         )
       }
     }
+  },
+  {
+    field: 'dataSource',
+    label: '数据来源',
+    minWidth: 128,
+    search: {
+      colProps: { span: 6 },
+      formItemProps: {
+        slots: {
+          default: (model: Recordable) => (
+            <ElSelect
+              v-model={model.dataSource}
+              clearable
+              filterable
+              placeholder="请选择数据来源"
+              style={{ width: '100%' }}
+            >
+              {dataSourceOptions.value.map((item) => (
+                <ElOption key={item.value || 'all-source'} label={item.label} value={item.value} />
+              ))}
+            </ElSelect>
+          )
+        }
+      }
+    },
+    table: { showOverflowTooltip: true }
   },
   {
     field: 'discoveredAt',
@@ -523,7 +571,12 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 
 <template>
   <ContentWrap>
-    <Search :schema="allSchemas.searchSchema" @search="setSearchParams" @reset="setSearchParams" />
+    <Search
+      :schema="allSchemas.searchSchema"
+      :expand-default="true"
+      @search="setSearchParams"
+      @reset="setSearchParams"
+    />
 
     <div class="mb-10px">
       <BaseButton type="primary" @click="openExportDialog">导出</BaseButton>

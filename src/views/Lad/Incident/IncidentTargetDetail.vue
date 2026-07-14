@@ -104,6 +104,7 @@ const viewDetail = computed<HistoryEventDetail | null>(() => {
     zoneName: normalizeText(detail.value.zoneName),
     frequencyInfo: normalizeText(detail.value.frequencyInfo),
     targetType: normalizeText(detail.value.targetType),
+    dataSource: normalizeText(detail.value.dataSource),
     detectionDevice: normalizeText(detail.value.detectionDevice),
     countermeasureDevice: countermeasureDeviceDisplay(
       normalizeText(detail.value.countermeasureDevice)
@@ -325,6 +326,7 @@ watch(
             <ElDescriptionsItem :label="targetAirframeLabel">{{
               viewDetail.targetType
             }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="数据来源">{{ viewDetail.dataSource }}</ElDescriptionsItem>
             <ElDescriptionsItem label="探测设备">{{
               viewDetail.detectionDevice
             }}</ElDescriptionsItem>

@@ -5,6 +5,12 @@ import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore
 import { resolveCountermeasureActionValue } from '@/constants/deviceCatalog'
 import { normalizeThreatLevel } from '@/api/lad/threat/threatLevelUtils'
 import { LAD_TARGET_PROFILES } from '@/api/lad/shared/targetProfiles'
+import { getStringSystemParam } from '@/api/lad/system/paramStore'
+import {
+  LAD_DEFAULT_DATA_SOURCE,
+  LAD_DEFAULT_DATA_SOURCE_PARAM_KEY,
+  normalizeLadDataSource
+} from '@/constants/ladDataSources'
 import type { LadTargetProfile } from '@/api/lad/shared/targetProfiles'
 import type {
   HistoryEventDetail,
@@ -23,7 +29,7 @@ const handlingResults = ['驱离成功', '迫降成功', '激光打击成功', '
 const detectionDevices = ['雷达-01 (2.4G)', '无线电-02', '雷达-03 (5.8G)', '光电-01', '融合节点-A']
 const zones = ['核心防护区A区', '缓冲区B区', '管制空域C区', '公共区域']
 const zoneAreaIds = ['ar-10001', 'ar-10002', 'ar-10003', 'ar-10003']
-const dataSources = ['雷达+无线电融合', '雷达单源', '无线电侦测', '光电跟踪', '多源融合节点']
+const dataSources = ['雷达', '无线电', '光电', '雷达+无线电', '多源数据融合']
 const countermeasures = ['干扰-01', '--', '诱骗-02', '干扰-01', '激光-01']
 
 const LIST_TYPE_STORAGE_KEY = 'lad-history-event-list-types'
@@ -42,6 +48,14 @@ function formatSeedDatetime(ms: number) {
   const date = new Date(ms)
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+function defaultHistoryDataSource() {
+  return getStringSystemParam(LAD_DEFAULT_DATA_SOURCE_PARAM_KEY, LAD_DEFAULT_DATA_SOURCE)
+}
+
+function normalizeHistoryDataSource(value?: string) {
+  return normalizeLadDataSource(value, defaultHistoryDataSource())
 }
 
 function buildSeedList() {
@@ -162,7 +176,7 @@ function buildSeedList() {
           areaId: zoneAreaIds[i % zoneAreaIds.length]
         },
         zoneName: zones[i % zones.length],
-        dataSource: dataSources[i % dataSources.length],
+        dataSource: normalizeHistoryDataSource(dataSources[i % dataSources.length]),
         trajectoryFeature: isBirdNuisanceDemo ? '不规则' : trajectories[i % trajectories.length],
         targetModel: rowTargetModel,
         uavSn: rowUavSn,
@@ -218,6 +232,7 @@ function persistListTypes() {
 const storedListTypes = readStoredListTypes()
 const allList: HistoryEventItem[] = buildSeedList().map((row) => ({
   ...row,
+  dataSource: normalizeHistoryDataSource(row.dataSource),
   listType: storedListTypes[row.id] || row.listType || '未知'
 }))
 
@@ -396,7 +411,8 @@ function filterList(params: HistoryEventQuery): HistoryEventItem[] {
     rows = rows.filter((row) => row.zoneName === params.zoneName)
   }
   if (params.dataSource) {
-    rows = rows.filter((row) => row.dataSource === params.dataSource)
+    const dataSource = normalizeHistoryDataSource(params.dataSource)
+    rows = rows.filter((row) => normalizeHistoryDataSource(row.dataSource) === dataSource)
   }
   return rows
 }
@@ -407,7 +423,9 @@ export function queryLocalHistoryEventList(params: HistoryEventQuery): HistoryEv
   const filtered = filterList(params)
   const start = (pageIndex - 1) * pageSize
   return {
-    list: filtered.slice(start, start + pageSize),
+    list: filtered
+      .slice(start, start + pageSize)
+      .map((row) => ({ ...row, dataSource: normalizeHistoryDataSource(row.dataSource) })),
     total: filtered.length
   }
 }
@@ -417,7 +435,9 @@ export function getLocalHistoryEventDetail(id: string): HistoryEventDetail | nul
     allList.find((item) => item.id === id) ||
     allList.find((item) => item.targetId === id) ||
     allList[0]
-  return row ? buildHistoryEventDetail(row) : null
+  return row
+    ? buildHistoryEventDetail({ ...row, dataSource: normalizeHistoryDataSource(row.dataSource) })
+    : null
 }
 
 export function confirmLocalHistoryEvent(payload: ManualConfirmPayload) {

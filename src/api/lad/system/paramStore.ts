@@ -4,6 +4,11 @@ import type {
   SystemParamQuery,
   SystemParamSavePayload
 } from './types'
+import {
+  LAD_DEFAULT_DATA_SOURCE,
+  LAD_DEFAULT_DATA_SOURCE_PARAM_KEY,
+  normalizeLadDataSource
+} from '@/constants/ladDataSources'
 
 function formatNow() {
   const d = new Date()
@@ -23,6 +28,16 @@ const PARAM_SEED: SystemParam[] = [
     paramValue: '低空防御指挥控制平台',
     remark: '登录页与页面标题展示',
     updatedAt: '2026-05-18 09:00:00'
+  },
+  {
+    id: 'sp-002',
+    paramKey: LAD_DEFAULT_DATA_SOURCE_PARAM_KEY,
+    paramName: '默认数据来源形式',
+    group: '系统',
+    valueType: 'string',
+    paramValue: LAD_DEFAULT_DATA_SOURCE,
+    remark: '历史事件数据来源缺省值；建议采用设备类型或设备组合，如雷达、雷达+无线电、多源数据融合',
+    updatedAt: '2026-07-14 18:00:00'
   },
   {
     id: 'sp-010',
@@ -142,7 +157,7 @@ function cloneParamSeed(): SystemParam[] {
 
 let allParams: SystemParam[] = cloneParamSeed()
 
-export const SYSTEM_PARAM_STORE_VERSION = 7
+export const SYSTEM_PARAM_STORE_VERSION = 8
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladSystemParamStoreVer?: number }
@@ -238,4 +253,16 @@ export function getNumericSystemParam(paramKey: string): number | null {
 
 export function isSimulateParamActive(paramKey: string): boolean {
   return getNumericSystemParam(paramKey) !== null
+}
+
+export function getStringSystemParam(paramKey: string, fallback = ''): string {
+  ensureStoreVersion()
+  const row = allParams.find((item) => item.paramKey === paramKey)
+  if (!row || row.valueType !== 'string') return fallback
+  const value = String(row.paramValue ?? '').trim()
+  if (!value) return fallback
+  if (paramKey === LAD_DEFAULT_DATA_SOURCE_PARAM_KEY) {
+    return normalizeLadDataSource(value, fallback || LAD_DEFAULT_DATA_SOURCE)
+  }
+  return value
 }
