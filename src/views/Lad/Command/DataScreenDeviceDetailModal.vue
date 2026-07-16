@@ -129,7 +129,7 @@ function formatMetric(item: DataScreenMetricItem) {
           </section>
         </ElTabPane>
 
-        <ElTabPane label="控制台" name="console">
+        <ElTabPane label="操作台" name="console">
           <DeviceRemoteControlPanel
             :device-record-id="deviceView.deviceRecordId"
             :device-name="deviceView.deviceName"

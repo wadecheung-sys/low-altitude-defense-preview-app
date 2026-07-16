@@ -259,7 +259,7 @@ watch(
     <section class="lad-device-detail-panel">
       <h4 class="lad-device-detail-panel__title">运行时控制项</h4>
       <p class="lad-device-detail-panel__hint">
-        转台角度等运行时参数由「控制台」实时下发，不在此持久化。
+        转台角度等运行时参数由「操作台」实时下发，不在此持久化。
       </p>
       <ElTable v-if="runtimeConfigItems.length" :data="runtimeConfigItems" border size="small">
         <ElTableColumn prop="label" label="控制项" min-width="160" />
