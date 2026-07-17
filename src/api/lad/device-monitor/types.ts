@@ -12,6 +12,27 @@ export interface DeviceMonitorMetrics {
   handleCount: number
 }
 
+export type DeviceRuntimeMetricLevel = 'normal' | 'running' | 'warning' | 'fault' | 'unknown'
+
+export interface DeviceRuntimeMetric {
+  key: string
+  label: string
+  value: string | number
+  unit?: string
+  level?: DeviceRuntimeMetricLevel
+}
+
+/** 设备运行监控弹层使用的实时状态快照 */
+export interface DeviceRuntimeSnapshot {
+  deviceId: string
+  model: string
+  connectionStatus: DeviceOnlineStatus
+  workStatus: string
+  workMode?: string
+  updatedAt: string
+  metrics: DeviceRuntimeMetric[]
+}
+
 export interface DeviceMonitorItem {
   id: string
   deviceId: string

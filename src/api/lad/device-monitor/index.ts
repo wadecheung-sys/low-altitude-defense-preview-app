@@ -1,7 +1,7 @@
 import request from '@/axios'
 import { SUCCESS_CODE } from '@/constants'
-import { queryDeviceMonitorList } from './monitorStore'
-import type { DeviceMonitorListResult, DeviceMonitorQuery } from './types'
+import { queryDeviceMonitorList, queryDeviceRuntimeSnapshot } from './monitorStore'
+import type { DeviceMonitorListResult, DeviceMonitorQuery, DeviceRuntimeSnapshot } from './types'
 
 const useLocalStore = import.meta.env.VITE_USE_MOCK === 'true'
 
@@ -18,4 +18,20 @@ export async function getDeviceMonitorListApi(
   return request.get({ url: '/mock/lad/device-monitor/list', params })
 }
 
-export type { DeviceMonitorItem, DeviceMonitorQuery, DeviceOnlineStatus } from './types'
+export async function getDeviceRuntimeSnapshotApi(
+  id: string
+): Promise<IResponse<DeviceRuntimeSnapshot>> {
+  if (useLocalStore) {
+    return ok(queryDeviceRuntimeSnapshot(id))
+  }
+  return request.get({ url: `/mock/lad/device-monitor/runtime/${id}` })
+}
+
+export type {
+  DeviceMonitorItem,
+  DeviceMonitorQuery,
+  DeviceOnlineStatus,
+  DeviceRuntimeMetric,
+  DeviceRuntimeMetricLevel,
+  DeviceRuntimeSnapshot
+} from './types'

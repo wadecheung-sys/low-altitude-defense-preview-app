@@ -2,16 +2,16 @@
 <svg version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="36px" height="39px" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <pattern id="BGPattern" patternUnits="userSpaceOnUse" alignment="0 0" imageRepeat="None" />
-    <mask fill="white" id="Clip88">
+    <mask fill="white" id="Clip2041">
       <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="evenodd" />
     </mask>
-    <mask fill="white" id="Clip89">
-      <path d="M 14 12  L 24 12  L 24 29  L 14 29  Z M 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="evenodd" />
+    <mask fill="white" id="Clip2042">
+      <path d="M 11.5 12  L 26.5 12  L 26.5 29  L 11.5 29  Z M 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="evenodd" />
     </mask>
   </defs>
-  <g transform="matrix(1 0 0 1 0 -138 )">
-    <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="nonzero" fill="rgba(242, 242, 242, 1)" stroke="none" transform="matrix(1 0 0 1 0 138 )" class="fill" />
-    <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " stroke-width="2" stroke-dasharray="0" stroke="rgba(121, 121, 121, 1)" fill="none" transform="matrix(1 0 0 1 0 138 )" class="stroke" mask="url(#Clip88)" />
-    <path d="M 35.632598277686256 0.39801853250655594  L 0.36740172231374396 38.601981467493445  M 0.36740172231374396 0.39801853250655594  L 35.632598277686256 38.601981467493445  " stroke-width="1" stroke-dasharray="0" stroke="rgba(121, 121, 121, 1)" fill="none" transform="matrix(1 0 0 1 0 138 )" class="stroke" mask="url(#Clip89)" />
+  <g transform="matrix(1 0 0 1 0 -46 )">
+    <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " fill-rule="nonzero" fill="rgba(242, 242, 242, 1)" stroke="none" transform="matrix(1 0 0 1 0 46 )" class="fill" />
+    <path d="M 0 39  L 0 0  L 36 0  L 36 39  L 0 39  Z " stroke-width="2" stroke-dasharray="0" stroke="rgba(121, 121, 121, 1)" fill="none" transform="matrix(1 0 0 1 0 46 )" class="stroke" mask="url(#Clip2041)" />
+    <path d="M 35.632598277686256 0.39801853250655594  L 0.36740172231374396 38.601981467493445  M 0.36740172231374396 0.39801853250655594  L 35.632598277686256 38.601981467493445  " stroke-width="1" stroke-dasharray="0" stroke="rgba(121, 121, 121, 1)" fill="none" transform="matrix(1 0 0 1 0 46 )" class="stroke" mask="url(#Clip2042)" />
   </g>
 </svg>

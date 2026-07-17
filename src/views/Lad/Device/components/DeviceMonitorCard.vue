@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import type { DeviceMonitorItem } from '@/api/lad/device-monitor/types'
+import { getDeviceRuntimeSnapshotApi } from '@/api/lad/device-monitor'
+import type {
+  DeviceRuntimeMetric,
+  DeviceRuntimeMetricLevel,
+  DeviceRuntimeSnapshot
+} from '@/api/lad/device-monitor'
 import {
   buildMonitorVideoChannels,
   findLinkageByMasterDeviceId,
   type DeviceMonitorVideoChannel
 } from '@/api/lad/device-monitor/videoChannels'
 import { getDeviceLinkageListApi } from '@/api/lad/device-group'
-import { getDeviceInfoDetailApi, getDeviceInfoListApi } from '@/api/lad/device-info'
-import type { DeviceLinkedArchive } from '@/api/lad/device-info/types'
+import { getDeviceInfoListApi } from '@/api/lad/device-info'
 import { DEVICE_ARCHIVE_PLACEHOLDER } from '../constants'
 import productImage from '@/assets/imgs/counter-uas-device.png'
 import deviceSiteCctv from '@/assets/imgs/device-site-cctv.png'
@@ -24,7 +29,7 @@ import {
   ElSelect,
   ElTooltip
 } from 'element-plus'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 const VIDEO_GRID_SIZE = 4
 
@@ -41,8 +46,10 @@ const videoLoading = ref(false)
 const videoChannels = ref<DeviceMonitorVideoChannel[]>([])
 const activeChannelId = ref('')
 const videoPage = ref(1)
-const archiveLoading = ref(false)
-const linkedArchiveDetail = ref<DeviceLinkedArchive | null>(null)
+const runtimeLoading = ref(false)
+const runtimeSnapshot = ref<DeviceRuntimeSnapshot | null>(null)
+
+let runtimeRefreshTimer: number | undefined
 
 const isMultiChannelView = computed(() => videoChannels.value.length > 1)
 
@@ -78,28 +85,42 @@ const connectionLabel = computed(() => {
   return '设备连接已断开'
 })
 
-const linkedArchive = computed(() => linkedArchiveDetail.value ?? props.item.linkedArchive)
-
-async function loadArchiveDetail() {
-  archiveLoading.value = true
+async function loadRuntimeSnapshot() {
+  runtimeLoading.value = true
   try {
-    const res = await getDeviceInfoDetailApi(props.item.id)
-    linkedArchiveDetail.value = res.data.linkedArchive
-  } catch {
-    linkedArchiveDetail.value = props.item.linkedArchive
+    const res = await getDeviceRuntimeSnapshotApi(props.item.id)
+    runtimeSnapshot.value = res.data
   } finally {
-    archiveLoading.value = false
+    runtimeLoading.value = false
   }
 }
 
 async function onPopoverShow() {
-  if (!linkedArchiveDetail.value) {
-    await loadArchiveDetail()
-  }
+  window.clearInterval(runtimeRefreshTimer)
+  await loadRuntimeSnapshot()
+  runtimeRefreshTimer = window.setInterval(() => void loadRuntimeSnapshot(), 5000)
 }
 
 function onPopoverHide() {
-  linkedArchiveDetail.value = null
+  window.clearInterval(runtimeRefreshTimer)
+  runtimeRefreshTimer = undefined
+}
+
+function runtimeLevelLabel(level: DeviceRuntimeMetricLevel | undefined) {
+  const labels: Record<DeviceRuntimeMetricLevel, string> = {
+    normal: '正常',
+    running: '运行',
+    warning: '注意',
+    fault: '故障',
+    unknown: '未知'
+  }
+  return labels[level ?? 'unknown']
+}
+
+function runtimeMetricValue(metric: DeviceRuntimeMetric) {
+  if (!metric.unit) return String(metric.value)
+  const compactUnits = new Set(['°', '%'])
+  return `${metric.value}${compactUnits.has(metric.unit) ? '' : ' '}${metric.unit}`
 }
 
 async function loadVideoChannels() {
@@ -134,9 +155,12 @@ watch(videoVisible, (visible) => {
 watch(
   () => props.item.id,
   () => {
-    linkedArchiveDetail.value = null
+    runtimeSnapshot.value = null
+    onPopoverHide()
   }
 )
+
+onBeforeUnmount(onPopoverHide)
 </script>
 
 <template>
@@ -206,7 +230,7 @@ watch(
           <button
             type="button"
             class="device-monitor-card__expand-button"
-            aria-label="展开档案指标"
+            aria-label="查看实时运行状态"
           >
             <ElIcon :size="17"><TopRight /></ElIcon>
           </button>
@@ -218,36 +242,36 @@ watch(
             <BaseButton link type="primary" @click="emit('detail', item)">查看详情</BaseButton>
           </div>
 
-          <div v-loading="archiveLoading" class="device-monitor-detail-popover__archive-pane">
+          <div v-loading="runtimeLoading" class="device-monitor-detail-popover__runtime-pane">
             <div
-              v-if="linkedArchive?.specifications.length"
-              class="device-monitor-detail-popover__indicators"
+              v-if="runtimeSnapshot?.metrics.length"
+              class="device-monitor-detail-popover__metrics"
             >
-              <div class="device-monitor-detail-popover__indicators-head">
-                <span>指标项</span>
-                <span>单位</span>
-                <span>规格值</span>
+              <div class="device-monitor-detail-popover__metrics-head">
+                <span>状态项</span>
+                <span>当前值</span>
+                <span>状态</span>
               </div>
-              <div class="device-monitor-detail-popover__indicators-body">
+              <div class="device-monitor-detail-popover__metrics-body">
                 <div
-                  v-for="row in linkedArchive.specifications"
-                  :key="row.id"
-                  class="device-monitor-detail-popover__indicator-row"
+                  v-for="row in runtimeSnapshot.metrics"
+                  :key="row.key"
+                  class="device-monitor-detail-popover__metric-row"
                 >
-                  <span :title="row.item">{{ row.item }}</span>
-                  <span>{{ row.unit || '—' }}</span>
-                  <strong :title="row.value || '—'">{{ row.value || '—' }}</strong>
+                  <span :title="row.label">{{ row.label }}</span>
+                  <strong :title="runtimeMetricValue(row)">{{ runtimeMetricValue(row) }}</strong>
+                  <em :class="`is-${row.level || 'unknown'}`">
+                    {{ runtimeLevelLabel(row.level) }}
+                  </em>
                 </div>
               </div>
+              <div class="device-monitor-detail-popover__updated-at">
+                <span>型号：{{ runtimeSnapshot.model }}</span>
+                <span>数据更新：{{ runtimeSnapshot.updatedAt }}</span>
+              </div>
             </div>
-            <p
-              v-else-if="linkedArchive && !archiveLoading"
-              class="device-monitor-detail-popover__empty"
-            >
-              暂无设备规格
-            </p>
-            <p v-else-if="!archiveLoading" class="device-monitor-detail-popover__empty">
-              未关联基础档案，暂无档案指标
+            <p v-else-if="!runtimeLoading" class="device-monitor-detail-popover__empty">
+              暂无实时运行状态
             </p>
           </div>
         </div>
@@ -522,7 +546,7 @@ watch(
     font-weight: 600;
   }
 
-  &__archive-pane {
+  &__runtime-pane {
     min-height: 80px;
     margin-top: 8px;
   }
@@ -538,33 +562,33 @@ watch(
     text-align: center;
   }
 
-  &__indicators {
+  &__metrics {
     overflow: hidden;
     border: 1px solid var(--el-border-color-lighter);
     border-radius: 5px;
   }
 
-  &__indicators-head,
-  &__indicator-row {
+  &__metrics-head,
+  &__metric-row {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) 56px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) 54px;
     gap: 8px;
     padding: 6px 10px;
     font-size: 11px;
   }
 
-  &__indicators-head {
+  &__metrics-head {
     background: #eef2f5;
     color: var(--el-text-color-secondary);
     font-weight: 600;
   }
 
-  &__indicators-body {
-    max-height: 160px;
+  &__metrics-body {
+    max-height: 220px;
     overflow-y: auto;
   }
 
-  &__indicator-row {
+  &__metric-row {
     border-top: 1px solid var(--el-border-color-extra-light);
 
     span,
@@ -578,6 +602,47 @@ watch(
       color: var(--el-text-color-regular);
       font-weight: 500;
     }
+
+    em {
+      justify-self: end;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: var(--el-fill-color);
+      color: var(--el-text-color-secondary);
+      font-style: normal;
+      font-size: 10px;
+
+      &.is-normal {
+        background: var(--el-color-success-light-9);
+        color: var(--el-color-success);
+      }
+
+      &.is-running {
+        background: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
+      }
+
+      &.is-warning {
+        background: var(--el-color-warning-light-9);
+        color: var(--el-color-warning);
+      }
+
+      &.is-fault {
+        background: var(--el-color-danger-light-9);
+        color: var(--el-color-danger);
+      }
+    }
+  }
+
+  &__updated-at {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 10px;
+    border-top: 1px solid var(--el-border-color-extra-light);
+    background: var(--el-fill-color-extra-light);
+    color: var(--el-text-color-secondary);
+    font-size: 10px;
   }
 }
 

@@ -100,6 +100,9 @@
 }
 ._连接线 {
 }
+.form_hint {
+  color:#999999;
+}
 .form_disabled {
 }
 .heading_3 {
@@ -149,7 +152,7 @@
   color:#000000;
   text-align:left;
 }
-.form_hint {
+.form_hint1 {
   color:#999999;
 }
 .form_disabled1 {
@@ -215,7 +218,7 @@
   color:#000000;
   text-align:left;
 }
-.form_hint1 {
+.form_hint2 {
   color:#999999;
 }
 .form_disabled2 {

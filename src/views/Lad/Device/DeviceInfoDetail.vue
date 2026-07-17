@@ -15,7 +15,6 @@ import type {
   DeviceLinkedArchive,
   DeviceSelfCheckResult
 } from '@/api/lad/device-info/types'
-import type { DeviceArchiveConfigurableItem } from '@/api/lad/device/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
 import DeviceInfoGisMap from './components/DeviceInfoGisMap.vue'
@@ -35,7 +34,6 @@ import {
   ElMessage,
   ElOption,
   ElSelect,
-  ElDivider,
   ElTabPane,
   ElTable,
   ElTableColumn,
@@ -76,12 +74,7 @@ const detailFallbackPath = computed(() =>
   isMonitorDetailMode.value ? '/lad/device/monitor' : '/lad/device/info/list'
 )
 
-const deviceConfigValues = ref<Record<string, string>>({})
-
 const linkedArchive = computed(() => currentLinkedArchive.value)
-const deviceScopeConfigItems = computed(() =>
-  (linkedArchive.value?.configurableItems || []).filter((item) => item.scope === 'device')
-)
 const archiveSelectOptions = computed(() => {
   const selectedArchiveId = form.archiveId
   return archiveOptions.value.filter((item) => item.enabled || item.id === selectedArchiveId)
@@ -218,23 +211,6 @@ function mapArchiveDetailToLinkedArchive(
   } satisfies DeviceLinkedArchive
 }
 
-function syncDeviceConfigDefaults(items: DeviceArchiveConfigurableItem[], preserve = true) {
-  const next: Record<string, string> = preserve ? { ...deviceConfigValues.value } : {}
-  items
-    .filter((item) => item.scope === 'device')
-    .forEach((item) => {
-      if (next[item.key] === undefined) {
-        next[item.key] = item.defaultValue || ''
-      }
-    })
-  Object.keys(next).forEach((key) => {
-    if (!items.some((item) => item.scope === 'device' && item.key === key)) {
-      delete next[key]
-    }
-  })
-  deviceConfigValues.value = next
-}
-
 function resolveDeployAreaId(deployLocation: string) {
   if (!deployLocation.trim()) return ''
   const match = areaOptions.value.find((item) => item.name === deployLocation.trim())
@@ -244,7 +220,6 @@ function resolveDeployAreaId(deployLocation: string) {
 function applyDetail(data: DeviceInfoDetail) {
   detail.value = data
   currentLinkedArchive.value = data.linkedArchive
-  deviceConfigValues.value = { ...(data.deviceConfigValues || {}) }
   form.deviceId = data.deviceId
   form.ipAddress = data.ipAddress
   form.deviceName = data.deviceName
@@ -278,15 +253,11 @@ function applyDetail(data: DeviceInfoDetail) {
   placement.mapX = data.mapX
   placement.mapY = data.mapY
   placement.controlRangeM = data.controlRangeM
-  if (data.linkedArchive) {
-    syncDeviceConfigDefaults(data.linkedArchive.configurableItems)
-  }
 }
 
 function resetCreate() {
   detail.value = null
   currentLinkedArchive.value = null
-  deviceConfigValues.value = {}
   form.deviceId = ''
   form.ipAddress = ''
   form.deviceName = ''
@@ -323,7 +294,6 @@ async function syncLinkedArchive(archiveId?: string) {
   if (!archiveId) {
     currentLinkedArchive.value = null
     form.deviceType = ''
-    deviceConfigValues.value = {}
     return
   }
   archiveLoading.value = true
@@ -331,11 +301,9 @@ async function syncLinkedArchive(archiveId?: string) {
     const res = await getDeviceArchiveDetailApi(archiveId)
     currentLinkedArchive.value = mapArchiveDetailToLinkedArchive(res.data)
     form.deviceType = res.data.deviceType
-    syncDeviceConfigDefaults(res.data.configurableItems)
   } catch {
     currentLinkedArchive.value = null
     form.deviceType = ''
-    deviceConfigValues.value = {}
     ElMessage.warning('基础档案加载失败')
   } finally {
     archiveLoading.value = false
@@ -455,8 +423,7 @@ async function save() {
         id: row.id,
         label: row.label.trim(),
         value: row.value.trim()
-      })),
-      deviceConfigValues: { ...deviceConfigValues.value }
+      }))
     })
     ElMessage.success(isCreateMode.value ? '新增成功' : '保存成功')
     if (isCreateMode.value) {
@@ -642,31 +609,6 @@ watch(metricsTab, (tab) => {
           <ElFormItem label="备注">
             <ElInput v-model="form.remark" type="textarea" :rows="2" placeholder="请输入备注信息" />
           </ElFormItem>
-
-          <ElDivider content-position="left">可配置项</ElDivider>
-          <div class="device-detail-config-section">
-            <p v-if="deviceScopeConfigItems.length" class="device-detail-config-section__hint">
-              以下参数可在设备部署时设定；转台方位等运行时参数请在指挥大屏控制。
-            </p>
-            <div v-if="deviceScopeConfigItems.length" class="device-detail-config-grid">
-              <ElFormItem
-                v-for="item in deviceScopeConfigItems"
-                :key="item.key"
-                :label="item.unit ? `${item.label}（${item.unit}）` : item.label"
-              >
-                <ElInput
-                  v-model="deviceConfigValues[item.key]"
-                  :disabled="!isEditable"
-                  :placeholder="item.hint || '请输入'"
-                  clearable
-                />
-              </ElFormItem>
-            </div>
-            <p v-else-if="linkedArchive" class="device-detail-archive-empty">
-              当前档案无设备级可配置项；运行时参数（如转台角度）由指挥大屏控制。
-            </p>
-            <p v-else class="device-detail-archive-empty"> 请先选择基础档案，再配置设备级参数。 </p>
-          </div>
 
           <ElFormItem v-show="false" prop="deployAreaId">
             <ElInput v-model="form.deployAreaId" />
@@ -1096,36 +1038,6 @@ watch(metricsTab, (tab) => {
   margin-top: 4px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-}
-
-.device-detail-archive-empty {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--el-text-color-secondary);
-}
-
-.device-detail-config-section {
-  margin-top: 4px;
-}
-
-.device-detail-config-section__hint {
-  margin: 0 0 10px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--el-text-color-secondary);
-}
-
-.device-detail-config-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 14px;
-}
-
-@media (max-width: 760px) {
-  .device-detail-config-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .device-detail-metrics-tabs {

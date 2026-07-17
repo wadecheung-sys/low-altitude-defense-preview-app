@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import DataScreenDeviceDetailModal from './DataScreenDeviceDetailModal.vue'
-import { bindDataScreenDeviceBridge } from './dataScreenDeviceBridge'
 import { bindDataScreenNavBridge } from './dataScreenNavBridge'
 
 defineOptions({ name: 'LadDataScreen' })
@@ -11,7 +9,7 @@ const PROTOTYPE_WIDTH = 1920
 const PROTOTYPE_HEIGHT = 1080
 const DISPLAY_MAX_WIDTH = 1920
 const PROTOTYPE_PAGE = encodeURIComponent('数据大屏03.html')
-const PROTOTYPE_VERSION = '20260716-1705'
+const PROTOTYPE_VERSION = '20260717-1806'
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/${PROTOTYPE_PAGE}?v=${PROTOTYPE_VERSION}`
 
 type Cleanup = () => void
@@ -21,8 +19,6 @@ const containerRef = ref<HTMLElement>()
 const iframeRef = ref<HTMLIFrameElement>()
 const frameLoaded = ref(false)
 const stageScale = ref(1)
-const deviceDetailVisible = ref(false)
-const deviceDetailModel = ref('')
 
 let bindRetryTimer: number | undefined
 let resizeObserver: ResizeObserver | undefined
@@ -78,13 +74,8 @@ function bindPrototypeInteractions() {
   const doc = getPrototypeDocument()
   if (!doc?.getElementById('base')) return false
 
-  const cleanups: Cleanup[] = [
-    bindDataScreenNavBridge(doc, router),
-    bindDataScreenDeviceBridge(doc, (model) => {
-      deviceDetailModel.value = model
-      deviceDetailVisible.value = true
-    })
-  ]
+  // 设备详情与配置由最新 Axure 导出原型自身处理；这里只桥接离开大屏的应用路由。
+  const cleanups: Cleanup[] = [bindDataScreenNavBridge(doc, router)]
 
   cleanupPrototypeBindings = () => {
     cleanups.forEach((cleanup) => cleanup())
@@ -156,8 +147,6 @@ onBeforeUnmount(() => {
       <span class="lad-data-screen__loading-ring"></span>
       <p>数据大屏加载中...</p>
     </div>
-
-    <DataScreenDeviceDetailModal v-model="deviceDetailVisible" :device-model="deviceDetailModel" />
   </section>
 </template>
 
