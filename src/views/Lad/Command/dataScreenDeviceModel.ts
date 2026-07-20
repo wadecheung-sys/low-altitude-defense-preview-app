@@ -40,18 +40,18 @@ export interface DataScreenDeviceView {
   runtimeConfigItems: Array<DeviceConfigurableItemTemplate & { currentValue: string }>
 }
 
-/** u313 各状态「查看更多」按钮 → 选型型号（数据大屏03.html） */
+/** u315 各状态「查看更多」按钮 → 选型型号（数据大屏03.html） */
 export const DATA_SCREEN_VIEW_MORE_BUTTONS: Record<string, string> = {
-  u314: 'TBD-RAD',
-  u319: 'TBD-EO',
-  u324: 'PL671F',
-  u329: 'RDS200',
-  u334: 'FG310F',
-  u340: 'DY506F',
-  u346: 'TBD-LSR',
-  u352: 'TBD-HPM',
-  u358: 'TBD-SLA',
-  u364: 'EXD55-LS'
+  u320: 'TBD-RAD',
+  u325: 'TBD-EO',
+  u330: 'PL671F',
+  u335: 'RDS200',
+  u341: 'FG310F',
+  u347: 'DY506F',
+  u353: 'TBD-LSR',
+  u359: 'TBD-HPM',
+  u365: 'TBD-SLA',
+  u370: 'EXD55-LS'
 }
 
 interface SummaryFieldSync {
@@ -295,18 +295,18 @@ function summaryFields(
   ]
 }
 
-/** 同步 u313 设备概要面板文案（每状态 4 个字段） */
+/** 同步 u315 设备概要面板文案（每状态 4 个字段） */
 export const DATA_SCREEN_SUMMARY_PANELS: SummaryPanelSync[] = [
-  { model: 'TBD-RAD', fields: summaryFields('u315', 'u316', 'u317', 'u318') },
-  { model: 'TBD-EO', fields: summaryFields('u320', 'u321', 'u322', 'u323') },
-  { model: 'PL671F', fields: summaryFields('u325', 'u326', 'u327', 'u328') },
-  { model: 'RDS200', fields: summaryFields('u330', 'u331', 'u332', 'u333') },
-  { model: 'FG310F', fields: summaryFields('u335', 'u336', 'u337', 'u338') },
-  { model: 'DY506F', fields: summaryFields('u341', 'u342', 'u343', 'u344') },
-  { model: 'TBD-LSR', fields: summaryFields('u347', 'u348', 'u349', 'u350') },
-  { model: 'TBD-HPM', fields: summaryFields('u353', 'u354', 'u355', 'u356') },
-  { model: 'TBD-SLA', fields: summaryFields('u359', 'u360', 'u361', 'u362') },
-  { model: 'EXD55-LS', fields: summaryFields('u365', 'u366', 'u367', 'u368') }
+  { model: 'TBD-RAD', fields: summaryFields('u316', 'u317', 'u318', 'u319') },
+  { model: 'TBD-EO', fields: summaryFields('u321', 'u322', 'u323', 'u324') },
+  { model: 'PL671F', fields: summaryFields('u326', 'u327', 'u328', 'u329') },
+  { model: 'RDS200', fields: summaryFields('u331', 'u332', 'u333', 'u334') },
+  { model: 'FG310F', fields: summaryFields('u336', 'u337', 'u338', 'u339') },
+  { model: 'DY506F', fields: summaryFields('u342', 'u343', 'u344', 'u345') },
+  { model: 'TBD-LSR', fields: summaryFields('u348', 'u349', 'u350', 'u351') },
+  { model: 'TBD-HPM', fields: summaryFields('u354', 'u355', 'u356', 'u357') },
+  { model: 'TBD-SLA', fields: summaryFields('u360', 'u361', 'u362', 'u363') },
+  { model: 'EXD55-LS', fields: summaryFields('u366', 'u367', 'u368', 'u369') }
 ]
 
 export function setPrototypeLabelText(doc: Document, elementId: string, text: string) {
