@@ -44,13 +44,14 @@ watch(
 )
 
 async function onRun() {
-  form.value.weatherConditions = normalizePlanSimulateWeather(
-    form.value.weatherConditions,
-    form.value.weatherConditionLogic
-  )
+  form.value.weatherConditions = normalizePlanSimulateWeather(form.value.weatherConditions)
   if (!planSimulateFormComplete(form.value)) {
     if (!form.value.threatLevel?.trim()) {
       ElMessage.warning('请选择威胁等级')
+      return
+    }
+    if (!form.value.areaLevel?.trim()) {
+      ElMessage.warning('请选择区域')
       return
     }
     ElMessage.warning('请完整填写天气要素条件')

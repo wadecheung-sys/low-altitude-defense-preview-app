@@ -9,7 +9,7 @@ import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { AREA_REGION_TYPE_META, AREA_REGION_TYPE_OPTIONS, regionTypeLabel } from './areaConstants'
 import SiteArchitectureTree from './components/SiteArchitectureTree.vue'
-import { ElInput, ElLink, ElMessage, ElMessageBox, ElTag, ElTree } from 'element-plus'
+import { ElInput, ElMessage, ElMessageBox, ElTag, ElTree } from 'element-plus'
 import { computed, onMounted, reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -185,14 +185,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       componentProps: { placeholder: '请输入区域名称', clearable: true, style: { width: '100%' } }
     },
     table: {
-      showOverflowTooltip: true,
-      slots: {
-        default: ({ row }: { row: AreaRegion }) => (
-          <ElLink type="primary" underline={false} onClick={() => openEdit(row)}>
-            {row.name}
-          </ElLink>
-        )
-      }
+      showOverflowTooltip: true
     }
   },
   {

@@ -13,6 +13,13 @@ import type {
 } from '@/api/lad/plan/types'
 import { ElInputNumber, ElLink, ElOption, ElSelect } from 'element-plus'
 
+const props = withDefaults(
+  defineProps<{
+    mode?: 'rule' | 'simulate'
+  }>(),
+  { mode: 'rule' }
+)
+
 const conditions = defineModel<PlanWeatherCondition[]>({ required: true })
 
 const conditionLogic = defineModel<PlanWeatherConditionLogic>('conditionLogic', {
@@ -40,13 +47,16 @@ function updateConditionNumber(condition: PlanWeatherCondition, value?: number |
 }
 
 function onPropertyChange(condition: PlanWeatherCondition) {
+  if (props.mode === 'simulate') condition.operator = '='
   condition.value = ''
 }
 
 function addCondition() {
   const last = conditions.value[conditions.value.length - 1]
   if (last && !last.nextLogic) last.nextLogic = conditionLogic.value || 'and'
-  conditions.value.push(createPlanWeatherCondition())
+  const condition = createPlanWeatherCondition()
+  if (props.mode === 'simulate') condition.operator = '='
+  conditions.value.push(condition)
 }
 
 function removeCondition(id: string) {
@@ -79,7 +89,11 @@ function removeCondition(id: string) {
         />
       </ElSelect>
 
-      <ElSelect v-model="condition.operator" class="plan-weather-condition-row__operator">
+      <ElSelect
+        v-if="mode !== 'simulate'"
+        v-model="condition.operator"
+        class="plan-weather-condition-row__operator"
+      >
         <ElOption
           v-for="option in planConditionOperatorOptions"
           :key="option.value"
@@ -99,7 +113,7 @@ function removeCondition(id: string) {
       <ElLink type="danger" @click="removeCondition(condition.id)">删除</ElLink>
 
       <ElSelect
-        v-if="index < conditions.length - 1"
+        v-if="mode !== 'simulate' && index < conditions.length - 1"
         v-model="condition.nextLogic"
         class="plan-weather-condition-row__logic"
       >

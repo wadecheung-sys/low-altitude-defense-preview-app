@@ -40,28 +40,22 @@ onMounted(() => {
         />
       </ElSelect>
     </ElFormItem>
-    <ElFormItem :label="UI.locatedArea">
+    <ElFormItem :label="UI.locatedArea" required>
       <ElCascader
         v-model="form.areaLevel"
         :options="areaOptions"
         :props="{
-          multiple: true,
           emitPath: false,
           checkStrictly: false
         }"
         class="w-full"
         clearable
-        collapse-tags
-        collapse-tags-tooltip
         filterable
-        placeholder="不选默认全部区域"
+        placeholder="请选择区域"
       />
     </ElFormItem>
     <ElFormItem :label="UI.weatherElements">
-      <PlanWeatherConditionEditor
-        v-model="form.weatherConditions"
-        v-model:condition-logic="form.weatherConditionLogic"
-      />
+      <PlanWeatherConditionEditor v-model="form.weatherConditions" mode="simulate" />
     </ElFormItem>
   </ElForm>
 </template>

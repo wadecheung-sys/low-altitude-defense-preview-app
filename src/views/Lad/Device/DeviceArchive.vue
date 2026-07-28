@@ -1,6 +1,6 @@
 <script setup lang="tsx">
 import { deleteDeviceArchiveApi, getDeviceArchiveListApi } from '@/api/lad/device'
-import type { DeviceArchiveCategory, DeviceArchiveItem } from '@/api/lad/device/types'
+import type { DeviceArchiveItem } from '@/api/lad/device/types'
 import { BaseButton } from '@/components/Button'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
@@ -13,39 +13,16 @@ import {
   deviceArchiveTypeOptions,
   deviceArchiveVendorOptions
 } from './constants'
-import { ElInput, ElLink, ElMessage, ElMessageBox, ElTag, ElTree } from 'element-plus'
-import { reactive, ref, unref, watch } from 'vue'
+import { ElMessage, ElMessageBox, ElTag } from 'element-plus'
+import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
 
 defineOptions({ name: 'LadDeviceArchive' })
-
-interface ArchiveTreeNode {
-  id: DeviceArchiveCategory
-  label: string
-  children?: ArchiveTreeNode[]
-}
-
-const archiveTreeData: ArchiveTreeNode[] = [
-  {
-    id: 'all',
-    label: '全部档案',
-    children: [
-      { id: 'radar', label: '雷达档案' },
-      { id: 'radio', label: '无线电侦测档案' },
-      { id: 'counter', label: '反制装备档案' },
-      { id: 'eo', label: '光电跟踪档案' },
-      { id: 'camera', label: '监控摄像机档案' }
-    ]
-  }
-]
 
 const { push } = useRouter()
 
 const ids = ref<string[]>([])
 const searchParams = ref<Recordable>({})
-const currentNodeKey = ref<DeviceArchiveCategory>('all')
-const currentTreeKeyword = ref('')
-const treeEl = ref<InstanceType<typeof ElTree>>()
 
 const setSearchParams = (params: Recordable) => {
   searchParams.value = {
@@ -66,7 +43,6 @@ const { tableRegister, tableState, tableMethods } = useTable({
     const res = await getDeviceArchiveListApi({
       pageIndex: unref(currentPage),
       pageSize: unref(pageSize),
-      category: currentNodeKey.value,
       ...unref(searchParams)
     })
     return { list: res.data.list, total: res.data.total }
@@ -83,23 +59,6 @@ function goDetail(row: DeviceArchiveItem) {
 function openEdit(row: DeviceArchiveItem) {
   push(`/lad/device/archive/edit/${row.id}`)
 }
-
-function currentChange(data: ArchiveTreeNode | null) {
-  if (!data?.id) return
-  currentNodeKey.value = data.id
-  currentPage.value = 1
-  ids.value = []
-  getList()
-}
-
-function filterNode(value: string, data: ArchiveTreeNode) {
-  if (!value) return true
-  return data.label.includes(value)
-}
-
-watch(currentTreeKeyword, (value) => {
-  treeEl.value?.filter(value)
-})
 
 function onSelectionChange(list: DeviceArchiveItem[]) {
   ids.value = list.map((item) => item.id)
@@ -175,14 +134,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       componentProps: { placeholder: '请输入档案编号', style: { width: '100%' } }
     },
     table: {
-      showOverflowTooltip: true,
-      slots: {
-        default: ({ row }: { row: DeviceArchiveItem }) => (
-          <ElLink type="primary" underline={false} onClick={() => goDetail(row)}>
-            {row.archiveNo}
-          </ElLink>
-        )
-      }
+      showOverflowTooltip: true
     }
   },
   {
@@ -294,33 +246,8 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 </script>
 
 <template>
-  <div class="device-archive-page flex w-100%">
-    <ContentWrap class="archive-tree-pane">
-      <div class="archive-tree-pane__inner">
-        <div class="pane-title">档案分类</div>
-        <ElInput
-          v-model="currentTreeKeyword"
-          class="archive-tree-search mb-12px"
-          placeholder="搜索档案类型"
-          clearable
-        />
-        <ElTree
-          ref="treeEl"
-          class="archive-tree-pane__tree"
-          :data="archiveTreeData"
-          default-expand-all
-          highlight-current
-          :expand-on-click-node="false"
-          node-key="id"
-          :current-node-key="currentNodeKey"
-          :props="{ label: 'label' }"
-          :filter-node-method="filterNode"
-          @current-change="currentChange"
-        />
-      </div>
-    </ContentWrap>
-
-    <ContentWrap class="archive-main flex-1 ml-20px">
+  <div class="device-archive-page">
+    <ContentWrap class="archive-main">
       <Search
         :schema="allSchemas.searchSchema"
         class="archive-search"
@@ -352,47 +279,10 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
 <style scoped lang="less">
 .device-archive-page {
   min-height: calc(100vh - 170px);
-  align-items: stretch;
-}
-
-.archive-tree-pane {
-  flex: 0 0 260px;
-  width: 260px;
-  display: flex;
-
-  :deep(.el-card) {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  :deep(.el-card__body) {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-}
-
-.archive-tree-pane__inner {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 100%;
-}
-
-.archive-tree-pane__tree {
-  flex: 1;
-  min-height: 0;
-}
-
-.pane-title {
-  margin-bottom: 12px;
-  font-size: 14px;
-  font-weight: 600;
 }
 
 .archive-main {
+  width: 100%;
   min-width: 0;
   display: flex;
 

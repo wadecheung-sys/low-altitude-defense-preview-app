@@ -148,7 +148,7 @@ onMounted(async () => {
 
       <ElLink type="danger" @click="removeCondition(condition.id)">删除</ElLink>
       <ElSelect
-        v-if="index < conditions.length - 1"
+        v-if="mode !== 'simulate' && index < conditions.length - 1"
         v-model="condition.nextLogic"
         class="threat-condition-row__logic"
       >

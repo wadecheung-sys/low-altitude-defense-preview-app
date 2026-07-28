@@ -8,7 +8,7 @@ import { Table } from '@/components/Table'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
 import { DEVICE_INFO_SEARCH_COL, deviceInfoTypeOptions } from './deviceInfoConstants'
-import { ElLink, ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -122,14 +122,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       componentProps: { placeholder: '请输入设备ID', style: { width: '100%' } }
     },
     table: {
-      showOverflowTooltip: true,
-      slots: {
-        default: ({ row }: { row: DeviceInfoItem }) => (
-          <ElLink type="primary" underline={false} onClick={() => goDetail(row)}>
-            {row.deviceId}
-          </ElLink>
-        )
-      }
+      showOverflowTooltip: true
     }
   },
   {

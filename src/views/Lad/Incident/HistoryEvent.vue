@@ -1,7 +1,7 @@
 <script setup lang="tsx">
 import { onMounted, reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElLink, ElMessage, ElOption, ElRadio, ElRadioGroup, ElSelect, ElTag } from 'element-plus'
+import { ElMessage, ElOption, ElRadio, ElRadioGroup, ElSelect, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Dialog } from '@/components/Dialog'
 import { Search } from '@/components/Search'
@@ -104,12 +104,6 @@ async function loadDataSourceOptions() {
   }
 }
 
-const filterByTargetId = (targetId: string) => {
-  searchParams.value = { ...unref(searchParams), targetId }
-  currentPage.value = 1
-  getList()
-}
-
 const { tableRegister, tableState, tableMethods } = useTable({
   fetchDataApi: async () => {
     const { currentPage, pageSize } = tableState
@@ -136,14 +130,6 @@ onMounted(() => {
 
 const goDetail = (row: HistoryEventItem) => {
   push(`/lad/incident/target/${row.id}`)
-}
-
-const goUavRegistry = (row: HistoryEventItem) => {
-  if (row.uavSn === '未解析') return
-  push({
-    path: '/lad/list/black-white',
-    query: { sn: row.uavSn, openDetail: '1' }
-  })
 }
 
 const openManualConfirm = (row: HistoryEventItem) => {
@@ -228,15 +214,6 @@ const crudSchemas = reactive<CrudSchema[]>([
       componentProps: {
         placeholder: '融合目标编号',
         style: { width: '100%' }
-      }
-    },
-    table: {
-      slots: {
-        default: ({ row }: { row: HistoryEventItem }) => (
-          <ElLink type="primary" underline={false} onClick={() => filterByTargetId(row.targetId)}>
-            {row.targetId}
-          </ElLink>
-        )
       }
     }
   },
@@ -377,9 +354,7 @@ const crudSchemas = reactive<CrudSchema[]>([
           row.uavSn === '未解析' ? (
             <span class="text-[var(--el-text-color-secondary)]">未解析</span>
           ) : (
-            <ElLink type="primary" underline={false} onClick={() => goUavRegistry(row)}>
-              {row.uavSn}
-            </ElLink>
+            <span>{row.uavSn}</span>
           )
       }
     }

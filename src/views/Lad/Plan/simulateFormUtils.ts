@@ -6,14 +6,12 @@ import {
 import type {
   PlanSimulateInput,
   PlanWeatherCondition,
-  PlanWeatherConditionLogic,
   PlanWeatherConditionProperty
 } from '@/api/lad/plan/types'
 
 export interface PlanSimulateFormState {
   threatLevel: string
-  areaLevel: string[]
-  weatherConditionLogic: PlanWeatherConditionLogic
+  areaLevel: string
   weatherConditions: PlanWeatherCondition[]
 }
 
@@ -29,52 +27,45 @@ function readWeatherNumber(
 
 export function createDefaultPlanSimulateForm(): PlanSimulateFormState {
   const temperature = createPlanWeatherCondition('temperature')
-  temperature.operator = '>'
+  temperature.operator = '='
   temperature.value = '28'
   const humidity = createPlanWeatherCondition('humidity')
-  humidity.operator = '<'
+  humidity.operator = '='
   humidity.value = '50'
-  humidity.nextLogic = 'and'
 
   return {
     threatLevel: '高危',
-    areaLevel: [],
-    weatherConditionLogic: 'and',
+    areaLevel: 'ar-10001',
     weatherConditions: [temperature, humidity]
   }
 }
 
 export function normalizePlanSimulateWeather(
-  conditions: PlanWeatherCondition[],
-  logic: PlanWeatherConditionLogic
+  conditions: PlanWeatherCondition[]
 ): PlanWeatherCondition[] {
   const normalized = normalizePlanWeatherConditions({
     weatherConditions: conditions,
-    weatherConditionLogic: logic
+    weatherConditionLogic: 'and'
   })
   const rows = normalized.weatherConditions ?? []
   return rows.map((condition, index) => ({
     ...condition,
-    nextLogic:
-      index < rows.length - 1
-        ? condition.nextLogic || normalized.weatherConditionLogic || logic
-        : undefined
+    operator: '=',
+    nextLogic: index < rows.length - 1 ? 'and' : undefined
   }))
 }
 
 export function planSimulateFormComplete(form: PlanSimulateFormState): boolean {
   if (!form.threatLevel?.trim()) return false
+  if (!form.areaLevel?.trim()) return false
   return weatherConditionsComplete(form.weatherConditions)
 }
 
 export function planFormToSimulateInput(form: PlanSimulateFormState): PlanSimulateInput {
-  const conditions = normalizePlanSimulateWeather(
-    form.weatherConditions,
-    form.weatherConditionLogic
-  )
+  const conditions = normalizePlanSimulateWeather(form.weatherConditions)
   return {
     threatLevel: form.threatLevel.trim(),
-    areaLevel: form.areaLevel[0],
+    areaLevel: form.areaLevel || undefined,
     temperature: readWeatherNumber(conditions, 'temperature'),
     humidity: readWeatherNumber(conditions, 'humidity'),
     windPower: readWeatherNumber(conditions, 'windPower'),

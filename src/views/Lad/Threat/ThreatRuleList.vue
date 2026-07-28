@@ -1,6 +1,6 @@
 <script setup lang="tsx">
 import { computed, reactive, ref, unref } from 'vue'
-import { ElLink, ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
+import { ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
 import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
@@ -175,9 +175,7 @@ const crudSchemas = reactive<CrudSchema[]>([
       slots: {
         default: ({ row }: { row: ThreatRule }) => (
           <span class="inline-flex items-center gap-6px">
-            <ElLink type="primary" underline={false} onClick={() => openDetail(row)}>
-              {row.ruleName}
-            </ElLink>
+            <span>{row.ruleName}</span>
             {isMonitorCatchAllRule(row) ? (
               <ElTag type="info" size="small" effect="plain">
                 {UI.fallbackTag}

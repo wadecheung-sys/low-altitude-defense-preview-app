@@ -130,9 +130,6 @@ const removeLoading = ref(false)
 const removeListLabel = (listType: ManagedListType) =>
   listType === '黑名单' ? '移出黑名单' : '移出白名单'
 
-const removeButtonType = (listType: ManagedListType) =>
-  listType === '黑名单' ? 'danger' : 'warning'
-
 const removeFromList = async (row: BlackWhiteListItem | null, listType: ManagedListType) => {
   const elTableExpose = await getElTableExpose()
   const selected = elTableExpose?.getSelectionRows() as BlackWhiteListItem[] | undefined
@@ -363,10 +360,10 @@ const crudSchemas = reactive<CrudSchema[]>([
               编辑
             </BaseButton>
             <BaseButton
-              type={removeButtonType(displayManagedListType(data.row.listType))}
+              type="danger"
               onClick={() => removeFromList(data.row, displayManagedListType(data.row.listType))}
             >
-              {removeListLabel(displayManagedListType(data.row.listType))}
+              移除
             </BaseButton>
           </>
         )
@@ -408,10 +405,10 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
           <BaseButton
             v-if="batchRemoveListType"
             :loading="removeLoading"
-            :type="batchRemoveListType === '黑名单' ? 'danger' : 'warning'"
+            type="danger"
             @click="removeFromList(null, batchRemoveListType)"
           >
-            批量{{ batchRemoveListType === '黑名单' ? '移出黑名单' : '移出白名单' }}
+            批量移除
           </BaseButton>
         </div>
 
