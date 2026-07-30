@@ -29,6 +29,10 @@ const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
 const zones = ['核心保护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
 const entryMethods: EntryMethod[] = ['自动录入', '人工录入', '自动+人工校验']
 const validOptions = ['永久', '2026-12-31 23:59:59', '2025-06-30 18:00:00', '2024-12-31 08:30:00']
+const whitelistUnits = ['低空运营中心', '电力巡检中心', '应急救援航空队', '城市测绘院']
+const whitelistUsers = ['张宇', '李明浩', '周敏', '陈嘉航']
+const whitelistOwners = ['王建国', '刘志强', '赵晓彤', '黄俊杰']
+const whitelistContacts = ['13800138001', '13900139002', '13600136003', '0755-86501234']
 
 function buildSeedList(): BlackWhiteListItem[] {
   const resolvableProfiles = LAD_RESOLVABLE_TARGET_PROFILES
@@ -43,10 +47,14 @@ function buildSeedList(): BlackWhiteListItem[] {
     const updated = `2024-03-${day} ${hour}:${String(updatedMin).padStart(2, '0')}:${String((Number(sec) + 8) % 60).padStart(2, '0')}`
     const durationSec = 15 + (i % 120)
 
+    const listType = listTypes[i % listTypes.length]
+    const hasWhitelistProfile = listType === '白名单' && i % 6 !== 5
+    const profileIndex = Math.floor(i / 2) % whitelistUnits.length
+
     return normalizeCooperativeBlackWhiteFields({
       id: `bw-${10001 + i}`,
       targetId: profile.targetId,
-      listType: listTypes[i % listTypes.length],
+      listType,
       historyTargetType: COOPERATIVE_DRONE_KIND,
       targetType: targetTypes[i % targetTypes.length],
       validUntil: normalizeValidUntil(validOptions[i % validOptions.length]),
@@ -56,6 +64,10 @@ function buildSeedList(): BlackWhiteListItem[] {
       model: profile.targetModel,
       frequency: frequencies[i % frequencies.length],
       sn: profile.uavSn,
+      affiliatedUnit: hasWhitelistProfile ? whitelistUnits[profileIndex] : '',
+      userName: hasWhitelistProfile && i % 4 !== 3 ? whitelistUsers[profileIndex] : '',
+      ownerName: hasWhitelistProfile ? whitelistOwners[profileIndex] : '',
+      contactInfo: hasWhitelistProfile && i % 8 !== 7 ? whitelistContacts[profileIndex] : '',
       zoneName: zones[i % zones.length],
       longitude: Number((113.38 + (i % 30) * 0.008).toFixed(4)),
       latitude: Number((23.08 + (i % 25) * 0.006).toFixed(4)),
@@ -65,7 +77,7 @@ function buildSeedList(): BlackWhiteListItem[] {
   }).filter((row) => hasResolvableSn(row.sn))
 }
 
-export const BLACK_WHITE_STORE_VERSION = 6
+export const BLACK_WHITE_STORE_VERSION = 8
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladBlackWhiteStoreVer?: number }
@@ -153,6 +165,22 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
     const kw = params.model.trim().toLowerCase()
     rows = rows.filter((r) => r.model.toLowerCase().includes(kw))
   }
+  if (params.affiliatedUnit?.trim()) {
+    const kw = params.affiliatedUnit.trim().toLowerCase()
+    rows = rows.filter((r) => r.affiliatedUnit.toLowerCase().includes(kw))
+  }
+  if (params.userName?.trim()) {
+    const kw = params.userName.trim().toLowerCase()
+    rows = rows.filter((r) => r.userName.toLowerCase().includes(kw))
+  }
+  if (params.ownerName?.trim()) {
+    const kw = params.ownerName.trim().toLowerCase()
+    rows = rows.filter((r) => r.ownerName.toLowerCase().includes(kw))
+  }
+  if (params.contactInfo?.trim()) {
+    const kw = params.contactInfo.trim().toLowerCase()
+    rows = rows.filter((r) => r.contactInfo.toLowerCase().includes(kw))
+  }
   if (params.zoneName) {
     rows = rows.filter((r) => r.zoneName === params.zoneName)
   }
@@ -212,6 +240,10 @@ export function updateLocalBlackWhiteListType(
   allList[idx] = {
     ...allList[idx],
     listType: payload.listType,
+    affiliatedUnit: payload.listType === '黑名单' ? '' : allList[idx].affiliatedUnit,
+    userName: payload.listType === '黑名单' ? '' : allList[idx].userName,
+    ownerName: payload.listType === '黑名单' ? '' : allList[idx].ownerName,
+    contactInfo: payload.listType === '黑名单' ? '' : allList[idx].contactInfo,
     updatedAt: formatTimestamp(new Date())
   }
   return buildTargetDetail(allList[idx])
@@ -233,6 +265,12 @@ export function syncLocalBlackWhiteListType(
         const managed = enrichManagedBlackWhiteListItem(row)
         if (!managed) return
         row.listType = listType
+        if (listType === '黑名单') {
+          row.affiliatedUnit = ''
+          row.userName = ''
+          row.ownerName = ''
+          row.contactInfo = ''
+        }
         row.historyTargetType = COOPERATIVE_DRONE_KIND
         row.updatedAt = ts
       })
@@ -251,6 +289,10 @@ export function syncLocalBlackWhiteListType(
       model: target.targetModel,
       frequency: '2.4GHz',
       sn: target.uavSn.trim(),
+      affiliatedUnit: '',
+      userName: '',
+      ownerName: '',
+      contactInfo: '',
       zoneName: '',
       longitude: 0,
       latitude: 0,
@@ -283,6 +325,21 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     findTargetProfileByUavSn(normalized.sn)?.targetId ||
     `TG-BW-${normalized.sn.trim()}`
   const withTargetId = { ...normalized, targetId }
+  const normalizedWhitelistInfo =
+    normalized.listType === '白名单'
+      ? {
+          affiliatedUnit: normalized.affiliatedUnit?.trim() || '',
+          userName: normalized.userName?.trim() || '',
+          ownerName: normalized.ownerName?.trim() || '',
+          contactInfo: normalized.contactInfo?.trim() || ''
+        }
+      : {
+          affiliatedUnit: '',
+          userName: '',
+          ownerName: '',
+          contactInfo: ''
+        }
+  const normalizedRecord = { ...withTargetId, ...normalizedWhitelistInfo }
 
   if (payload.id) {
     const idx = allList.findIndex((row) => row.id === payload.id)
@@ -291,7 +348,7 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     }
     allList[idx] = {
       ...allList[idx],
-      ...withTargetId,
+      ...normalizedRecord,
       updatedAt: ts
     }
     return allList[idx]
@@ -302,7 +359,7 @@ export function saveLocalBlackWhite(payload: BlackWhiteFormPayload): BlackWhiteL
     discoveredAt: ts,
     updatedAt: ts,
     duration: '00:00:00',
-    ...withTargetId
+    ...normalizedRecord
   }
   allList.unshift(row)
   return row

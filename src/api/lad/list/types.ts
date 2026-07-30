@@ -27,6 +27,14 @@ export interface BlackWhiteListItem {
   model: string
   frequency: string
   sn: string
+  /** 所属单位（白名单扩展信息，非必填） */
+  affiliatedUnit: string
+  /** 使用人（白名单扩展信息，非必填） */
+  userName: string
+  /** 归属人（白名单扩展信息，非必填） */
+  ownerName: string
+  /** 联系方式（白名单扩展信息，非必填） */
+  contactInfo: string
   zoneName: string
   longitude: number
   latitude: number
@@ -40,6 +48,10 @@ export interface BlackWhiteListQuery {
   listType?: ListType
   sn?: string
   model?: string
+  affiliatedUnit?: string
+  userName?: string
+  ownerName?: string
+  contactInfo?: string
   historyTargetType?: BlackWhiteTargetKindFilter
   targetType?: string
   zoneName?: string
@@ -64,6 +76,10 @@ export type BlackWhiteFormPayload = Pick<
   | 'model'
   | 'frequency'
   | 'sn'
+  | 'affiliatedUnit'
+  | 'userName'
+  | 'ownerName'
+  | 'contactInfo'
   | 'zoneName'
   | 'longitude'
   | 'latitude'

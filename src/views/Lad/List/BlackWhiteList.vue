@@ -46,6 +46,10 @@ const setSearchParams = (params: Recordable) => {
     listType: activeListTab.value === 'all' ? undefined : activeListTab.value,
     sn: params.sn,
     model: params.model,
+    affiliatedUnit: params.affiliatedUnit,
+    userName: params.userName,
+    ownerName: params.ownerName,
+    contactInfo: params.contactInfo,
     validUntilStart: range?.[0] || undefined,
     validUntilEnd: range?.[1] || undefined
   }
@@ -275,6 +279,46 @@ const crudSchemas = reactive<CrudSchema[]>([
     label: '频段/频率',
     minWidth: 120,
     search: { hidden: true },
+    table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'affiliatedUnit',
+    label: '所属单位',
+    minWidth: 170,
+    search: {
+      component: 'Input',
+      componentProps: { placeholder: '请输入所属单位' }
+    },
+    table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'userName',
+    label: '使用人',
+    minWidth: 100,
+    search: {
+      component: 'Input',
+      componentProps: { placeholder: '请输入使用人' }
+    },
+    table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'ownerName',
+    label: '归属人',
+    minWidth: 100,
+    search: {
+      component: 'Input',
+      componentProps: { placeholder: '请输入归属人' }
+    },
+    table: { showOverflowTooltip: true }
+  },
+  {
+    field: 'contactInfo',
+    label: '联系方式',
+    minWidth: 140,
+    search: {
+      component: 'Input',
+      componentProps: { placeholder: '请输入联系方式' }
+    },
     table: { showOverflowTooltip: true }
   },
   {

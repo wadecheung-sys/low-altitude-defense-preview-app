@@ -78,6 +78,10 @@ function createDefaultForm() {
     model: modelOptions[0],
     frequencyBands: [createFrequencyBand(2.4), createFrequencyBand(5.8)] as FrequencyBand[],
     sn: '',
+    affiliatedUnit: '',
+    userName: '',
+    ownerName: '',
+    contactInfo: '',
     zoneName: '核心防护区A区',
     longitude: 113.4,
     latitude: 23.1,
@@ -124,6 +128,10 @@ watch(
         model: props.row.model || '其他',
         frequencyBands: parseFrequencyBands(props.row.frequency),
         sn: props.row.sn,
+        affiliatedUnit: props.row.affiliatedUnit,
+        userName: props.row.userName,
+        ownerName: props.row.ownerName,
+        contactInfo: props.row.contactInfo,
         zoneName: props.row.zoneName,
         longitude: props.row.longitude,
         latitude: props.row.latitude,
@@ -167,6 +175,10 @@ const onSubmit = async () => {
       model: form.value.model,
       frequency,
       sn,
+      affiliatedUnit: form.value.affiliatedUnit,
+      userName: form.value.userName,
+      ownerName: form.value.ownerName,
+      contactInfo: form.value.contactInfo,
       zoneName: form.value.zoneName,
       longitude: form.value.longitude,
       latitude: form.value.latitude,
@@ -242,6 +254,18 @@ const onSubmit = async () => {
           clearable
           style="width: 100%"
         />
+      </ElFormItem>
+      <ElFormItem label="所属单位">
+        <ElInput v-model="form.affiliatedUnit" placeholder="请输入所属单位（非必填）" />
+      </ElFormItem>
+      <ElFormItem label="使用人">
+        <ElInput v-model="form.userName" placeholder="请输入使用人（非必填）" />
+      </ElFormItem>
+      <ElFormItem label="归属人">
+        <ElInput v-model="form.ownerName" placeholder="请输入归属人（非必填）" />
+      </ElFormItem>
+      <ElFormItem label="联系方式">
+        <ElInput v-model="form.contactInfo" placeholder="请输入联系方式（非必填）" />
       </ElFormItem>
       <ElFormItem label="备注">
         <ElInput v-model="form.remark" type="textarea" :rows="2" />

@@ -483,6 +483,19 @@ watch(
             {{ detail.discoveredAt }}
           </ElDescriptionsItem>
 
+          <ElDescriptionsItem label="所属单位">
+            {{ detail.affiliatedUnit || '—' }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="使用人">
+            {{ detail.userName || '—' }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="归属人">
+            {{ detail.ownerName || '—' }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="联系方式">
+            {{ detail.contactInfo || '—' }}
+          </ElDescriptionsItem>
+
           <ElDescriptionsItem label="关联事件" :span="2">
             共 {{ detail.eventCount }} 条
           </ElDescriptionsItem>
