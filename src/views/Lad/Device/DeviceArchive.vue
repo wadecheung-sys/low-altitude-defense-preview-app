@@ -100,14 +100,6 @@ function openCreate() {
   push('/lad/device/archive/add')
 }
 
-function importArchive() {
-  ElMessage.info('导入设备档案')
-}
-
-function exportArchive() {
-  ElMessage.success('设备档案已导出')
-}
-
 const crudSchemas = reactive<CrudSchema[]>([
   {
     field: 'selection',
@@ -258,8 +250,6 @@ const { allSchemas } = useCrudSchemas(crudSchemas)
       <div class="mb-10px">
         <BaseButton type="primary" @click="openCreate">新增档案</BaseButton>
         <BaseButton type="danger" @click="batchRemove">批量删除</BaseButton>
-        <BaseButton @click="importArchive">导入</BaseButton>
-        <BaseButton @click="exportArchive">导出档案</BaseButton>
       </div>
 
       <Table
