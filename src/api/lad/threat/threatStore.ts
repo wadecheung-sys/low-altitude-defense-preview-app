@@ -14,7 +14,6 @@ import {
   effectiveRulePriority,
   isSwarmRule,
   isSwarmSimulateInput,
-  resolveThreatLevelKey,
   swarmEscalationNote,
   SWARM_TARGET_TYPE
 } from './threatSwarm'
@@ -874,7 +873,6 @@ export function assessThreatRule(id: string): ThreatAssessResult {
   if (!rule) throw new Error('\u89c4\u5219\u4e0d\u5b58\u5728')
   const plan = getPlan(rule.planId)
   const triggerRule = plan ? resolvePlanTriggerRule(plan) : null
-  const levelKey = resolveThreatLevelKey(rule)
   const planLabel = plan ? `\u300c${plan.planName}\u300d\uff08${plan.planCode}\uff09` : '-'
   const fnLabel = triggerRule
     ? functionLabel(triggerRule.deviceGroupType, triggerRule.deviceFunction)
@@ -894,7 +892,6 @@ export function assessThreatRule(id: string): ThreatAssessResult {
     planDeviceAction: triggerRule?.deviceAction,
     planDeviceType: triggerRule?.deviceGroupType,
     planDeviceFunction: fnLabel,
-    alarmLevel: levelKey === 'high' ? '一级告警' : '二级预警',
     summary: `${monitorSummary}${swarmSummary}规则威胁等级「${rule.threatLevel}」；名单类型「${rule.targetType}」；目标型号「${rule.targetModel}」；触发条件：${rule.conditionSummary}`,
     swarmNote,
     triggerNote:

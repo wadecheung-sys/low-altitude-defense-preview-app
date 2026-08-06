@@ -131,7 +131,6 @@ export interface ThreatAssessResult {
   planDeviceAction?: string
   planDeviceType?: string
   planDeviceFunction?: string
-  alarmLevel: string
   summary: string
   triggerNote: string
   swarmNote?: string
