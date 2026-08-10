@@ -75,7 +75,6 @@ export const UI = {
   simulateDisposalMode: '处置模式',
   simulateTriggerStrategy: '预案触发策略',
   simulateDeviceAction: '设备动作',
-  fallbackTag: '兜底',
   dialogDetail: '规则详情',
   detailThreatLevel: '威胁等级',
   detailAlarmLevel: '告警等级参考',

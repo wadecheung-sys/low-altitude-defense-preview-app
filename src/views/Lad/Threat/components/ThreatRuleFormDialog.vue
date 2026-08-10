@@ -71,16 +71,6 @@ function generateThreatRuleCode() {
   return `THREAT-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${pad(Math.floor(Math.random() * 100))}`
 }
 
-function newCondition(): RuleCondition {
-  return {
-    id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    property: 'speed',
-    operator: '>',
-    value: '',
-    nextLogic: undefined
-  }
-}
-
 function isAreaCondition(condition: RuleCondition) {
   return condition.property === 'locatedArea'
 }
@@ -108,7 +98,7 @@ function resetForm() {
     priority: 500,
     enabled: true,
     conditionLogic: 'and',
-    conditions: [newCondition()]
+    conditions: []
   }
 }
 
@@ -158,10 +148,6 @@ onMounted(() => {
 async function onSave() {
   if (!form.value.ruleName.trim()) {
     ElMessage.warning('请填写规则名称')
-    return
-  }
-  if (!form.value.conditions.length) {
-    ElMessage.warning('请至少添加一条目标属性条件')
     return
   }
   if (

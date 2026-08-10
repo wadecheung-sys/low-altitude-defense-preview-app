@@ -47,7 +47,6 @@ defineProps<{
         </ElDescriptionsItem>
       </ElDescriptions>
 
-      <p v-if="result.monitorNote" class="threat-simulate-result__note">{{ result.monitorNote }}</p>
       <p v-if="result.swarmNote" class="threat-simulate-result__note">{{ result.swarmNote }}</p>
     </template>
   </ElAlert>

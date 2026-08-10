@@ -12,7 +12,6 @@ import {
   getThreatRuleListApi,
   toggleThreatRuleEnabledApi
 } from '@/api/lad/threat'
-import { isMonitorCatchAllRule } from '@/api/lad/threat/threatFallback'
 import type { ThreatRule } from '@/api/lad/threat/types'
 import ThreatRuleFormDialog from './components/ThreatRuleFormDialog.vue'
 import ThreatSimulateDialog from './components/ThreatSimulateDialog.vue'
@@ -20,8 +19,7 @@ import ThreatRuleDetailDialog from './components/ThreatRuleDetailDialog.vue'
 import {
   THREAT_SEARCH_COL,
   buildThreatLevelSelectOptions,
-  threatTargetModelFilterOptions,
-  UI
+  threatTargetModelFilterOptions
 } from './threatConstants'
 import {
   LAD_DICT_THREAT_LEVEL,
@@ -171,19 +169,7 @@ const crudSchemas = reactive<CrudSchema[]>([
     },
     table: {
       minWidth: 180,
-      showOverflowTooltip: true,
-      slots: {
-        default: ({ row }: { row: ThreatRule }) => (
-          <span class="inline-flex items-center gap-6px">
-            <span>{row.ruleName}</span>
-            {isMonitorCatchAllRule(row) ? (
-              <ElTag type="info" size="small" effect="plain">
-                {UI.fallbackTag}
-              </ElTag>
-            ) : null}
-          </span>
-        )
-      }
+      showOverflowTooltip: true
     }
   },
   {

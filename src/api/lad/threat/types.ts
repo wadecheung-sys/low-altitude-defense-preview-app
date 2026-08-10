@@ -119,8 +119,6 @@ export interface ThreatSimulateResult {
   outcomeSummary?: string
   message: string
   swarmNote?: string
-  isMonitorCatchAll?: boolean
-  monitorNote?: string
 }
 
 export interface ThreatAssessResult {

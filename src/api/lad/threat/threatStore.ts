@@ -4,11 +4,7 @@ import { formatDisposalExecNote } from '../plan/planDisposal'
 import { resolvePlanTriggerRule } from '../plan/planTrigger'
 import { listAreaRegions } from '../area/areaStore'
 import { coerceThreatLevelLabel, normalizeThreatLevel } from './threatLevelUtils'
-import {
-  isMonitorCatchAllRule,
-  monitorCatchAllNote,
-  THREAT_MONITOR_RULE_ID
-} from './threatFallback'
+import { THREAT_MONITOR_RULE_ID } from './threatMonitorRule'
 import {
   deriveThreatLevel,
   effectiveRulePriority,
@@ -831,14 +827,10 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
     }
   }
 
-  let matched: ThreatRule | undefined
   const enabled = allRules
     .filter((r) => r.enabled)
     .sort((a, b) => effectiveRulePriority(b, simInput) - effectiveRulePriority(a, simInput))
-  matched = enabled.find((r) => ruleMatches(r, simInput))
-  if (!matched) {
-    matched = allRules.find((r) => r.id === THREAT_MONITOR_RULE_ID && r.enabled)
-  }
+  const matched = enabled.find((r) => ruleMatches(r, simInput))
 
   if (!matched) {
     return {
@@ -847,22 +839,16 @@ export function simulateThreat(input: ThreatSimulateInput): ThreatSimulateResult
     }
   }
 
-  const isMonitorCatchAll = isMonitorCatchAllRule(matched)
   const threatLevelLabel = normalizeThreatLevel(matched.threatLevel)
   const swarmNote =
-    !isMonitorCatchAll && (isSwarmRule(matched) || isSwarmSimulateInput(simInput))
-      ? swarmEscalationNote()
-      : undefined
-  const monitorNote = isMonitorCatchAll ? monitorCatchAllNote() : undefined
-  const prefix = isSwarmSimulateInput(simInput) && !isMonitorCatchAll ? '【蜂群场景】' : ''
+    isSwarmRule(matched) || isSwarmSimulateInput(simInput) ? swarmEscalationNote() : undefined
+  const prefix = isSwarmSimulateInput(simInput) ? '【蜂群场景】' : ''
 
   return {
     matched: true,
     rule: { ...matched },
     ruleName: matched.ruleName,
     threatLevel: threatLevelLabel,
-    isMonitorCatchAll,
-    monitorNote,
     swarmNote,
     message: `${scenarioPrefix}${prefix}命中规则「${matched.ruleName}」，威胁等级结论：${threatLevelLabel}`
   }
@@ -881,9 +867,6 @@ export function assessThreatRule(id: string): ThreatAssessResult {
   const swarmSummary = isSwarmRule(rule)
     ? '蜂群维度：多机入侵时默认提升威胁等级，驱离级预案可升级为激光/高功率微波。'
     : ''
-  const monitorSummary = isMonitorCatchAllRule(rule)
-    ? '兜底监测：未命中更高优先级规则时，默认启动无人机设备监测。'
-    : ''
   return {
     rule,
     threatLevel: rule.threatLevel,
@@ -892,7 +875,7 @@ export function assessThreatRule(id: string): ThreatAssessResult {
     planDeviceAction: triggerRule?.deviceAction,
     planDeviceType: triggerRule?.deviceGroupType,
     planDeviceFunction: fnLabel,
-    summary: `${monitorSummary}${swarmSummary}规则威胁等级「${rule.threatLevel}」；名单类型「${rule.targetType}」；目标型号「${rule.targetModel}」；触发条件：${rule.conditionSummary}`,
+    summary: `${swarmSummary}规则威胁等级「${rule.threatLevel}」；名单类型「${rule.targetType}」；目标型号「${rule.targetModel}」；触发条件：${rule.conditionSummary}`,
     swarmNote,
     triggerNote:
       plan && triggerRule
