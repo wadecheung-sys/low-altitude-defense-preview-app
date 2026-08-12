@@ -42,7 +42,7 @@ export interface DataScreenDeviceView {
 
 /** u315 各状态「查看更多」按钮 → 选型型号（数据大屏03.html） */
 export const DATA_SCREEN_VIEW_MORE_BUTTONS: Record<string, string> = {
-  u320: 'TBD-RAD',
+  u320: 'RADAR-081',
   u325: 'TBD-EO',
   u330: 'PL671F',
   u335: 'RDS200',
@@ -125,13 +125,16 @@ function mockLiveMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
         { label: '刷新策略', value: '实时' },
         ...common
       ]
-    case 'TBD-RAD':
+    case 'RADAR-081':
       return [
-        { label: '锁定目标', value: 'T-0726-01', emphasis: true },
-        { label: '探测距离', value: '5.8', unit: 'km' },
-        { label: '扫描周期', value: '4', unit: 's' },
-        { label: '发现目标数', value: '3', unit: '架' },
-        ...common
+        { label: '目标批次号', value: '081', emphasis: true },
+        { label: '最新报文', value: '0x8C 跟踪航迹报' },
+        { label: '目标距离', value: '3.8', unit: 'km' },
+        { label: '目标速度', value: '26', unit: 'm/s' },
+        { label: '报文频率', value: '10', unit: 'Hz' },
+        { label: '阵面/处理状态', value: '正常' },
+        { label: '最近心跳', value: '2026-07-09 23:08:12' },
+        { label: '数据刷新', value: '0.1 s' }
       ]
     case 'TBD-EO':
       return [
@@ -297,7 +300,7 @@ function summaryFields(
 
 /** 同步 u315 设备概要面板文案（每状态 4 个字段） */
 export const DATA_SCREEN_SUMMARY_PANELS: SummaryPanelSync[] = [
-  { model: 'TBD-RAD', fields: summaryFields('u316', 'u317', 'u318', 'u319') },
+  { model: 'RADAR-081', fields: summaryFields('u316', 'u317', 'u318', 'u319') },
   { model: 'TBD-EO', fields: summaryFields('u321', 'u322', 'u323', 'u324') },
   { model: 'PL671F', fields: summaryFields('u326', 'u327', 'u328', 'u329') },
   { model: 'RDS200', fields: summaryFields('u331', 'u332', 'u333', 'u334') },

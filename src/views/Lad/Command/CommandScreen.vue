@@ -10,7 +10,7 @@ const PROTOTYPE_WIDTH = 1920
 const PROTOTYPE_HEIGHT = 1080
 const DISPLAY_MAX_WIDTH = 1920
 const PROTOTYPE_PAGE = encodeURIComponent('数据大屏03.html')
-const PROTOTYPE_VERSION = '20260730-名单有效期'
+const PROTOTYPE_VERSION = '20260812-radar-081'
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/${PROTOTYPE_PAGE}?v=${PROTOTYPE_VERSION}`
 
 type Cleanup = () => void

@@ -52,7 +52,7 @@ const panelMode = computed<
   ) {
     return 'detect'
   }
-  if (model === 'TBD-RAD' || props.deviceType === '雷达') return 'radar'
+  if (model === 'RADAR-081' || props.deviceType === '雷达') return 'radar'
   if (model === 'TBD-EO' || props.deviceType === '光电跟踪') return 'eo'
   if (model === 'TBD-LSR' || props.deviceType === '激光打击') return 'strike'
   if (model === 'TBD-HPM' || props.deviceType === '高功率微波') return 'hpm'
@@ -63,9 +63,11 @@ const panelMode = computed<
 const actions = computed<DeviceOperationAction[]>(() => {
   if (panelMode.value === 'radar') {
     return [
-      { key: 'scan_start', label: '启动扫描', type: 'primary' },
-      { key: 'scan_stop', label: '停止扫描' },
-      { key: 'target_track', label: '目标跟踪' }
+      { key: 'radar_search', label: '搜索模式', type: 'primary' },
+      { key: 'radar_track', label: '跟踪模式' },
+      { key: 'radar_search_track', label: '搜跟模式' },
+      { key: 'radar_receive', label: '仅接收' },
+      { key: 'radar_silent', label: '雷达寂静', type: 'danger' }
     ]
   }
   if (panelMode.value === 'eo') {
@@ -123,7 +125,8 @@ const actions = computed<DeviceOperationAction[]>(() => {
 })
 
 const panelHint = computed(() => {
-  if (panelMode.value === 'radar') return '雷达监视链路正常，扫描与跟踪指令经平台上报链路转发。'
+  if (panelMode.value === 'radar')
+    return '按 0x8A 系统控制报语义下发，控制周期 100ms；搜索/跟踪及收发状态由 0x8D、0x8E 状态报回送确认。'
   if (panelMode.value === 'eo') return '光电转台支持自动/手动跟踪切换，实时角度同步至监测数据。'
   if (panelMode.value === 'strike') return '激光打击需完成安全联锁复核后方可出光，请谨慎操作。'
   if (panelMode.value === 'hpm') return '高功率微波设备需确认伺服状态与工作模式后再执行发射准备。'

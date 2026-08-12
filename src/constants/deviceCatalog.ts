@@ -215,6 +215,43 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     }
   },
   {
+    model: 'RADAR-081',
+    vendor: '未在接口协议中标注',
+    deviceType: '雷达',
+    tier: 'confirmed',
+    docFile: '雷达对外通讯接口协议设计20240614.docx',
+    groupMasterEligible: true,
+    archiveName: '搜索跟踪雷达081接口档案',
+    archiveNo: 'D-LAD-RAD0001',
+    specifications: [
+      ind('网络协议', '', 'UDP / IEEE 802.3'),
+      ind('接口控制模块', '', '200.200.10.71:8181'),
+      ind('上级显控终端', '', '200.168.10.102:10001'),
+      ind('常规帧频', 'Hz', '10'),
+      ind('搜索/跟踪航迹报', '', '0x8B / 0x8C'),
+      ind('阵面/处理状态报', '', '0x8D / 0x8E')
+    ],
+    configurableItems: [
+      cfg('search_track_mode', '搜跟模式', '', 'device', '搜索 / 跟踪 / 手控 / 搜跟', '搜跟'),
+      cfg('radar_work_mode', '雷达工作模式', '', 'device', '常规 / 增程 / 测试', '常规'),
+      cfg('frequency_point', '工作频点', '', 'device', 'F1~F23，协议默认 F12', 'F12'),
+      cfg('detect_threshold', '检测门限', '', 'device', '0~15.5，量化 0.5', '5'),
+      cfg('agc_code', 'AGC码值', 'dB', 'device', '0~127', '0'),
+      cfg('guide_target', '跟踪引导批号', '', 'runtime', '目标批次号 0~200'),
+      cfg('silent_sector', '静默/航迹屏蔽扇区', '', 'runtime', '最多 3 个区域')
+    ],
+    demo: {
+      deviceId: 'DEV-RAD-081-01',
+      deviceName: '1#搜索跟踪雷达-081',
+      deployLocation: '北区瞭望台',
+      ipAddress: '200.200.10.71',
+      serialNo: 'RADAR-081-2026-001',
+      personInCharge: '陈工',
+      controlRangeM: 35000,
+      deviceIcon: 'radar'
+    }
+  },
+  {
     model: 'EXD55-LS',
     vendor: '亿思德科技',
     deviceType: 'ADS-B 监视',
@@ -246,36 +283,6 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
 
 /** 扩展选型设备（设备组与演示保留） */
 export const PENDING_DEVICES: DeviceCatalogEntry[] = [
-  {
-    model: 'TBD-RAD',
-    vendor: '华诺智感',
-    deviceType: '雷达',
-    tier: 'pending',
-    groupMasterEligible: true,
-    archiveName: '低空监视雷达档案',
-    archiveNo: 'D-LAD-RAD0001',
-    specifications: [
-      ind('工作频段', 'GHz', 'X / Ku'),
-      ind('探测距离', 'km', '≥8'),
-      ind('备注', '', '北区主雷达站')
-    ],
-    configurableItems: [
-      cfg('scan_mode', '扫描模式', '', 'device', '扇扫 / 圆桌', '扇扫'),
-      cfg('target_filter', '目标过滤等级', '', 'device', '低 / 中 / 高', '中'),
-      cfg('alarm_threshold', '告警触发阈值', '架', 'device', '1~20', '3'),
-      cfg('link_eo_track', '联动光电跟踪', '', 'device', '开 / 关', '开')
-    ],
-    demo: {
-      deviceId: 'DEV-RAD-01',
-      deviceName: '1#雷达-LD',
-      deployLocation: '北区瞭望台',
-      ipAddress: '192.168.8.60',
-      serialNo: 'LD-RAD-2025-001',
-      personInCharge: '陈工',
-      controlRangeM: 800,
-      deviceIcon: 'radar'
-    }
-  },
   {
     model: 'TBD-EO',
     vendor: '视界光电',

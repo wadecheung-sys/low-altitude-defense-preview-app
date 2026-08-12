@@ -2,6 +2,7 @@ import { queryDeviceArchiveDetail } from '../device/archiveStore'
 import { queryDeviceInfoDetail, queryDeviceInfoList } from '../device-info/infoStore'
 import type { DeviceInfoItem } from '../device-info/types'
 import { LAD_MONITOR_EXCLUDED_DEVICE_TYPES } from '@/constants/deviceTypes'
+import { buildRadarDemoRuntime } from '../radar/radarDemoRuntime'
 import type {
   DeviceMonitorItem,
   DeviceMonitorListResult,
@@ -15,7 +16,7 @@ import type {
 const MONITOR_EXCLUDED_TYPES = new Set(LAD_MONITOR_EXCLUDED_DEVICE_TYPES)
 
 const VENDOR_BY_TYPE: Record<string, string> = {
-  雷达: '华诺智感',
+  雷达: '未在接口协议中标注',
   无线电侦测: '凡双科技',
   'Remote-ID 监视': '凡双科技',
   'ADS-B 监视': '亿思德科技',
@@ -27,7 +28,7 @@ const VENDOR_BY_TYPE: Record<string, string> = {
 }
 
 const MODEL_BY_TYPE: Record<string, string> = {
-  雷达: 'TBD-RAD',
+  雷达: 'RADAR-081',
   无线电侦测: 'PL671F',
   'Remote-ID 监视': 'RDS200',
   'ADS-B 监视': 'EXD55-LS',
@@ -160,7 +161,12 @@ function buildRuntimeMetrics(
   seed: number,
   tick: number,
   onlineStatus: DeviceOnlineStatus
-): { workStatus: string; workMode?: string; metrics: DeviceRuntimeMetric[] } {
+): {
+  workStatus: string
+  workMode?: string
+  metrics: DeviceRuntimeMetric[]
+  radar?: DeviceRuntimeSnapshot['radar']
+} {
   if (onlineStatus === '离线') {
     return {
       workStatus: '离线',
@@ -183,6 +189,8 @@ function buildRuntimeMetrics(
   )
 
   switch (model) {
+    case 'RADAR-081':
+      return buildRadarDemoRuntime(seed, tick)
     case 'FG310F': {
       const active = offset % 4 !== 0
       const workStatus = active ? '压制中' : '待机'
@@ -373,6 +381,7 @@ export function queryDeviceRuntimeSnapshot(id: string): DeviceRuntimeSnapshot {
     workStatus: runtime.workStatus,
     workMode: runtime.workMode,
     updatedAt: formatNow(),
-    metrics: runtime.metrics
+    metrics: runtime.metrics,
+    radar: runtime.radar
   }
 }

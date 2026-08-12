@@ -95,10 +95,10 @@ let allLinkages: DeviceLinkageItem[] = [
   buildStoredRow(
     {
       masterDeviceId: 'di-10007',
-      deviceName: '1#雷达-LD',
-      deviceCode: 'DEV-RAD-01',
+      deviceName: '1#搜索跟踪雷达-081',
+      deviceCode: 'DEV-RAD-081-01',
       deviceType: '雷达',
-      deployArea: '待部署',
+      deployArea: '北区瞭望台',
       linkedDeviceIds: [],
       linkedChain: '',
       enabled: true

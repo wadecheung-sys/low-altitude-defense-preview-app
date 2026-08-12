@@ -85,6 +85,8 @@ const connectionLabel = computed(() => {
   return '设备连接已断开'
 })
 
+const isRadarDevice = computed(() => props.item.deviceModel === 'RADAR-081')
+
 async function loadRuntimeSnapshot() {
   runtimeLoading.value = true
   try {
@@ -221,7 +223,7 @@ onBeforeUnmount(onPopoverHide)
       <ElPopover
         placement="top-end"
         trigger="click"
-        :width="460"
+        :width="isRadarDevice ? 680 : 460"
         popper-class="device-monitor-popper"
         @show="onPopoverShow"
         @hide="onPopoverHide"
@@ -269,6 +271,73 @@ onBeforeUnmount(onPopoverHide)
                 <span>型号：{{ runtimeSnapshot.model }}</span>
                 <span>数据更新：{{ runtimeSnapshot.updatedAt }}</span>
               </div>
+              <template v-if="runtimeSnapshot.radar">
+                <section class="device-monitor-detail-popover__radar">
+                  <div class="device-monitor-detail-popover__radar-head">
+                    <strong>雷达协议实况</strong>
+                    <span>
+                      {{ runtimeSnapshot.radar.transport }} · {{ runtimeSnapshot.radar.endpoint }} ·
+                      {{ runtimeSnapshot.radar.reportRateHz }} Hz
+                    </span>
+                  </div>
+                  <dl class="device-monitor-detail-popover__track">
+                    <div
+                      ><dt>报文</dt
+                      ><dd
+                        >{{ runtimeSnapshot.radar.track.messageType }}
+                        {{ runtimeSnapshot.radar.track.messageName }}</dd
+                      ></div
+                    >
+                    <div
+                      ><dt>目标批次</dt><dd>{{ runtimeSnapshot.radar.track.targetId }}</dd></div
+                    >
+                    <div
+                      ><dt>目标类型</dt><dd>{{ runtimeSnapshot.radar.track.targetType }}</dd></div
+                    >
+                    <div
+                      ><dt>点迹性质</dt><dd>{{ runtimeSnapshot.radar.track.pointKind }}</dd></div
+                    >
+                    <div
+                      ><dt>经纬度</dt
+                      ><dd
+                        >{{ runtimeSnapshot.radar.track.longitude.toFixed(7) }},
+                        {{ runtimeSnapshot.radar.track.latitude.toFixed(7) }}</dd
+                      ></div
+                    >
+                    <div
+                      ><dt>海拔 / 距离</dt
+                      ><dd
+                        >{{ runtimeSnapshot.radar.track.altitudeM.toFixed(2) }} m /
+                        {{ runtimeSnapshot.radar.track.rangeM }} m</dd
+                      ></div
+                    >
+                    <div
+                      ><dt>方位 / 俯仰</dt
+                      ><dd
+                        >{{ runtimeSnapshot.radar.track.azimuthMil }} /
+                        {{ runtimeSnapshot.radar.track.elevationMil }} mil</dd
+                      ></div
+                    >
+                    <div
+                      ><dt>速度 / 强度</dt
+                      ><dd
+                        >{{ runtimeSnapshot.radar.track.speedMps }} m/s /
+                        {{ runtimeSnapshot.radar.track.intensity }}</dd
+                      ></div
+                    >
+                  </dl>
+                  <div class="device-monitor-detail-popover__health">
+                    <span
+                      v-for="health in runtimeSnapshot.radar.health"
+                      :key="health.label"
+                      :class="health.normal ? 'is-normal' : 'is-fault'"
+                      :title="health.detail"
+                    >
+                      <i></i>{{ health.label }}：{{ health.normal ? '正常' : '异常' }}
+                    </span>
+                  </div>
+                </section>
+              </template>
             </div>
             <p v-else-if="!runtimeLoading" class="device-monitor-detail-popover__empty">
               暂无实时运行状态
@@ -643,6 +712,91 @@ onBeforeUnmount(onPopoverHide)
     background: var(--el-fill-color-extra-light);
     color: var(--el-text-color-secondary);
     font-size: 10px;
+  }
+
+  &__radar {
+    padding: 10px;
+    border-top: 1px solid var(--el-border-color-lighter);
+    background: linear-gradient(135deg, #f4fbfc, #f7f9fc);
+  }
+
+  &__radar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    color: #244d5a;
+    font-size: 11px;
+
+    span {
+      color: var(--el-text-color-secondary);
+      font-family: monospace;
+    }
+  }
+
+  &__track {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0;
+    background: #dce7ea;
+    border: 1px solid #dce7ea;
+
+    div {
+      display: grid;
+      grid-template-columns: 70px minmax(0, 1fr);
+      padding: 5px 7px;
+      background: #fff;
+      font-size: 11px;
+    }
+
+    dt {
+      color: var(--el-text-color-secondary);
+    }
+
+    dd {
+      overflow: hidden;
+      margin: 0;
+      color: var(--el-text-color-primary);
+      font-family: monospace;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__health {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 10px;
+      background: #ecf5ee;
+      color: #3d7650;
+      font-size: 10px;
+    }
+
+    i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #45a360;
+    }
+
+    .is-fault {
+      background: #fef0f0;
+      color: #c45656;
+
+      i {
+        background: #f56c6c;
+      }
+    }
   }
 }
 

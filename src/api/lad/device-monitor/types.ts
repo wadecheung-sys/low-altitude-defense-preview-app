@@ -22,6 +22,34 @@ export interface DeviceRuntimeMetric {
   level?: DeviceRuntimeMetricLevel
 }
 
+export interface RadarRuntimeTrack {
+  messageType: '0x8B' | '0x8C'
+  messageName: '搜索航迹报' | '跟踪航迹报'
+  targetId: number
+  targetType: '鸟类' | '无人机' | '不明'
+  longitude: number
+  latitude: number
+  altitudeM: number
+  rangeM: number
+  azimuthMil: number
+  elevationMil: number
+  speedMps: number
+  intensity: number
+  pointKind: '真实点' | '外推点'
+}
+
+export interface RadarRuntimeProtocol {
+  transport: string
+  endpoint: string
+  reportRateHz: number
+  sourceAddress: string
+  destinationAddress: string
+  lastMessageType: '0x8B' | '0x8C' | '0x8D' | '0x8E'
+  checksumValid: boolean
+  track: RadarRuntimeTrack
+  health: Array<{ label: string; normal: boolean; detail: string }>
+}
+
 /** 设备运行监控弹层使用的实时状态快照 */
 export interface DeviceRuntimeSnapshot {
   deviceId: string
@@ -31,6 +59,7 @@ export interface DeviceRuntimeSnapshot {
   workMode?: string
   updatedAt: string
   metrics: DeviceRuntimeMetric[]
+  radar?: RadarRuntimeProtocol
 }
 
 export interface DeviceMonitorItem {
