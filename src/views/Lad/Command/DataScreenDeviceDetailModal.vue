@@ -66,6 +66,7 @@ function formatMetric(item: DataScreenMetricItem) {
 <template>
   <ElDialog
     v-model="visible"
+    class="lad-data-screen-device-dialog"
     :title="dialogTitle"
     width="960px"
     top="6vh"
@@ -98,6 +99,19 @@ function formatMetric(item: DataScreenMetricItem) {
                 :label="item.label"
               >
                 <span :class="{ 'is-emphasis': item.emphasis }">{{ formatMetric(item) }}</span>
+              </ElDescriptionsItem>
+            </ElDescriptions>
+          </section>
+
+          <section v-if="deviceView.protocolMetrics.length" class="lad-device-detail-panel">
+            <h4 class="lad-device-detail-panel__title">接口协议状态</h4>
+            <ElDescriptions :column="1" border size="small">
+              <ElDescriptionsItem
+                v-for="item in deviceView.protocolMetrics"
+                :key="item.label"
+                :label="item.label"
+              >
+                {{ formatMetric(item) }}
               </ElDescriptionsItem>
             </ElDescriptions>
           </section>
@@ -161,6 +175,11 @@ function formatMetric(item: DataScreenMetricItem) {
 </template>
 
 <style scoped lang="less">
+:global(.lad-data-screen-device-dialog .el-dialog__body) {
+  max-height: calc(82vh - 120px);
+  overflow-y: auto;
+}
+
 .lad-device-detail-modal__summary {
   display: flex;
   align-items: flex-start;

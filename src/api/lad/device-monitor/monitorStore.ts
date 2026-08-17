@@ -196,10 +196,11 @@ function buildRuntimeMetrics(
       const workStatus = active ? '压制中' : '待机'
       const azimuth = ((seed * 7 + tick * 2.35) % 360).toFixed(2)
       const elevation = (8 + ((seed + tick) % 180) / 10).toFixed(2)
-      const bands = ['400-450', '840-928', '2400-2485', '5725-5850']
+      const bands = ['840-960', '1550-1650', '2400-2485', '5725-5850', '5145-5250', '400-450']
+      const bandIndex = offset % bands.length
       return {
         workStatus,
-        workMode: '自动联动',
+        workMode: 'HTTP 双向交互',
         metrics: [
           commonConnection,
           runtimeMetric(
@@ -209,29 +210,32 @@ function buildRuntimeMetrics(
             undefined,
             active ? 'running' : 'normal'
           ),
-          runtimeMetric('control_mode', '控制模式', '自动联动'),
-          runtimeMetric('azimuth', '当前方位角', azimuth, '°'),
-          runtimeMetric('elevation', '当前俯仰角', elevation, '°'),
+          runtimeMetric('last_report', '最近上报', '0x2003 水平/垂直角度'),
+          runtimeMetric('azimuth', '转台水平角', azimuth, '°'),
+          runtimeMetric('elevation', '转台垂直角', elevation, '°'),
           runtimeMetric(
             'target',
             '锁定目标',
             active ? `TG-${String((seed % 90) + 10).padStart(4, '0')}` : '—'
           ),
-          runtimeMetric('band', '当前压制频段', bands[offset % bands.length], 'MHz'),
+          runtimeMetric('band_index', '频段索引', bandIndex),
+          runtimeMetric('band', '当前压制频段', bands[bandIndex], 'MHz'),
           runtimeMetric(
             'emission',
-            '射频发射状态',
+            '频段开关状态',
             active ? '开启' : '关闭',
             undefined,
             active ? 'running' : 'normal'
-          )
+          ),
+          runtimeMetric('band_power', '频段功率', ((90 + (offset % 26)) / 10).toFixed(1), 'dBm'),
+          runtimeMetric('band_temperature', '功放温度', 29 + (offset % 4), '℃')
         ]
       }
     }
     case 'DY506F': {
       const active = offset % 5 !== 0
-      const workStatus = active ? '防御中' : '待机'
-      const modes = ['驱离', '禁飞', '迫降']
+      const workStatus = active ? '工作中 · 整点授时' : '准备就绪'
+      const modes = ['驱离', '禁飞/降落', '导航防御']
       return {
         workStatus,
         workMode: modes[Math.floor(offset / 4) % modes.length],
@@ -244,30 +248,29 @@ function buildRuntimeMetrics(
             undefined,
             active ? 'running' : 'normal'
           ),
-          runtimeMetric(
-            'defense_mode',
-            '当前诱骗模式',
-            modes[Math.floor(offset / 4) % modes.length]
-          ),
+          runtimeMetric('last_report', '最近上报', '0x1010 设备信息'),
+          runtimeMetric('ocxo', '晶振状态', '锁定'),
+          runtimeMetric('timing', '授时同步状态字', '00000000 · 正常'),
+          runtimeMetric('time_accuracy', '时间精度', 18 + (offset % 4), 'ns'),
           runtimeMetric(
             'emission',
-            '发射总状态',
-            active ? '开启' : '关闭',
+            '四系统发射开关',
+            active ? 'GPS/BDS/GLO 开 · GAL 关' : '全部关闭',
             undefined,
             active ? 'running' : 'normal'
           ),
           runtimeMetric(
             'satellites',
-            '可用卫星',
-            `GPS ${7 + (offset % 3)} / GLONASS ${5 + (offset % 3)} / Galileo ${4 + (offset % 2)}`
+            '转发卫星颗数',
+            `GPS ${7 + (offset % 3)} / BDS ${6 + (offset % 3)} / GLO ${5 + (offset % 3)} / GAL ${4 + (offset % 2)}`
           ),
-          runtimeMetric('timing', '授时同步', '正常'),
           runtimeMetric(
             'sim_position',
             '模拟位置',
             `${120.089 + (offset % 6) * 0.0001}, ${30.342 + (offset % 5) * 0.0001}`
           ),
-          runtimeMetric('sim_height', '模拟高度', 36 + (offset % 5), 'm')
+          runtimeMetric('sim_height', '模拟高度', 36 + (offset % 5), 'm'),
+          runtimeMetric('environment', '环境温度', (36.5 + (offset % 8) / 10).toFixed(1), '℃')
         ]
       }
     }
@@ -295,25 +298,35 @@ function buildRuntimeMetrics(
       }
     }
     case 'RDS200': {
-      const targetCount = 3 + (offset % 6)
       return {
         workStatus: '监视中',
-        workMode: 'RID 广播报文解析',
+        workMode: '0x1102 RID 广播报文解析',
         metrics: [
           commonConnection,
           runtimeMetric('work_status', '工作状态', '监视中', undefined, 'running'),
-          runtimeMetric('uav_count', '当前无人机数', targetCount, '架'),
-          runtimeMetric('pilot_count', '当前飞手数', Math.max(1, targetCount - 1), '人'),
+          runtimeMetric('last_message', '最近消息', '0x1102 无人机信息'),
           runtimeMetric(
-            'latest_rid',
-            '最新 Remote-ID',
-            `RID-${String((seed + tick) % 999).padStart(3, '0')}`
+            'uas_id',
+            '最新 UAS ID',
+            `1581F6N8C237C${String((seed + tick) % 100000).padStart(5, '0')}`
           ),
-          runtimeMetric('latest_model', '最新识别型号', offset % 2 ? 'DJI Air 3' : 'DJI Mavic 3'),
-          runtimeMetric('packet_rate', '报文接收速率', 18 + (offset % 12), '条/s'),
+          runtimeMetric('recv_type', '承载协议', offset % 2 ? '2.4G' : 'BT5'),
+          runtimeMetric('rssi', '接收信号强度', -35 - (offset % 12), 'dBm'),
+          runtimeMetric(
+            'uav_position',
+            '无人机经纬度',
+            `${(120.356876 + (offset % 5) * 0.00001).toFixed(6)}, ${(30.234543 + (offset % 4) * 0.00001).toFixed(6)}`
+          ),
+          runtimeMetric('barometric_altitude', '气压高度', (68.5 + (offset % 8)).toFixed(1), 'm'),
+          runtimeMetric('ground_height', '距地/起飞高度', 36 + (offset % 7), 'm'),
+          runtimeMetric('track_angle', '航迹角', (181 + (offset % 30)) % 360, '°'),
+          runtimeMetric('ground_speed', '地速', 8 + (offset % 6), 'm/s'),
+          runtimeMetric('operator_position', '操作员经纬度', '120.123456, 30.234543'),
+          runtimeMetric('openbox_alarm', '开箱告警', '正常'),
+          runtimeMetric('power_alarm', '断电告警', '正常'),
           runtimeMetric(
             'network',
-            '公网链路',
+            'TCP/MQTT 链路',
             onlineStatus === '异常' ? '抖动' : '正常',
             undefined,
             connectionLevel

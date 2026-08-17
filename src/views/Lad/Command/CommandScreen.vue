@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import DataScreenDeviceDetailModal from './DataScreenDeviceDetailModal.vue'
 import { bindDataScreenNavBridge } from './dataScreenNavBridge'
 import { bindDataScreenTargetValidUntil } from './dataScreenTargetValidUntilBridge'
 
@@ -20,6 +21,8 @@ const containerRef = ref<HTMLElement>()
 const iframeRef = ref<HTMLIFrameElement>()
 const frameLoaded = ref(false)
 const stageScale = ref(1)
+const confirmedDeviceDetailVisible = ref(false)
+const confirmedDeviceModel = ref('')
 
 let bindRetryTimer: number | undefined
 let resizeObserver: ResizeObserver | undefined
@@ -68,6 +71,32 @@ function normalizePrototypeSurface() {
   doc.body.style.margin = '0'
 }
 
+function bindConfirmedDeviceDetailBridge(doc: Document): Cleanup {
+  const modelByMoreButtonId: Record<string, 'RDS200' | 'FG310F' | 'DY506F'> = {
+    u331: 'RDS200',
+    u337: 'FG310F',
+    u343: 'DY506F'
+  }
+  const cleanups: Cleanup[] = []
+
+  Object.entries(modelByMoreButtonId).forEach(([elementId, model]) => {
+    const element = doc.getElementById(elementId)
+    if (!element) return
+
+    const openDetail = (event: Event) => {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      confirmedDeviceModel.value = model
+      confirmedDeviceDetailVisible.value = true
+    }
+
+    element.addEventListener('click', openDetail, true)
+    cleanups.push(() => element.removeEventListener('click', openDetail, true))
+  })
+
+  return () => cleanups.forEach((cleanup) => cleanup())
+}
+
 function bindPrototypeInteractions() {
   cleanupPrototypeBindings?.()
   cleanupPrototypeBindings = undefined
@@ -78,7 +107,8 @@ function bindPrototypeInteractions() {
   // 设备详情与配置由最新 Axure 导出原型自身处理；这里只桥接离开大屏的应用路由。
   const cleanups: Cleanup[] = [
     bindDataScreenNavBridge(doc, router),
-    bindDataScreenTargetValidUntil(doc)
+    bindDataScreenTargetValidUntil(doc),
+    bindConfirmedDeviceDetailBridge(doc)
   ]
 
   cleanupPrototypeBindings = () => {
@@ -151,6 +181,11 @@ onBeforeUnmount(() => {
       <span class="lad-data-screen__loading-ring"></span>
       <p>数据大屏加载中...</p>
     </div>
+
+    <DataScreenDeviceDetailModal
+      v-model="confirmedDeviceDetailVisible"
+      :device-model="confirmedDeviceModel"
+    />
   </section>
 </template>
 

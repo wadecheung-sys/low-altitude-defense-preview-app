@@ -8,6 +8,7 @@ import {
   type DeviceCatalogTier,
   type DeviceConfigurableItemTemplate
 } from '@/constants/deviceCatalog'
+import { getConfirmedDeviceProtocol } from '@/constants/deviceProtocols'
 
 export type DataScreenDetailTab = 'monitor' | 'console' | 'logic'
 
@@ -34,6 +35,7 @@ export interface DataScreenDeviceView {
   runStatus: string
   healthStatus: string
   overviewMetrics: DataScreenMetricItem[]
+  protocolMetrics: DataScreenMetricItem[]
   liveMetrics: DataScreenMetricItem[]
   specifications: DataScreenMetricItem[]
   deviceConfigItems: Array<DeviceConfigurableItemTemplate & { currentValue: string }>
@@ -92,20 +94,24 @@ function mockLiveMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
     case 'FG310F':
       return [
         { label: '锁定目标', value: 'T-0726-01', emphasis: true },
-        { label: '转台方位角', value: '184.75', unit: '°', emphasis: true },
-        { label: '转台俯仰角', value: '12.35', unit: '°', emphasis: true },
-        { label: '当前压制频段', value: '2400-2485', unit: 'MHz' },
-        { label: '联动模式', value: '自动' },
-        { label: '压制状态', value: '待机' },
+        { label: '转台水平角', value: '184.75', unit: '°', emphasis: true },
+        { label: '转台垂直角', value: '12.35', unit: '°', emphasis: true },
+        { label: '频段索引', value: '2 · 2400-2485', unit: 'MHz' },
+        { label: '频段功率', value: '9.0', unit: 'dBm' },
+        { label: '功放温度', value: '31', unit: '℃' },
+        { label: '最近报文', value: '0x2003 角度上报' },
         ...common
       ]
     case 'DY506F':
       return [
-        { label: '锁定目标', value: 'T-0726-01', emphasis: true },
-        { label: '诱骗模式', value: '驱离' },
-        { label: '发射功率档位', value: '中' },
-        { label: '发射状态', value: '关闭' },
-        { label: '有效防御距离', value: '820', unit: 'm' },
+        { label: '系统工作状态', value: '工作中 · 整点授时', emphasis: true },
+        { label: '晶振状态', value: '锁定' },
+        { label: '授时同步', value: '正常 · 18 ns' },
+        { label: '四系统发射', value: 'GPS/BDS/GLO 开 · GAL 关' },
+        { label: '转发卫星', value: 'GPS 9 / BDS 8 / GLO 6 / GAL 4' },
+        { label: '模拟位置', value: '120.089436, 30.341896 · 36 m' },
+        { label: '环境温度', value: '37.2', unit: '℃' },
+        { label: '最近报文', value: '0x1010 设备信息上报' },
         ...common
       ]
     case 'PL671F':
@@ -118,11 +124,14 @@ function mockLiveMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
       ]
     case 'RDS200':
       return [
-        { label: 'RID 目标数', value: '4', unit: '架', emphasis: true },
-        { label: '转台方位角', value: '184.75', unit: '°' },
-        { label: '转台俯仰角', value: '12.35', unit: '°' },
-        { label: '最近 Remote-ID', value: '1581F45TB23A0023' },
-        { label: '刷新策略', value: '实时' },
+        { label: '最新 UAS ID', value: '1581F6N8C237C0031Q5N', emphasis: true },
+        { label: '承载协议', value: 'WiFi 2.4G' },
+        { label: '接收信号', value: '-35', unit: 'dBm' },
+        { label: '无人机位置', value: '120.356876, 30.234543' },
+        { label: '气压/距地高度', value: '68.5 / 36', unit: 'm' },
+        { label: '航迹角/地速', value: '181° / 10 m/s' },
+        { label: '设备告警', value: '开箱正常 · 供电正常' },
+        { label: '最近报文', value: '0x1102 无人机信息' },
         ...common
       ]
     case 'RADAR-081':
@@ -175,6 +184,22 @@ function mockLiveMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
     default:
       return [{ label: '设备类型', value: deviceType }, ...common]
   }
+}
+
+function buildProtocolMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
+  const protocol = getConfirmedDeviceProtocol(entry.model)
+  if (!protocol) return []
+  return [
+    { label: '传输方式', value: protocol.transport },
+    { label: '连接角色', value: protocol.connectionRole },
+    { label: '报文封装', value: protocol.framing },
+    { label: '对接端点', value: protocol.endpoint },
+    {
+      label: '已映射消息',
+      value: protocol.messages.map((message) => `${message.code} ${message.label}`).join(' / ')
+    },
+    { label: '协议依据', value: protocol.sourceDocument }
+  ]
 }
 
 function resolveRunStatus(entry: DeviceCatalogEntry): string {
@@ -269,6 +294,7 @@ export function buildDataScreenDeviceView(model: string): DataScreenDeviceView |
     runStatus: mockOverviewMetrics(entry)[1]?.value ?? '监视中',
     healthStatus: '正常',
     overviewMetrics: mockOverviewMetrics(entry),
+    protocolMetrics: buildProtocolMetrics(entry),
     liveMetrics: mockLiveMetrics(entry),
     specifications: entry.specifications.map((item) => ({
       label: item.item,

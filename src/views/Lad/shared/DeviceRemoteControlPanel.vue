@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { postDeviceCommandApi } from '@/api/lad/device-control'
 import { BaseButton } from '@/components/Button'
-import { ElAlert, ElMessage, ElSwitch } from 'element-plus'
+import { getConfirmedDeviceProtocol } from '@/constants/deviceProtocols'
+import { ElAlert, ElMessage, ElTag } from 'element-plus'
 import { computed, ref } from 'vue'
 
 export interface DeviceOperationAction {
@@ -9,6 +10,9 @@ export interface DeviceOperationAction {
   label: string
   type?: 'primary' | 'danger' | 'default'
   disabled?: boolean
+  protocolCode?: string
+  payload?: Record<string, unknown>
+  localOnly?: boolean
 }
 
 const props = withDefaults(
@@ -32,22 +36,21 @@ const props = withDefaults(
   }
 )
 
-const autoMode = ref(true)
-const powered = ref(true)
 const pendingActionKey = ref('')
 
+const protocolProfile = computed(() => getConfirmedDeviceProtocol(props.deviceModel))
+
 const panelMode = computed<
-  'counter' | 'detect' | 'radar' | 'eo' | 'strike' | 'hpm' | 'sound_light' | 'readonly'
+  'counter' | 'detect' | 'rid' | 'radar' | 'eo' | 'strike' | 'hpm' | 'sound_light' | 'readonly'
 >(() => {
   const model = props.deviceModel
   if (model === 'FG310F' || props.deviceType === '无线电干扰') return 'counter'
   if (model === 'DY506F' || props.deviceType === '导航诱骗') return 'counter'
+  if (model === 'RDS200' || props.deviceType === 'Remote-ID 监视') return 'rid'
   if (
     model === 'PL671F' ||
-    model === 'RDS200' ||
     model === 'EXD55-LS' ||
     props.deviceType === '无线电侦测' ||
-    props.deviceType === 'Remote-ID 监视' ||
     props.deviceType === 'ADS-B 监视'
   ) {
     return 'detect'
@@ -103,22 +106,127 @@ const actions = computed<DeviceOperationAction[]>(() => {
       { key: 'report', label: '上报平台同步' }
     ]
   }
+  if (panelMode.value === 'rid') {
+    return [{ key: 'local_refresh', label: '刷新监测数据', localOnly: true }]
+  }
   if (props.deviceModel === 'DY506F') {
     return [
-      { key: 'emit_on', label: '发射开启', type: 'primary' },
-      { key: 'emit_off', label: '发射关闭' },
-      { key: 'forced_land', label: '迫降', type: 'danger' },
-      { key: 'no_fly', label: '禁飞', type: 'danger' },
-      { key: 'expel', label: '驱离' },
-      { key: 'sim_pos', label: '模拟位置' }
+      {
+        key: 'spoof_position',
+        label: '诱骗位置设置',
+        type: 'primary',
+        protocolCode: '0x2001',
+        payload: { msgType: 0x2001, dbLon: 120.089436, dbLat: 30.341896, dbAlt: 36 }
+      },
+      {
+        key: 'constellation_on',
+        label: '四系统发射',
+        protocolCode: '0x2003',
+        payload: {
+          msgType: 0x2003,
+          iSwitchGPS: 1,
+          iSwitchBDS: 1,
+          iSwitchGLO: 1,
+          iSwitchGAL: 1
+        }
+      },
+      {
+        key: 'constellation_off',
+        label: '全部停止',
+        protocolCode: '0x2003',
+        payload: {
+          msgType: 0x2003,
+          iSwitchGPS: 0,
+          iSwitchBDS: 0,
+          iSwitchGLO: 0,
+          iSwitchGAL: 0
+        }
+      },
+      {
+        key: 'expel',
+        label: '驱离发射',
+        protocolCode: '0x2102',
+        payload: { msgType: 0x2102 }
+      },
+      {
+        key: 'no_fly_land',
+        label: '禁飞/降落',
+        type: 'danger',
+        protocolCode: '0x2106',
+        payload: { msgType: 0x2106 }
+      },
+      {
+        key: 'navigation_defense',
+        label: '导航防御',
+        protocolCode: '0x2108',
+        payload: { msgType: 0x2108 }
+      },
+      {
+        key: 'initial_speed',
+        label: '模拟初速度',
+        protocolCode: '0x200E',
+        payload: { msgType: 0x200e, fInitSpeedVal: 10, fInitSpeedHead: 180 }
+      },
+      {
+        key: 'circle_motion',
+        label: '模拟圆周运动',
+        protocolCode: '0x2012',
+        payload: { msgType: 0x2012, fCirRadius: 100, fCirCycle: 200, iCirRotDir: 0 }
+      }
     ]
   }
   if (props.deviceModel === 'FG310F') {
     return [
-      { key: 'link_track', label: '联动跟踪压制', type: 'primary' },
-      { key: 'band_jam', label: '指定频段压制' },
-      { key: 'release', label: '解除压制' },
-      { key: 'reset', label: '转台复位' }
+      {
+        key: 'turn_left',
+        label: '转台左转',
+        protocolCode: '0x2001',
+        payload: { msgType: 0x2001, type: 0 }
+      },
+      {
+        key: 'turn_right',
+        label: '转台右转',
+        protocolCode: '0x2001',
+        payload: { msgType: 0x2001, type: 1 }
+      },
+      {
+        key: 'turn_stop',
+        label: '转台停止',
+        protocolCode: '0x2001',
+        payload: { msgType: 0x2001, type: 4 }
+      },
+      {
+        key: 'turn_angle',
+        label: '指定水平角',
+        protocolCode: '0x2004',
+        payload: { msgType: 0x2004, type: 0, angle: 18475 }
+      },
+      {
+        key: 'band_on',
+        label: '频段 2 开启',
+        type: 'primary',
+        protocolCode: '0x3001',
+        payload: { msgType: 0x3001, type: 1, freq: 2 }
+      },
+      {
+        key: 'band_off',
+        label: '频段 2 关闭',
+        protocolCode: '0x3001',
+        payload: { msgType: 0x3001, type: 0, freq: 2 }
+      },
+      {
+        key: 'all_band_off',
+        label: '全部频段关闭',
+        type: 'danger',
+        protocolCode: '0x3002',
+        payload: { msgType: 0x3002, type: 0 }
+      },
+      {
+        key: 'query_bands',
+        label: '查询频段状态',
+        protocolCode: '0x3003',
+        payload: { msgType: 0x3003 }
+      }
     ]
   }
   return [{ key: 'status', label: '查询设备状态' }]
@@ -132,9 +240,12 @@ const panelHint = computed(() => {
   if (panelMode.value === 'hpm') return '高功率微波设备需确认伺服状态与工作模式后再执行发射准备。'
   if (panelMode.value === 'sound_light') return '声光警示用于近距驱离，请确认警戒区域内无无关人员。'
   if (panelMode.value === 'detect') return '探测类设备以监视为主，指令经供应商平台上报链路转发。'
-  if (props.deviceModel === 'DY506F') return '导航诱骗：迫降 / 禁飞 / 驱离对应 DY506F 上位机能力。'
+  if (panelMode.value === 'rid')
+    return 'RID 协议的 0x1100/0x1102 均由设备主动上报且平台无需应答；操作台仅刷新本地显示。'
+  if (props.deviceModel === 'DY506F')
+    return '506 设备使用 TCP 六字节帧头与 JSON 帧体；控制项已按 0x2001/0x2003/0x200E/0x2012 及固定式发射命令映射。'
   if (props.deviceModel === 'FG310F')
-    return '无线电压制：压制效果可能触发目标自动返航；转台方位/俯仰请在指挥大屏实时控制。'
+    return '310 设备使用 HTTP POST/PUT JSON；转台角度按真实角度 100 倍下发，频段先由 0x3003 查询并按数组下标控制。'
   return '指令经平台上报链路转发。'
 })
 
@@ -176,19 +287,11 @@ async function dispatchCommand(
 
 function onAction(action: DeviceOperationAction) {
   if (action.disabled || !props.online || pendingActionKey.value) return
-  if (action.key === 'emit_on') powered.value = true
-  if (action.key === 'emit_off') powered.value = false
-  void dispatchCommand(action.key, action.label)
-}
-
-function onAutoModeChange(enabled: boolean) {
-  void dispatchCommand(
-    enabled ? 'auto_mode_on' : 'auto_mode_off',
-    enabled ? '切换自动联动' : '切换手动控制',
-    {
-      autoMode: enabled
-    }
-  )
+  if (action.localOnly) {
+    ElMessage.success('监测数据已刷新；RID 上报消息无需平台应答')
+    return
+  }
+  void dispatchCommand(action.key, action.label, action.payload)
 }
 </script>
 
@@ -208,16 +311,18 @@ function onAutoModeChange(enabled: boolean) {
     <ElAlert :closable="false" type="info" show-icon class="device-remote-panel__hint">
       {{ panelHint }}
     </ElAlert>
-    <div v-if="panelMode === 'counter'" class="device-remote-panel__mode">
-      <span>联动模式</span>
-      <ElSwitch
-        v-model="autoMode"
-        inline-prompt
-        active-text="自动"
-        inactive-text="手动"
-        :disabled="!!pendingActionKey || !online"
-        @change="onAutoModeChange"
-      />
+    <div v-if="protocolProfile" class="device-remote-panel__protocol">
+      <p>{{ protocolProfile.transport }} · {{ protocolProfile.connectionRole }}</p>
+      <div class="device-remote-panel__protocol-tags">
+        <ElTag
+          v-for="message in protocolProfile.messages"
+          :key="message.code"
+          size="small"
+          effect="plain"
+        >
+          {{ message.code }} {{ message.label }}
+        </ElTag>
+      </div>
     </div>
     <div class="device-remote-panel__actions">
       <BaseButton
@@ -227,14 +332,14 @@ function onAutoModeChange(enabled: boolean) {
         size="small"
         :loading="pendingActionKey === action.key"
         :disabled="
-          action.disabled ||
-          !online ||
-          (!!pendingActionKey && pendingActionKey !== action.key) ||
-          (panelMode === 'counter' && !powered && action.key !== 'emit_on')
+          action.disabled || !online || (!!pendingActionKey && pendingActionKey !== action.key)
         "
         @click="onAction(action)"
       >
         {{ action.label }}
+        <small v-if="action.protocolCode" class="device-remote-panel__action-code">
+          {{ action.protocolCode }}
+        </small>
       </BaseButton>
     </div>
   </div>
@@ -283,12 +388,20 @@ function onAutoModeChange(enabled: boolean) {
   margin-bottom: 10px;
 }
 
-.device-remote-panel__mode {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.device-remote-panel__protocol {
   margin-bottom: 10px;
   font-size: 13px;
+
+  p {
+    margin: 0 0 8px;
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.device-remote-panel__protocol-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .device-remote-panel__actions {
@@ -299,5 +412,10 @@ function onAutoModeChange(enabled: boolean) {
 
 .device-remote-panel.is-compact .device-remote-panel__actions {
   gap: 6px;
+}
+
+.device-remote-panel__action-code {
+  margin-left: 4px;
+  opacity: 0.72;
 }
 </style>

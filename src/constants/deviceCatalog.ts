@@ -91,27 +91,34 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     vendor: '凡双科技',
     deviceType: '无线电干扰',
     tier: 'confirmed',
-    docFile: '使用说明书_固定式转台无线电压制设备FG310F.pdf',
+    docFile: '固定式转台定向压制协议（310）.docx',
     groupMasterEligible: true,
     archiveName: '核心区转台无线电压制设备档案',
     archiveNo: 'D-LAD-JAM0001',
     specifications: [
-      ind(
-        '工作频段',
-        'MHz',
-        '400-450 / 840-928 / 1160-1250 / 1350-1470 / 1550-1620 / 2400-2485 / 5140-5945'
-      ),
+      ind('工作频段', 'MHz', '400-450 / 840-960 / 1550-1650 / 2400-2485 / 5145-5250 / 5725-5850'),
       ind('水平转角范围', '°', '0~360'),
       ind('俯仰角范围', '°', '-10~+60'),
       ind('有效拦截距离', 'km', '≥3'),
       ind('设备功率', 'W', '≤600'),
-      ind('拦截响应时间', 's', '≤5')
+      ind('拦截响应时间', 's', '≤5'),
+      ind('接口协议', '', 'HTTP POST/PUT + JSON'),
+      ind('设备服务端', '', '192.168.8.50:19876（默认）'),
+      ind('状态/控制消息', '', '0x1001 / 0x2001~0x2006 / 0x3001~0x3003')
     ],
     configurableItems: [
-      cfg('jam_default_band', '默认压制频段', 'MHz', 'device', '选自工作频段子集', '2400-2485'),
+      cfg(
+        'jam_default_band',
+        '默认压制频段',
+        'MHz',
+        'device',
+        '400-450 / 840-960 / 1550-1650 / 2400-2485 / 5145-5250 / 5725-5850',
+        '2400-2485'
+      ),
       cfg('link_track_mode', '联动跟踪模式', '', 'device', '自动 / 手动', '自动'),
-      cfg('turntable_azimuth', '转台方位角', '°', 'runtime', '0~360，指挥大屏实时控制'),
-      cfg('turntable_elevation', '转台俯仰角', '°', 'runtime', '-10~+60，指挥大屏实时控制')
+      cfg('turntable_azimuth', '转台水平角', '°', 'runtime', '0~360，0x2004 按 100 倍整数下发'),
+      cfg('turntable_elevation', '转台垂直角', '°', 'runtime', '0~360，向下递增，0x2004 下发'),
+      cfg('jam_band_index', '干扰频段索引', '', 'runtime', '通过 0x3003 查询后按数组下标控制', '2')
     ],
     demo: {
       deviceId: 'DEV-FG310-01',
@@ -129,20 +136,33 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     vendor: '凡双科技',
     deviceType: '导航诱骗',
     tier: 'confirmed',
-    docFile: '使用说明书_固定式反无人机无线电主动防御设备DY506F.pdf',
+    docFile: '导航诱骗对接协议&固定式 对外协议-固定式防爆506.docx',
     groupMasterEligible: true,
     archiveName: '西区导航主动防御设备档案',
     archiveNo: 'D-LAD-SPF0001',
     specifications: [
-      ind('工作频率', 'MHz', 'GPS L1 / GLONASS L1 / Galileo E1'),
+      ind('卫星系统', '', 'GPS / BDS / GLONASS / Galileo'),
       ind('主动防御距离', 'm', '500-1000'),
       ind('诱骗起效时间', 's', '≤10'),
       ind('设备功耗', 'W', '≤16'),
-      ind('防护等级', '', 'IP66')
+      ind('防护等级', '', 'IP66'),
+      ind('接口协议', '', 'TCP + 6 字节帧头 + JSON'),
+      ind('状态上报', '', '0x1010（59 项实时状态，UTC 毫秒时间）'),
+      ind('核心控制', '', '0x2001 / 0x2003 / 0x200E / 0x2012 / 0x2102~0x2108')
     ],
     configurableItems: [
-      cfg('spoof_default_mode', '默认证诱骗模式', '', 'device', '禁飞 / 驱离 / 迫降', '驱离'),
-      cfg('emit_power_level', '发射功率档位', '', 'device', '低 / 中 / 高', '中')
+      cfg('spoof_default_mode', '默认诱骗模式', '', 'device', '禁飞 / 驱离 / 导航防御', '驱离'),
+      cfg(
+        'gnss_constellations',
+        '发射卫星系统',
+        '',
+        'device',
+        'GPS / BDS / GLONASS / Galileo',
+        'GPS+BDS+GLONASS'
+      ),
+      cfg('sim_position', '模拟位置', '经纬高', 'runtime', '0x2001：经度 / 纬度 / 高度'),
+      cfg('sim_speed', '模拟初速度', 'm/s', 'runtime', '0x200E：最大 50，测试建议 10', '10'),
+      cfg('sim_heading', '模拟运动方向', '°', 'runtime', '驱离动作设置目标反方向', '180')
     ],
     demo: {
       deviceId: 'DEV-DY506-01',
@@ -191,7 +211,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
     vendor: '凡双科技',
     deviceType: 'Remote-ID 监视',
     tier: 'confirmed',
-    docFile: '使用说明书_远程识别监视设备RDS200.pdf',
+    docFile: 'RID对接协议2026.docx',
     groupMasterEligible: false,
     archiveName: 'Remote-ID 监视站档案',
     archiveNo: 'D-LAD-RID0001',
@@ -200,7 +220,11 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
       ind('探测半径', 'km', '1.5-3'),
       ind('多目标监测', '架', '≥50'),
       ind('刷新时间', 's', '≤1'),
-      ind('侦测模式', '', 'RID 广播报文解析')
+      ind('侦测模式', '', 'WiFi 2.4G/5.8G、Bluetooth 4/5 RID 广播解析'),
+      ind('接口协议', '', 'TCP（RJ45/4G）或 MQTT'),
+      ind('报文结构', '', '0x55 0x55 0xAA 0xAA + 小端 TLV + ASCII JSON'),
+      ind('上报消息', '', '0x1100 心跳 / 0x1102 无人机信息'),
+      ind('设备告警', '', '开箱告警 / 断电告警')
     ],
     configurableItems: [cfg('refresh_policy', '监测刷新策略', '', 'device', '实时 / 节能', '实时')],
     demo: {
