@@ -24,7 +24,7 @@ const VENDOR_BY_TYPE: Record<string, string> = {
   导航诱骗: '凡双科技',
   激光打击: '锐光防务',
   高功率微波: '磐石电子',
-  光电跟踪: '视界光电'
+  光电跟踪: '光电设备厂商（资料未标注）'
 }
 
 const MODEL_BY_TYPE: Record<string, string> = {
@@ -36,7 +36,7 @@ const MODEL_BY_TYPE: Record<string, string> = {
   导航诱骗: 'DY506F',
   激光打击: 'TBD-LSR',
   高功率微波: 'TBD-HPM',
-  光电跟踪: 'TBD-EO'
+  光电跟踪: 'EO-V2.8'
 }
 
 function hashSeed(id: string): number {
@@ -271,6 +271,34 @@ function buildRuntimeMetrics(
           ),
           runtimeMetric('sim_height', '模拟高度', 36 + (offset % 5), 'm'),
           runtimeMetric('environment', '环境温度', (36.5 + (offset % 8) / 10).toFixed(1), '℃')
+        ]
+      }
+    }
+    case 'EO-V2.8': {
+      const azimuth = ((126.4 + tick * 0.08) % 360).toFixed(2)
+      const elevation = (8.2 + Math.sin(tick / 4) * 0.18).toFixed(2)
+      const channel = offset % 6 < 4 ? '可见光' : '热成像'
+      const targetId = `EO-${String((seed % 90) + 10).padStart(4, '0')}`
+      return {
+        workStatus: '跟踪中',
+        workMode: `${channel}自动跟踪`,
+        metrics: [
+          commonConnection,
+          runtimeMetric('work_status', '工作状态', '跟踪中', undefined, 'running'),
+          runtimeMetric('last_report', '最近上报', '0x0F 脱靶量 / 0x18 目标扩展'),
+          runtimeMetric('target_id', '跟踪目标', targetId),
+          runtimeMetric('tracking_channel', '跟踪视频源', channel),
+          runtimeMetric('azimuth', '转台方位角', azimuth, '°'),
+          runtimeMetric('elevation', '转台俯仰角', elevation, '°'),
+          runtimeMetric('target_distance', '目标距离', 612 + (offset % 17), 'm'),
+          runtimeMetric('target_height', '目标高度', 82 + (offset % 9), 'm'),
+          runtimeMetric('off_target_x', '水平脱靶量', (offset % 9) - 4, 'px'),
+          runtimeMetric('off_target_y', '俯仰脱靶量', (offset % 7) - 3, 'px'),
+          runtimeMetric('visible_focal', '可见光物理焦距', 150, 'mm'),
+          runtimeMetric('thermal_focal', '热成像物理焦距', 75, 'mm'),
+          runtimeMetric('focus_mode', '聚焦模式', 'AF'),
+          runtimeMetric('rangefinder', '激光测距器', '正常'),
+          runtimeMetric('report_interval', '目标上报周期', 100, 'ms')
         ]
       }
     }

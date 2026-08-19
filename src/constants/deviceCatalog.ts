@@ -6,7 +6,7 @@
  */
 import type { DeviceArchiveIndicator, DeviceConfigItemScope } from '@/api/lad/device/types'
 
-export const DEVICE_CATALOG_VERSION = 'v2-selection'
+export const DEVICE_CATALOG_VERSION = 'v3-optical-confirmed'
 
 export const DEVICE_DOCS_ROOT = '../device-docs'
 
@@ -302,42 +302,63 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
       controlRangeM: 250000,
       deviceIcon: 'radar'
     }
+  },
+  {
+    model: 'EO-V2.8',
+    vendor: '光电设备厂商（资料未标注）',
+    deviceType: '光电跟踪',
+    tier: 'confirmed',
+    groupMasterEligible: true,
+    archiveName: '双光谱光电跟踪设备档案',
+    archiveNo: 'D-LAD-EO0001',
+    specifications: [
+      ind('指控协议', '', '光电指控协议 V2.8（协议号 9002）'),
+      ind('通信方式', '', 'UDP / TCP，可配置'),
+      ind('数据格式', '', '36+N Byte，小端序'),
+      ind('视频通道', '', '可见光 / 热成像'),
+      ind('工作模式', '', '空闲 / 搜索 / 跟踪'),
+      ind('核心回传', '', '状态、方位俯仰、目标、镜头、脱靶量'),
+      ind('SDK', '', 'Windows x86/x64、Linux，ControlClient 3.8.0.0'),
+      ind('厂商及商品型号', '', '待依据设备铭牌或产品规格书补录')
+    ],
+    configurableItems: [
+      cfg('eo_transport', '指控通信方式', '', 'device', 'UDP / TCP', 'UDP'),
+      cfg('track_mode', '工作模式', '', 'device', '空闲 / 搜索 / 跟踪', '跟踪'),
+      cfg('tracking_channel', '跟踪视频源', '', 'device', '可见光 / 热成像', '可见光'),
+      cfg('visible_focus_mode', '可见光聚焦模式', '', 'device', 'AF / ZF / MF', 'AF'),
+      cfg('thermal_focus_mode', '热成像聚焦模式', '', 'device', 'AF / ZF / MF', 'AF'),
+      cfg('auto_zoom', '跟踪自动变倍', '', 'device', '开 / 关', '开'),
+      cfg('auto_zoom_in_threshold', '自动变倍放大阈值', 'px', 'device', '1~4096', '40'),
+      cfg('auto_zoom_out_threshold', '自动变倍缩小阈值', 'px', 'device', '1~4096', '100'),
+      cfg(
+        'ai_template',
+        'AI 识别模板',
+        '',
+        'device',
+        '对天 3 分类 / 对地 80 分类 / 20 分类',
+        '对天 3 分类'
+      ),
+      cfg('eo_azimuth', '转台方位角', '°', 'runtime', '由 0x02 回传，0x03/0x0D 控制'),
+      cfg('eo_elevation', '转台俯仰角', '°', 'runtime', '由 0x02 回传，0x03/0x0D 控制'),
+      cfg('eo_search_mode', '搜索跟踪指令', '', 'runtime', '0x04：搜索跟踪 / 指定目标 / 释放'),
+      cfg('eo_lens_control', '镜头控制', '', 'runtime', '0x09：焦距 / 倍数 / Zoom / Focus'),
+      cfg('eo_rangefinder', '激光测距器', '', 'runtime', '0x11：开启 / 关闭')
+    ],
+    demo: {
+      deviceId: 'DEV-EO-01',
+      deviceName: '核心区双光谱光电跟踪设备',
+      deployLocation: '核心区制高点',
+      ipAddress: '192.168.2.15',
+      serialNo: 'EO-V28-DEMO-001',
+      personInCharge: '王工',
+      controlRangeM: 600,
+      deviceIcon: 'eo'
+    }
   }
 ]
 
 /** 扩展选型设备（设备组与演示保留） */
 export const PENDING_DEVICES: DeviceCatalogEntry[] = [
-  {
-    model: 'TBD-EO',
-    vendor: '视界光电',
-    deviceType: '光电跟踪',
-    tier: 'pending',
-    groupMasterEligible: true,
-    archiveName: '光电跟踪转台档案',
-    archiveNo: 'D-LAD-EO0001',
-    specifications: [
-      ind('可见光焦距', 'mm', '15-750'),
-      ind('热成像', '', '640×512'),
-      ind('水平转角范围', '°', '0~360'),
-      ind('俯仰角范围', '°', '-45~+45'),
-      ind('备注', '', '南门岗哨主跟踪')
-    ],
-    configurableItems: [
-      cfg('track_mode', '跟踪模式', '', 'device', '自动 / 手动', '自动'),
-      cfg('eo_azimuth', '转台方位角', '°', 'runtime', '指挥大屏实时控制'),
-      cfg('eo_elevation', '转台俯仰角', '°', 'runtime', '指挥大屏实时控制')
-    ],
-    demo: {
-      deviceId: 'DEV-EO-01',
-      deviceName: '1#光电-GD',
-      deployLocation: '南门岗哨',
-      ipAddress: '192.168.2.15',
-      serialNo: 'GD-EO-2025-001',
-      personInCharge: '王工',
-      controlRangeM: 600,
-      deviceIcon: 'eo'
-    }
-  },
   {
     model: 'TBD-LSR',
     vendor: '锐光防务',

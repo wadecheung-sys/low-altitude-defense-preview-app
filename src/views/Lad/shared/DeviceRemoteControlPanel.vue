@@ -56,7 +56,7 @@ const panelMode = computed<
     return 'detect'
   }
   if (model === 'RADAR-081' || props.deviceType === '雷达') return 'radar'
-  if (model === 'TBD-EO' || props.deviceType === '光电跟踪') return 'eo'
+  if (model === 'EO-V2.8' || props.deviceType === '光电跟踪') return 'eo'
   if (model === 'TBD-LSR' || props.deviceType === '激光打击') return 'strike'
   if (model === 'TBD-HPM' || props.deviceType === '高功率微波') return 'hpm'
   if (model === 'TBD-SLA' || props.deviceType === '声光驱离') return 'sound_light'
@@ -75,9 +75,67 @@ const actions = computed<DeviceOperationAction[]>(() => {
   }
   if (panelMode.value === 'eo') {
     return [
-      { key: 'track_auto', label: '自动跟踪', type: 'primary' },
-      { key: 'track_manual', label: '手动跟踪' },
-      { key: 'reset_turret', label: '转台复位' }
+      {
+        key: 'eo_search_track',
+        label: '搜索并自动跟踪',
+        type: 'primary',
+        protocolCode: '0x04',
+        payload: { commandCode: 0x04, controlCommand: 1, searchMode: 0 }
+      },
+      {
+        key: 'eo_search_only',
+        label: '仅搜索',
+        protocolCode: '0x04',
+        payload: { commandCode: 0x04, controlCommand: 4, searchMode: 0 }
+      },
+      {
+        key: 'eo_release',
+        label: '释放目标',
+        protocolCode: '0x04',
+        payload: { commandCode: 0x04, controlCommand: 3 }
+      },
+      {
+        key: 'eo_visible',
+        label: '切换可见光跟踪',
+        protocolCode: '0x0E',
+        payload: { commandCode: 0x0e, trackingChannel: 0 }
+      },
+      {
+        key: 'eo_thermal',
+        label: '切换热成像跟踪',
+        protocolCode: '0x0E',
+        payload: { commandCode: 0x0e, trackingChannel: 1 }
+      },
+      {
+        key: 'eo_zoom_in',
+        label: '镜头拉近',
+        protocolCode: '0x09',
+        payload: { commandCode: 0x09, lensCommand: 0x05, speed: 96, channel: 0 }
+      },
+      {
+        key: 'eo_zoom_out',
+        label: '镜头推远',
+        protocolCode: '0x09',
+        payload: { commandCode: 0x09, lensCommand: 0x04, speed: 96, channel: 0 }
+      },
+      {
+        key: 'eo_lens_stop',
+        label: '镜头停止',
+        protocolCode: '0x09',
+        payload: { commandCode: 0x09, lensCommand: 0x00, channel: 0 }
+      },
+      {
+        key: 'eo_range_on',
+        label: '开启激光测距',
+        protocolCode: '0x11',
+        payload: { commandCode: 0x11, peripheralCommand: 1, controlValue: 1 }
+      },
+      {
+        key: 'eo_range_off',
+        label: '关闭激光测距',
+        protocolCode: '0x11',
+        payload: { commandCode: 0x11, peripheralCommand: 1, controlValue: 0 }
+      }
     ]
   }
   if (panelMode.value === 'strike') {
@@ -235,7 +293,8 @@ const actions = computed<DeviceOperationAction[]>(() => {
 const panelHint = computed(() => {
   if (panelMode.value === 'radar')
     return '按 0x8A 系统控制报语义下发，控制周期 100ms；搜索/跟踪及收发状态由 0x8D、0x8E 状态报回送确认。'
-  if (panelMode.value === 'eo') return '光电转台支持自动/手动跟踪切换，实时角度同步至监测数据。'
+  if (panelMode.value === 'eo')
+    return '按 V2.8 指控协议演示搜索跟踪、双光通道切换、镜头控制和测距；状态、目标、镜头及脱靶量由设备主动回传。'
   if (panelMode.value === 'strike') return '激光打击需完成安全联锁复核后方可出光，请谨慎操作。'
   if (panelMode.value === 'hpm') return '高功率微波设备需确认伺服状态与工作模式后再执行发射准备。'
   if (panelMode.value === 'sound_light') return '声光警示用于近距驱离，请确认警戒区域内无无关人员。'

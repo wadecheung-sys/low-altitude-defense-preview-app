@@ -11,7 +11,7 @@ export interface DeviceProtocolBand {
 }
 
 export interface DeviceProtocolProfile {
-  model: 'RDS200' | 'DY506F' | 'FG310F'
+  model: 'RDS200' | 'DY506F' | 'FG310F' | 'EO-V2.8'
   sourceDocument: string
   transport: string
   connectionRole: string
@@ -80,6 +80,32 @@ export const CONFIRMED_DEVICE_PROTOCOLS: Record<
       { index: 3, startMHz: 5725, endMHz: 5850 },
       { index: 4, startMHz: 5145, endMHz: 5250 },
       { index: 5, startMHz: 400, endMHz: 450 }
+    ]
+  },
+  'EO-V2.8': {
+    model: 'EO-V2.8',
+    sourceDocument: '光电指控协议V2.8.pdf / SDK_CN_2026_02_28.rar',
+    transport: 'UDP / TCP（可配置）',
+    connectionRole: '指控平台与光电设备双向通信',
+    framing: '协议号 9002；36+N Byte；小端序；固定帧头/帧尾',
+    endpoint: '设备地址及平台 IP/端口按部署配置，平台参数可由 0x19 下发',
+    messages: [
+      { code: '0x01', label: '设备状态', direction: '设备→平台' },
+      { code: '0x02', label: '方位俯仰', direction: '设备→平台' },
+      { code: '0x03/0x16', label: '目指引导', direction: '平台→设备' },
+      { code: '0x04', label: '搜索跟踪', direction: '平台→设备' },
+      { code: '0x08', label: '状态扩展', direction: '设备→平台' },
+      { code: '0x09', label: '镜头控制', direction: '平台→设备' },
+      { code: '0x0B/0x18', label: '目标上报', direction: '设备→平台' },
+      { code: '0x0C', label: '镜头状态', direction: '设备→平台' },
+      { code: '0x0D', label: '转台控制', direction: '平台→设备' },
+      { code: '0x0E', label: '跟踪通道切换', direction: '平台→设备' },
+      { code: '0x0F', label: '脱靶量', direction: '设备→平台' },
+      { code: '0x10', label: '手动锁定', direction: '平台→设备' },
+      { code: '0x11', label: '外围设备控制', direction: '平台→设备' },
+      { code: '0x13', label: '聚焦模式', direction: '平台→设备' },
+      { code: '0x15', label: '系统状态扩展', direction: '设备→平台' },
+      { code: '0x19', label: '系统参数', direction: '平台→设备' }
     ]
   }
 }

@@ -228,7 +228,7 @@ const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
     lastHeartbeat: '2026-05-20 14:28:05',
     updatedAt: '2026-05-20 14:28:05'
   }),
-  catalogSeedRow('TBD-EO', {
+  catalogSeedRow('EO-V2.8', {
     lastHeartbeat: '2026-05-20 13:55:40',
     updatedAt: '2026-05-20 13:55:40'
   }),

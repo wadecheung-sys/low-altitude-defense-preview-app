@@ -44,16 +44,16 @@ export interface DataScreenDeviceView {
 
 /** u315 各状态「查看更多」按钮 → 选型型号（数据大屏03.html） */
 export const DATA_SCREEN_VIEW_MORE_BUTTONS: Record<string, string> = {
-  u320: 'RADAR-081',
-  u325: 'TBD-EO',
-  u330: 'PL671F',
-  u335: 'RDS200',
-  u341: 'FG310F',
-  u347: 'DY506F',
-  u353: 'TBD-LSR',
-  u359: 'TBD-HPM',
-  u365: 'TBD-SLA',
-  u370: 'EXD55-LS'
+  u316: 'RADAR-081',
+  u321: 'EO-V2.8',
+  u326: 'PL671F',
+  u331: 'RDS200',
+  u337: 'FG310F',
+  u343: 'DY506F',
+  u349: 'TBD-LSR',
+  u355: 'TBD-HPM',
+  u361: 'TBD-SLA',
+  u366: 'EXD55-LS'
 }
 
 interface SummaryFieldSync {
@@ -145,12 +145,21 @@ function mockLiveMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
         { label: '最近心跳', value: '2026-07-09 23:08:12' },
         { label: '数据刷新', value: '0.1 s' }
       ]
-    case 'TBD-EO':
+    case 'EO-V2.8':
       return [
         { label: '跟踪目标', value: 'T-0726-01', emphasis: true },
+        { label: '工作模式', value: '跟踪中', emphasis: true },
+        { label: '跟踪视频源', value: '可见光' },
         { label: '转台方位角', value: '126.4', unit: '°' },
         { label: '转台俯仰角', value: '8.2', unit: '°' },
-        { label: '跟踪模式', value: '自动' },
+        { label: '目标距离', value: '612', unit: 'm' },
+        { label: '目标高度', value: '86', unit: 'm' },
+        { label: '水平/俯仰脱靶量', value: '+4 / -2', unit: 'px' },
+        { label: '可见光物理焦距', value: '150', unit: 'mm' },
+        { label: '热成像物理焦距', value: '75', unit: 'mm' },
+        { label: '聚焦模式', value: 'AF' },
+        { label: '激光测距器', value: '正常' },
+        { label: '最近报文', value: '0x0F 脱靶量 / 0x18 目标扩展' },
         ...common
       ]
     case 'TBD-LSR':
@@ -326,16 +335,16 @@ function summaryFields(
 
 /** 同步 u315 设备概要面板文案（每状态 4 个字段） */
 export const DATA_SCREEN_SUMMARY_PANELS: SummaryPanelSync[] = [
-  { model: 'RADAR-081', fields: summaryFields('u316', 'u317', 'u318', 'u319') },
-  { model: 'TBD-EO', fields: summaryFields('u321', 'u322', 'u323', 'u324') },
-  { model: 'PL671F', fields: summaryFields('u326', 'u327', 'u328', 'u329') },
-  { model: 'RDS200', fields: summaryFields('u331', 'u332', 'u333', 'u334') },
-  { model: 'FG310F', fields: summaryFields('u336', 'u337', 'u338', 'u339') },
-  { model: 'DY506F', fields: summaryFields('u342', 'u343', 'u344', 'u345') },
-  { model: 'TBD-LSR', fields: summaryFields('u348', 'u349', 'u350', 'u351') },
-  { model: 'TBD-HPM', fields: summaryFields('u354', 'u355', 'u356', 'u357') },
-  { model: 'TBD-SLA', fields: summaryFields('u360', 'u361', 'u362', 'u363') },
-  { model: 'EXD55-LS', fields: summaryFields('u366', 'u367', 'u368', 'u369') }
+  { model: 'RADAR-081', fields: summaryFields('u312', 'u313', 'u314', 'u315') },
+  { model: 'EO-V2.8', fields: summaryFields('u317', 'u318', 'u319', 'u320') },
+  { model: 'PL671F', fields: summaryFields('u322', 'u323', 'u324', 'u325') },
+  { model: 'RDS200', fields: summaryFields('u327', 'u328', 'u329', 'u330') },
+  { model: 'FG310F', fields: summaryFields('u332', 'u333', 'u334', 'u335') },
+  { model: 'DY506F', fields: summaryFields('u338', 'u339', 'u340', 'u341') },
+  { model: 'TBD-LSR', fields: summaryFields('u344', 'u345', 'u346', 'u347') },
+  { model: 'TBD-HPM', fields: summaryFields('u350', 'u351', 'u352', 'u353') },
+  { model: 'TBD-SLA', fields: summaryFields('u356', 'u357', 'u358', 'u359') },
+  { model: 'EXD55-LS', fields: summaryFields('u362', 'u363', 'u364', 'u365') }
 ]
 
 export function setPrototypeLabelText(doc: Document, elementId: string, text: string) {
