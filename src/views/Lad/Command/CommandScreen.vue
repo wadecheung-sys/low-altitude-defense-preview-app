@@ -2,7 +2,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { bindDataScreenNavBridge } from './dataScreenNavBridge'
-import { bindDataScreenTargetValidUntil } from './dataScreenTargetValidUntilBridge'
 
 defineOptions({ name: 'LadDataScreen' })
 
@@ -10,7 +9,7 @@ const PROTOTYPE_WIDTH = 1920
 const PROTOTYPE_HEIGHT = 1080
 const DISPLAY_MAX_WIDTH = 1920
 const PROTOTYPE_PAGE = encodeURIComponent('数据大屏03.html')
-const PROTOTYPE_VERSION = '20260820-prototype-update'
+const PROTOTYPE_VERSION = '20260821-prototype-update'
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/${PROTOTYPE_PAGE}?v=${PROTOTYPE_VERSION}`
 
 type Cleanup = () => void
@@ -76,10 +75,7 @@ function bindPrototypeInteractions() {
   if (!doc?.getElementById('base')) return false
 
   // 设备详情与配置由最新 Axure 导出原型自身处理；这里只桥接离开大屏的应用路由。
-  const cleanups: Cleanup[] = [
-    bindDataScreenNavBridge(doc, router),
-    bindDataScreenTargetValidUntil(doc)
-  ]
+  const cleanups: Cleanup[] = [bindDataScreenNavBridge(doc, router)]
 
   cleanupPrototypeBindings = () => {
     cleanups.forEach((cleanup) => cleanup())
