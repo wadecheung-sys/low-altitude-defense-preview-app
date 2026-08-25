@@ -7,7 +7,11 @@ import { Search } from '@/components/Search'
 import { Table } from '@/components/Table'
 import { useTable } from '@/hooks/web/useTable'
 import { CrudSchema, useCrudSchemas } from '@/hooks/web/useCrudSchemas'
-import { DEVICE_INFO_SEARCH_COL, deviceInfoTypeOptions } from './deviceInfoConstants'
+import {
+  DEVICE_INFO_FIELD_LABELS,
+  DEVICE_INFO_SEARCH_COL,
+  deviceInfoTypeOptions
+} from './deviceInfoConstants'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { reactive, ref, unref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -26,7 +30,6 @@ const setSearchParams = (params: Recordable) => {
     deviceType: params.deviceType,
     deployLocation: params.deployLocation,
     ipAddress: params.ipAddress,
-    serialNo: params.serialNo,
     personInCharge: params.personInCharge
   }
   currentPage.value = 1
@@ -114,12 +117,12 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'deviceId',
-    label: '设备ID',
+    label: DEVICE_INFO_FIELD_LABELS.deviceId,
     minWidth: 130,
     search: {
       component: 'Input',
       colProps: DEVICE_INFO_SEARCH_COL,
-      componentProps: { placeholder: '请输入设备ID', style: { width: '100%' } }
+      componentProps: { placeholder: '请输入设备编号', style: { width: '100%' } }
     },
     table: {
       showOverflowTooltip: true
@@ -127,7 +130,7 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'deviceName',
-    label: '设备名称',
+    label: DEVICE_INFO_FIELD_LABELS.deviceName,
     minWidth: 160,
     search: {
       component: 'Input',
@@ -138,14 +141,14 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'archiveInfo',
-    label: '档案指标',
+    label: DEVICE_INFO_FIELD_LABELS.archiveInfo,
     minWidth: 140,
     search: { hidden: true },
     table: { showOverflowTooltip: true }
   },
   {
     field: 'deviceType',
-    label: '设备类型',
+    label: DEVICE_INFO_FIELD_LABELS.deviceType,
     minWidth: 110,
     search: {
       component: 'Select',
@@ -161,44 +164,33 @@ const crudSchemas = reactive<CrudSchema[]>([
   },
   {
     field: 'deployLocation',
-    label: '部署位置',
+    label: DEVICE_INFO_FIELD_LABELS.deployLocation,
     minWidth: 120,
     search: {
       component: 'Input',
       colProps: DEVICE_INFO_SEARCH_COL,
-      componentProps: { placeholder: '请输入部署位置', style: { width: '100%' } }
+      componentProps: { placeholder: '请输入部署区域', style: { width: '100%' } }
     },
     table: { showOverflowTooltip: true }
   },
   {
     field: 'ipAddress',
-    label: 'IP地址',
+    label: DEVICE_INFO_FIELD_LABELS.ipAddress,
     minWidth: 130,
     search: {
       component: 'Input',
       colProps: DEVICE_INFO_SEARCH_COL,
-      componentProps: { placeholder: '请输入IP地址', style: { width: '100%' } }
+      componentProps: { placeholder: '请输入设备IP', style: { width: '100%' } }
     }
   },
   {
-    field: 'serialNo',
-    label: '识别码',
-    minWidth: 140,
-    search: {
-      component: 'Input',
-      colProps: DEVICE_INFO_SEARCH_COL,
-      componentProps: { placeholder: '请输入序列号', style: { width: '100%' } }
-    },
-    table: { showOverflowTooltip: true }
-  },
-  {
     field: 'personInCharge',
-    label: '负责人',
+    label: DEVICE_INFO_FIELD_LABELS.personInCharge,
     minWidth: 100,
     search: {
       component: 'Input',
       colProps: DEVICE_INFO_SEARCH_COL,
-      componentProps: { placeholder: '请输入负责人', style: { width: '100%' } }
+      componentProps: { placeholder: '请输入保管人', style: { width: '100%' } }
     },
     table: { showOverflowTooltip: true }
   },

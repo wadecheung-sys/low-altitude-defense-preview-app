@@ -351,27 +351,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     detail: { hidden: true }
   },
   {
-    field: 'zoneName',
-    search: { hidden: true },
-    table: { hidden: true },
-    form: { hidden: true },
-    detail: { hidden: true }
-  },
-  {
-    field: 'longitude',
-    search: { hidden: true },
-    table: { hidden: true },
-    form: { hidden: true },
-    detail: { hidden: true }
-  },
-  {
-    field: 'latitude',
-    search: { hidden: true },
-    table: { hidden: true },
-    form: { hidden: true },
-    detail: { hidden: true }
-  },
-  {
     field: 'entryMethod',
     search: { hidden: true },
     table: { hidden: true },

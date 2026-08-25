@@ -82,9 +82,6 @@ function createDefaultForm() {
     userName: '',
     ownerName: '',
     contactInfo: '',
-    zoneName: '核心防护区A区',
-    longitude: 113.4,
-    latitude: 23.1,
     entryMethod: '人工录入' as EntryMethod,
     remark: ''
   }
@@ -132,9 +129,6 @@ watch(
         userName: props.row.userName,
         ownerName: props.row.ownerName,
         contactInfo: props.row.contactInfo,
-        zoneName: props.row.zoneName,
-        longitude: props.row.longitude,
-        latitude: props.row.latitude,
         entryMethod: props.row.entryMethod,
         remark: props.row.remark
       }
@@ -179,9 +173,6 @@ const onSubmit = async () => {
       userName: form.value.userName,
       ownerName: form.value.ownerName,
       contactInfo: form.value.contactInfo,
-      zoneName: form.value.zoneName,
-      longitude: form.value.longitude,
-      latitude: form.value.latitude,
       entryMethod: form.value.entryMethod,
       remark: form.value.remark
     })

@@ -17,6 +17,7 @@ import type {
 } from '@/api/lad/device-info/types'
 import { BaseButton } from '@/components/Button'
 import { ContentDetailWrap } from '@/components/ContentDetailWrap'
+import { DEVICE_INFO_FIELD_LABELS } from './deviceInfoConstants'
 import DeviceInfoGisMap from './components/DeviceInfoGisMap.vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
@@ -558,13 +559,13 @@ watch(metricsTab, (tab) => {
           class="device-detail-form"
           :disabled="!isEditable"
         >
-          <ElFormItem label="设备编号" prop="deviceId" required>
+          <ElFormItem :label="DEVICE_INFO_FIELD_LABELS.deviceId" prop="deviceId" required>
             <ElInput v-model="form.deviceId" placeholder="请输入设备编号" clearable />
           </ElFormItem>
-          <ElFormItem label="设备" prop="deviceName" required>
+          <ElFormItem :label="DEVICE_INFO_FIELD_LABELS.deviceName" prop="deviceName" required>
             <ElInput v-model="form.deviceName" placeholder="请输入设备名称" clearable />
           </ElFormItem>
-          <ElFormItem label="基础档案" prop="archiveId" required>
+          <ElFormItem :label="DEVICE_INFO_FIELD_LABELS.archiveInfo" prop="archiveId" required>
             <ElSelect
               v-if="isEditable"
               v-model="form.archiveId"
@@ -589,7 +590,7 @@ watch(metricsTab, (tab) => {
               {{ detail?.archiveInfo || '未关联' }}
             </span>
           </ElFormItem>
-          <ElFormItem label="设备类型" prop="deviceType" required>
+          <ElFormItem :label="DEVICE_INFO_FIELD_LABELS.deviceType" prop="deviceType" required>
             <ElInput v-model="form.deviceType" placeholder="随所选档案自动确定" disabled />
           </ElFormItem>
           <ElFormItem label="厂商" required>
@@ -716,7 +717,11 @@ watch(metricsTab, (tab) => {
               </div>
 
               <div class="device-detail-map-area">
-                <ElFormItem label="部署区域" required class="device-detail-map-area__field">
+                <ElFormItem
+                  :label="DEVICE_INFO_FIELD_LABELS.deployLocation"
+                  required
+                  class="device-detail-map-area__field"
+                >
                   <ElSelect
                     v-if="isEditable"
                     v-model="form.deployAreaId"

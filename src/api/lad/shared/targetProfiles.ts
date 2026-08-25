@@ -43,3 +43,14 @@ export function findTargetProfileByTargetId(targetId: string): LadTargetProfile 
 export function findTargetProfileByUavSn(uavSn: string): LadTargetProfile | undefined {
   return LAD_TARGET_PROFILES.find((profile) => profile.uavSn === uavSn)
 }
+
+/** 演示数据中同一目标档案在名单页与历史事件页使用同一名单属性。 */
+export function defaultTargetProfileListType(
+  profile: LadTargetProfile
+): '黑名单' | '白名单' | '未知' {
+  if (!profile.hasResolvableSn) return '未知'
+  const managedIndex = LAD_RESOLVABLE_TARGET_PROFILES.findIndex(
+    (item) => item.targetId === profile.targetId
+  )
+  return managedIndex % 2 === 0 ? '黑名单' : '白名单'
+}

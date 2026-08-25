@@ -4,7 +4,7 @@ import { BIRD_NUISANCE_DEMO_EVENT_ID, resolveHistoryTargetType } from './history
 import { syncLocalBlackWhiteListType } from '@/api/lad/list/localBlackWhiteStore'
 import { resolveCountermeasureActionValue } from '@/constants/deviceCatalog'
 import { normalizeThreatLevel } from '@/api/lad/threat/threatLevelUtils'
-import { LAD_TARGET_PROFILES } from '@/api/lad/shared/targetProfiles'
+import { LAD_TARGET_PROFILES, defaultTargetProfileListType } from '@/api/lad/shared/targetProfiles'
 import { getStringSystemParam } from '@/api/lad/system/paramStore'
 import {
   LAD_DEFAULT_DATA_SOURCE,
@@ -128,9 +128,7 @@ function buildSeedList() {
 
       const rowTargetModel = isBirdNuisanceDemo ? '未知型号' : profile.targetModel
       const rowUavSn = isBirdNuisanceDemo ? '未解析' : profile.uavSn
-      const rowTargetId = isBirdNuisanceDemo
-        ? 'TG-2024-BIRD-001'
-        : `TG-2024-${String(i + 1).padStart(4, '0')}`
+      const rowTargetId = isBirdNuisanceDemo ? 'TG-2024-BIRD-001' : profile.targetId
       const historyTargetType = isBirdNuisanceDemo
         ? '躁扰信号-飞鸟'
         : resolveHistoryTargetType({
@@ -205,7 +203,7 @@ function buildSeedList() {
                 ? '进行中'
                 : '已结束',
         manualConfirmStatus,
-        listType: '未知',
+        listType: isBirdNuisanceDemo ? '未知' : defaultTargetProfileListType(profile),
         remark
       })
     }
@@ -420,7 +418,7 @@ function filterList(params: HistoryEventQuery): HistoryEventItem[] {
 export function queryLocalHistoryEventList(params: HistoryEventQuery): HistoryEventListResult {
   const pageIndex = Number(params.pageIndex) || 1
   const pageSize = Number(params.pageSize) || 10
-  const filtered = filterList(params)
+  const filtered = filterList(params).sort((a, b) => b.discoveredAt.localeCompare(a.discoveredAt))
   const start = (pageIndex - 1) * pageSize
   return {
     list: filtered

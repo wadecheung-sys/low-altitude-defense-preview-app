@@ -1,5 +1,3 @@
-import type { ThreatLevel } from '@/api/lad/incident/types'
-import { isHandlingEnded } from '@/api/lad/incident/handlingStatusUtils'
 import type {
   BlackWhiteFormPayload,
   BlackWhiteListItem,
@@ -19,14 +17,13 @@ import {
 import { matchValidUntilRange, normalizeValidUntil } from './validUntilUtils'
 import {
   LAD_RESOLVABLE_TARGET_PROFILES,
+  defaultTargetProfileListType,
   findTargetProfileByTargetId,
   findTargetProfileByUavSn
 } from '@/api/lad/shared/targetProfiles'
 
-const listTypes: ListType[] = ['黑名单', '白名单']
 const targetTypes = ['多旋翼', '固定翼', '行业级']
 const frequencies = ['2.4GHz', '5.8GHz', '2.4GHz + 5.8GHz', '915MHz']
-const zones = ['核心保护区-A区', '缓冲区-B区', '管制空域-C区', '公共区域']
 const entryMethods: EntryMethod[] = ['自动录入', '人工录入', '自动+人工校验']
 const validOptions = ['永久', '2026-12-31 23:59:59', '2025-06-30 18:00:00', '2024-12-31 08:30:00']
 const whitelistUnits = ['低空运营中心', '电力巡检中心', '应急救援航空队', '城市测绘院']
@@ -36,48 +33,46 @@ const whitelistContacts = ['13800138001', '13900139002', '13600136003', '0755-86
 
 function buildSeedList(): BlackWhiteListItem[] {
   const resolvableProfiles = LAD_RESOLVABLE_TARGET_PROFILES
-  return Array.from({ length: 56 }, (_, i) => {
-    const profile = resolvableProfiles[i % resolvableProfiles.length]
-    const day = String(4 + (i % 20)).padStart(2, '0')
-    const hour = String(8 + (i % 10)).padStart(2, '0')
-    const min = String((i * 5) % 60).padStart(2, '0')
-    const sec = String((i * 11) % 60).padStart(2, '0')
-    const discovered = `2024-03-${day} ${hour}:${min}:${sec}`
-    const updatedMin = (Number(min) + 3) % 60
-    const updated = `2024-03-${day} ${hour}:${String(updatedMin).padStart(2, '0')}:${String((Number(sec) + 8) % 60).padStart(2, '0')}`
-    const durationSec = 15 + (i % 120)
+  return resolvableProfiles
+    .map((profile, i) => {
+      const day = String(4 + (i % 20)).padStart(2, '0')
+      const hour = String(8 + (i % 10)).padStart(2, '0')
+      const min = String((i * 5) % 60).padStart(2, '0')
+      const sec = String((i * 11) % 60).padStart(2, '0')
+      const discovered = `2024-03-${day} ${hour}:${min}:${sec}`
+      const updatedMin = (Number(min) + 3) % 60
+      const updated = `2024-03-${day} ${hour}:${String(updatedMin).padStart(2, '0')}:${String((Number(sec) + 8) % 60).padStart(2, '0')}`
+      const durationSec = 15 + (i % 120)
 
-    const listType = listTypes[i % listTypes.length]
-    const hasWhitelistProfile = listType === '白名单' && i % 6 !== 5
-    const profileIndex = Math.floor(i / 2) % whitelistUnits.length
+      const listType = defaultTargetProfileListType(profile)
+      const hasWhitelistProfile = listType === '白名单' && i % 6 !== 5
+      const profileIndex = Math.floor(i / 2) % whitelistUnits.length
 
-    return normalizeCooperativeBlackWhiteFields({
-      id: `bw-${10001 + i}`,
-      targetId: profile.targetId,
-      listType,
-      historyTargetType: COOPERATIVE_DRONE_KIND,
-      targetType: targetTypes[i % targetTypes.length],
-      validUntil: normalizeValidUntil(validOptions[i % validOptions.length]),
-      discoveredAt: discovered,
-      updatedAt: updated,
-      duration: `00:${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`,
-      model: profile.targetModel,
-      frequency: frequencies[i % frequencies.length],
-      sn: profile.uavSn,
-      affiliatedUnit: hasWhitelistProfile ? whitelistUnits[profileIndex] : '',
-      userName: hasWhitelistProfile && i % 4 !== 3 ? whitelistUsers[profileIndex] : '',
-      ownerName: hasWhitelistProfile ? whitelistOwners[profileIndex] : '',
-      contactInfo: hasWhitelistProfile && i % 8 !== 7 ? whitelistContacts[profileIndex] : '',
-      zoneName: zones[i % zones.length],
-      longitude: Number((113.38 + (i % 30) * 0.008).toFixed(4)),
-      latitude: Number((23.08 + (i % 25) * 0.006).toFixed(4)),
-      entryMethod: entryMethods[i % entryMethods.length],
-      remark: i % 8 === 0 ? '历史事件自动同步' : ''
+      return normalizeCooperativeBlackWhiteFields({
+        id: `bw-${10001 + i}`,
+        targetId: profile.targetId,
+        listType,
+        historyTargetType: COOPERATIVE_DRONE_KIND,
+        targetType: targetTypes[i % targetTypes.length],
+        validUntil: normalizeValidUntil(validOptions[i % validOptions.length]),
+        discoveredAt: discovered,
+        updatedAt: updated,
+        duration: `00:${String(Math.floor(durationSec / 60)).padStart(2, '0')}:${String(durationSec % 60).padStart(2, '0')}`,
+        model: profile.targetModel,
+        frequency: frequencies[i % frequencies.length],
+        sn: profile.uavSn,
+        affiliatedUnit: hasWhitelistProfile ? whitelistUnits[profileIndex] : '',
+        userName: hasWhitelistProfile && i % 4 !== 3 ? whitelistUsers[profileIndex] : '',
+        ownerName: hasWhitelistProfile ? whitelistOwners[profileIndex] : '',
+        contactInfo: hasWhitelistProfile && i % 8 !== 7 ? whitelistContacts[profileIndex] : '',
+        entryMethod: entryMethods[i % entryMethods.length],
+        remark: i % 8 === 0 ? '历史事件自动同步' : ''
+      })
     })
-  }).filter((row) => hasResolvableSn(row.sn))
+    .filter((row) => hasResolvableSn(row.sn))
 }
 
-export const BLACK_WHITE_STORE_VERSION = 8
+export const BLACK_WHITE_STORE_VERSION = 9
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladBlackWhiteStoreVer?: number }
@@ -101,48 +96,13 @@ function formatTimestamp(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-function hashSeed(id: string): number {
-  let h = 0
-  for (const c of id) {
-    h = (h * 31 + c.charCodeAt(0)) % 10000
-  }
-  return h
-}
-
 function buildTargetDetail(row: BlackWhiteListItem): BlackWhiteTargetDetail {
-  const seed = hashSeed(row.id)
-  const threatByList: Record<'黑名单' | '白名单', ThreatLevel> = {
-    黑名单: '高危',
-    白名单: '低危'
-  }
   const listType = row.listType === '白名单' ? '白名单' : '黑名单'
-  const alt = 80 + (seed % 80)
-  const pilotLocated = seed % 5 !== 0
-  const lng = row.longitude.toFixed(4)
-  const lat = row.latitude.toFixed(4)
-  const handlingStatus = listType === '白名单' ? '已结束' : '进行中'
-
-  let disposalDetail = ''
-  if (isHandlingEnded(handlingStatus)) {
-    disposalDetail =
-      row.remark ||
-      (listType === '白名单' ? '白名单目标，探测后自动过滤告警' : '黑名单重点监控，待联动处置')
-  }
 
   return {
     ...row,
     listType,
     historyTargetType: COOPERATIVE_DRONE_KIND,
-    threatLevel: threatByList[listType],
-    handlingStatus,
-    lastPosition: `E:${lng}，N:${lat}（海拔${alt}m）`,
-    pilotLocation: pilotLocated
-      ? `E:${(row.longitude - 0.0014).toFixed(4)}，N:${(row.latitude - 0.0012).toFixed(4)}`
-      : '未定位',
-    pilotConfidence: pilotLocated ? `${72 + (seed % 23)}%` : '—',
-    disposalDetail,
-    lastObservedAt: row.updatedAt,
-    pilotLocatedAt: pilotLocated ? row.updatedAt : '—',
     eventCount:
       findTargetProfileByUavSn(row.sn)?.eventCount ??
       findTargetProfileByTargetId(row.targetId)?.eventCount ??
@@ -180,9 +140,6 @@ function filterList(params: BlackWhiteListQuery): BlackWhiteListItem[] {
   if (params.contactInfo?.trim()) {
     const kw = params.contactInfo.trim().toLowerCase()
     rows = rows.filter((r) => r.contactInfo.toLowerCase().includes(kw))
-  }
-  if (params.zoneName) {
-    rows = rows.filter((r) => r.zoneName === params.zoneName)
   }
   if (params.entryMethod) {
     rows = rows.filter((r) => r.entryMethod === params.entryMethod)
@@ -293,9 +250,6 @@ export function syncLocalBlackWhiteListType(
       userName: '',
       ownerName: '',
       contactInfo: '',
-      zoneName: '',
-      longitude: 0,
-      latitude: 0,
       entryMethod: '人工录入',
       remark: '由历史事件批量设置'
     })

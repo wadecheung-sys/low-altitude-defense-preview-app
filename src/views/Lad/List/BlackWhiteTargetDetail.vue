@@ -61,10 +61,10 @@ const loadError = ref('')
 const recordId = computed(() => route.params.id as string)
 
 const latestEvent = ref<HistoryEventItem | null>(null)
+const relatedFlightCount = ref(0)
 
 const eventFilters = reactive<{
   discoveredAtRange: string[]
-  zoneName: string
   dataSource: string
   threatLevel: ThreatLevel | ''
   verificationMethod: VerificationMethod | ''
@@ -73,7 +73,6 @@ const eventFilters = reactive<{
   handlingStatus: HandlingStatus | ''
 }>({
   discoveredAtRange: [] as string[],
-  zoneName: '',
   dataSource: '',
   threatLevel: '',
   verificationMethod: '',
@@ -81,14 +80,6 @@ const eventFilters = reactive<{
   countermeasureDevice: '',
   handlingStatus: ''
 })
-
-const zoneOptions = [
-  { label: '全部区域', value: '' },
-  { label: '核心防护区A区', value: '核心防护区A区' },
-  { label: '缓冲区B区', value: '缓冲区B区' },
-  { label: '管制空域C区', value: '管制空域C区' },
-  { label: '公共区域', value: '公共区域' }
-]
 
 const dataSourceOptions = ref([
   { label: '全部数据来源', value: '' },
@@ -144,6 +135,7 @@ async function fetchLatestEvent() {
   const d = detail.value
   if (!d) {
     latestEvent.value = null
+    relatedFlightCount.value = 0
     return
   }
   const res = await getHistoryEventListApi({
@@ -152,6 +144,7 @@ async function fetchLatestEvent() {
     uavSn: d.sn
   })
   const list = res.data.list
+  relatedFlightCount.value = res.data.total
   latestEvent.value = list.length
     ? [...list].sort((a, b) => b.discoveredAt.localeCompare(a.discoveredAt))[0]
     : null
@@ -185,7 +178,6 @@ const eventQueryParams = computed(() => {
     uavSn: d.sn,
     discoveredAtStart: range?.[0],
     discoveredAtEnd: range?.[1],
-    zoneName: eventFilters.zoneName || undefined,
     dataSource: eventFilters.dataSource || undefined,
     threatLevel: eventFilters.threatLevel || undefined,
     verificationMethod: eventFilters.verificationMethod || undefined,
@@ -224,7 +216,6 @@ const applyEventFilters = () => {
 
 const resetEventFilters = () => {
   eventFilters.discoveredAtRange = []
-  eventFilters.zoneName = ''
   eventFilters.dataSource = ''
   eventFilters.threatLevel = ''
   eventFilters.verificationMethod = ''
@@ -243,6 +234,7 @@ watch(
       fetchLatestEvent()
     } else {
       latestEvent.value = null
+      relatedFlightCount.value = 0
     }
   }
 )
@@ -295,12 +287,6 @@ const crudSchemas = reactive<CrudSchema[]>([
     field: 'handledAt',
     label: '处置时间',
     minWidth: 168,
-    table: { showOverflowTooltip: true }
-  },
-  {
-    field: 'zoneName',
-    label: '所在区域',
-    minWidth: 130,
     table: { showOverflowTooltip: true }
   },
   {
@@ -496,8 +482,8 @@ watch(
             {{ detail.contactInfo || '—' }}
           </ElDescriptionsItem>
 
-          <ElDescriptionsItem label="关联事件" :span="2">
-            共 {{ detail.eventCount }} 条
+          <ElDescriptionsItem label="近期飞行记录" :span="2">
+            共 {{ relatedFlightCount }} 条
           </ElDescriptionsItem>
 
           <ElDescriptionsItem v-if="detail.remark" label="备注" :span="2">
@@ -506,10 +492,10 @@ watch(
         </ElDescriptions>
       </ContentWrap>
 
-      <ContentWrap class="target-detail-events" title="历史事件信息">
+      <ContentWrap class="target-detail-events" title="近期飞行记录">
         <section class="target-detail-events__snapshot">
           <div class="target-detail-events__snapshot-title-row">
-            <span class="target-detail-events__snapshot-title">最近一次探测</span>
+            <span class="target-detail-events__snapshot-title">最近一次飞行记录</span>
           </div>
           <ElDescriptions
             v-if="latestEvent"
@@ -530,7 +516,6 @@ watch(
             <ElDescriptionsItem label="处置状态">
               {{ handlingStatusDisplay(latestEvent.handlingStatus) }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="所在区域">{{ latestEvent.zoneName }}</ElDescriptionsItem>
             <ElDescriptionsItem label="数据来源">{{ latestEvent.dataSource }}</ElDescriptionsItem>
 
             <ElDescriptionsItem label="无人机最后位置" :span="2">
@@ -545,11 +530,11 @@ watch(
               </template>
             </ElDescriptionsItem>
           </ElDescriptions>
-          <p v-else class="target-detail-events__snapshot-empty">暂无历史事件记录</p>
+          <p v-else class="target-detail-events__snapshot-empty">暂无近期飞行记录</p>
         </section>
 
         <div class="target-detail-events__list-head-row">
-          <span class="target-detail-events__list-head">全部历史记录</span>
+          <span class="target-detail-events__list-head">飞行记录明细</span>
         </div>
         <div class="target-detail-events__toolbar mb-10px">
           <ElForm inline class="target-detail-events__filters">
@@ -564,21 +549,6 @@ watch(
                 clearable
                 style="width: 260px"
               />
-            </ElFormItem>
-            <ElFormItem label="区域">
-              <ElSelect
-                v-model="eventFilters.zoneName"
-                placeholder="全部区域"
-                clearable
-                style="width: 160px"
-              >
-                <ElOption
-                  v-for="opt in zoneOptions"
-                  :key="opt.value || 'all'"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </ElSelect>
             </ElFormItem>
             <ElFormItem label="数据来源">
               <ElSelect

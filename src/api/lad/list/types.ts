@@ -1,4 +1,3 @@
-import type { HandlingStatus, ThreatLevel } from '@/api/lad/incident/types'
 import type { BlackWhiteTargetKind, BlackWhiteTargetKindFilter } from './listTargetKind'
 
 /** 名单类型 */
@@ -35,9 +34,6 @@ export interface BlackWhiteListItem {
   ownerName: string
   /** 联系方式（白名单扩展信息，非必填） */
   contactInfo: string
-  zoneName: string
-  longitude: number
-  latitude: number
   entryMethod: EntryMethod
   remark: string
 }
@@ -54,7 +50,6 @@ export interface BlackWhiteListQuery {
   contactInfo?: string
   historyTargetType?: BlackWhiteTargetKindFilter
   targetType?: string
-  zoneName?: string
   entryMethod?: EntryMethod
   discoveredAtStart?: string
   discoveredAtEnd?: string
@@ -80,33 +75,14 @@ export type BlackWhiteFormPayload = Pick<
   | 'userName'
   | 'ownerName'
   | 'contactInfo'
-  | 'zoneName'
-  | 'longitude'
-  | 'latitude'
   | 'entryMethod'
   | 'remark'
 > & { id?: string; targetId?: string }
 
 /**
- * 黑白名单「目标详情」— 融合无人机主数据 + 最近一次态势摘要
- *
- * - 主数据字段（型号、SN、名单类型等）相对稳定
- * - lastPosition / pilotLocation / disposalDetail 等取自最近一次关联历史事件，会随探测变化
+ * 黑白名单「无人机详情」仅保留设备名单属性；飞行态势从关联历史事件实时查询。
  */
 export interface BlackWhiteTargetDetail extends BlackWhiteListItem {
-  threatLevel: ThreatLevel
-  /** 汇总处置状态（进行中 / 已结束） */
-  handlingStatus: HandlingStatus
-  /** 无人机最后已知位置（最近一次探测） */
-  lastPosition: string
-  /** 飞手最后已知位置（最近一次无线电/TDOA 推算，非设备固定属性） */
-  pilotLocation: string
-  pilotConfidence: string
-  /** 最近一次探测/更新时刻，态势摘要时间基准 */
-  lastObservedAt: string
-  /** 飞手位置推算时刻；未定位时为 — */
-  pilotLocatedAt: string
-  disposalDetail: string
   /** 关联历史事件条数 */
   eventCount: number
 }
