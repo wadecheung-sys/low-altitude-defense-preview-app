@@ -61,7 +61,6 @@ const loadError = ref('')
 const recordId = computed(() => route.params.id as string)
 
 const latestEvent = ref<HistoryEventItem | null>(null)
-const relatedFlightCount = ref(0)
 
 const eventFilters = reactive<{
   discoveredAtRange: string[]
@@ -135,7 +134,6 @@ async function fetchLatestEvent() {
   const d = detail.value
   if (!d) {
     latestEvent.value = null
-    relatedFlightCount.value = 0
     return
   }
   const res = await getHistoryEventListApi({
@@ -144,7 +142,6 @@ async function fetchLatestEvent() {
     uavSn: d.sn
   })
   const list = res.data.list
-  relatedFlightCount.value = res.data.total
   latestEvent.value = list.length
     ? [...list].sort((a, b) => b.discoveredAt.localeCompare(a.discoveredAt))[0]
     : null
@@ -234,7 +231,6 @@ watch(
       fetchLatestEvent()
     } else {
       latestEvent.value = null
-      relatedFlightCount.value = 0
     }
   }
 )
@@ -480,10 +476,6 @@ watch(
           </ElDescriptionsItem>
           <ElDescriptionsItem label="联系方式">
             {{ detail.contactInfo || '—' }}
-          </ElDescriptionsItem>
-
-          <ElDescriptionsItem label="近期飞行记录" :span="2">
-            共 {{ relatedFlightCount }} 条
           </ElDescriptionsItem>
 
           <ElDescriptionsItem v-if="detail.remark" label="备注" :span="2">
