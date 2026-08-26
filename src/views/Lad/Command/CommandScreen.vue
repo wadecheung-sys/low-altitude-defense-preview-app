@@ -13,6 +13,10 @@ const PROTOTYPE_VERSION = '20260821-prototype-update'
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/data-screen-03/${PROTOTYPE_PAGE}?v=${PROTOTYPE_VERSION}`
 
 type Cleanup = () => void
+type IdleCapableWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
+  cancelIdleCallback?: (handle: number) => void
+}
 
 const router = useRouter()
 const containerRef = ref<HTMLElement>()
@@ -21,8 +25,11 @@ const frameLoaded = ref(false)
 const stageScale = ref(1)
 
 let bindRetryTimer: number | undefined
+let backendPrefetchTimer: number | undefined
+let backendPrefetchIdleId: number | undefined
 let resizeObserver: ResizeObserver | undefined
 let cleanupPrototypeBindings: Cleanup | undefined
+let backendPrefetchPromise: Promise<unknown> | undefined
 
 const viewportStyle = computed(() => ({
   width: `${PROTOTYPE_WIDTH * stageScale.value}px`,
@@ -75,7 +82,11 @@ function bindPrototypeInteractions() {
   if (!doc?.getElementById('base')) return false
 
   // 设备详情与配置由最新 Axure 导出原型自身处理；这里只桥接离开大屏的应用路由。
-  const cleanups: Cleanup[] = [bindDataScreenNavBridge(doc, router)]
+  const cleanups: Cleanup[] = [
+    bindDataScreenNavBridge(doc, router, () => {
+      void prefetchBackendEntries()
+    })
+  ]
 
   cleanupPrototypeBindings = () => {
     cleanups.forEach((cleanup) => cleanup())
@@ -98,9 +109,47 @@ function schedulePrototypeBinding() {
   }, 120)
 }
 
+/**
+ * 大屏加载完成后预热离开大屏时最常访问的后台页面。
+ * 动态 import 会同时缓存 Layout、表格等依赖分包，点击入口时只需完成路由渲染。
+ */
+function prefetchBackendEntries() {
+  backendPrefetchPromise ??= Promise.allSettled([
+    import('@/layout/Layout.vue'),
+    import('@/views/Lad/Incident/HistoryEvent.vue'),
+    import('@/views/Lad/Message/MessageCenterList.vue')
+  ])
+  return backendPrefetchPromise
+}
+
+function scheduleBackendPrefetch() {
+  const idleWindow = window as IdleCapableWindow
+  window.clearTimeout(backendPrefetchTimer)
+  if (backendPrefetchIdleId !== undefined) {
+    idleWindow.cancelIdleCallback?.(backendPrefetchIdleId)
+    backendPrefetchIdleId = undefined
+  }
+
+  if (idleWindow.requestIdleCallback) {
+    backendPrefetchIdleId = idleWindow.requestIdleCallback(
+      () => {
+        backendPrefetchIdleId = undefined
+        void prefetchBackendEntries()
+      },
+      { timeout: 1500 }
+    )
+    return
+  }
+
+  backendPrefetchTimer = window.setTimeout(() => {
+    void prefetchBackendEntries()
+  }, 500)
+}
+
 function onFrameLoad() {
   frameLoaded.value = true
   normalizePrototypeSurface()
+  scheduleBackendPrefetch()
   void nextTick(() => {
     updateStageScale()
     schedulePrototypeBinding()
@@ -120,11 +169,17 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  const idleWindow = window as IdleCapableWindow
   cleanupPrototypeBindings?.()
   cleanupPrototypeBindings = undefined
   resizeObserver?.disconnect()
   resizeObserver = undefined
   window.clearTimeout(bindRetryTimer)
+  window.clearTimeout(backendPrefetchTimer)
+  if (backendPrefetchIdleId !== undefined) {
+    idleWindow.cancelIdleCallback?.(backendPrefetchIdleId)
+    backendPrefetchIdleId = undefined
+  }
   window.removeEventListener('resize', updateStageScale)
 })
 </script>

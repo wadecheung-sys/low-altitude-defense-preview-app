@@ -23,7 +23,7 @@ function bindClickableElement(
   doc: Document,
   elementId: string,
   onClick: () => void,
-  options?: { role?: string; ariaLabel?: string }
+  options?: { role?: string; ariaLabel?: string; onIntent?: () => void }
 ) {
   const element = doc.getElementById(elementId) as HTMLElement | null
   if (!element) return undefined
@@ -34,14 +34,28 @@ function bindClickableElement(
 
   const handleClick = (event: Event) => {
     stopPrototypeEvent(event)
+    options?.onIntent?.()
     onClick()
   }
+  const handleIntent = () => options?.onIntent?.()
 
   element.addEventListener('click', handleClick, true)
-  return () => element.removeEventListener('click', handleClick, true)
+  element.addEventListener('pointerenter', handleIntent, { passive: true })
+  element.addEventListener('touchstart', handleIntent, { passive: true })
+  element.addEventListener('focusin', handleIntent)
+  return () => {
+    element.removeEventListener('click', handleClick, true)
+    element.removeEventListener('pointerenter', handleIntent)
+    element.removeEventListener('touchstart', handleIntent)
+    element.removeEventListener('focusin', handleIntent)
+  }
 }
 
-export function bindDataScreenNavBridge(doc: Document, router: Router): DataScreenNavBridgeCleanup {
+export function bindDataScreenNavBridge(
+  doc: Document,
+  router: Router,
+  onNavigateIntent?: () => void
+): DataScreenNavBridgeCleanup {
   const cleanups: Array<() => void> = []
 
   NAV_LINKS.forEach((link) => {
@@ -51,7 +65,7 @@ export function bindDataScreenNavBridge(doc: Document, router: Router): DataScre
       () => {
         void router.push(link.path)
       },
-      { role: link.role, ariaLabel: link.ariaLabel }
+      { role: link.role, ariaLabel: link.ariaLabel, onIntent: onNavigateIntent }
     )
     if (cleanup) cleanups.push(cleanup)
   })
