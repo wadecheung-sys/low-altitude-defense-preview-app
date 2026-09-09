@@ -14,7 +14,7 @@ export const LAD_PAGE_META: Record<string, LadPageMeta> = {
     pageKey: 'data-screen',
     pageType: 'map',
     reqModule: '1',
-    prototypeRef: 'preview-app/public/prototypes/data-screen-03-20260908-145354/数据大屏03.html',
+    prototypeRef: 'preview-app/public/prototypes/data-screen-03-20260909-133434/数据大屏03.html',
     phaseNote: '指挥控制中心数据大屏。'
   },
   'incident-history': {
