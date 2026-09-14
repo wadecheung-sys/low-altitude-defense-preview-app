@@ -5,12 +5,12 @@ export type DataScreenNavBridgeCleanup = () => void
 
 /**
  * 仅绑定会离开大屏的入口。
- * 「操作台」u393→u394 弹层由 Axure 原型自身处理，勿在此拦截。
+ * 「操作台」弹层由 Axure 原型自身处理，勿在此拦截。
  */
 const NAV_LINKS = [
   { id: 'u18', path: LAD_BACKEND_HOME_PATH, role: 'button', ariaLabel: '进入控制台' },
-  { id: 'u103', path: LAD_BACKEND_HOME_PATH, role: 'link', ariaLabel: '历史事件' },
-  { id: 'u187', path: LAD_MESSAGE_CENTER_PATH, role: 'link', ariaLabel: '消息中心更多' }
+  { id: 'u112', path: LAD_BACKEND_HOME_PATH, role: 'link', ariaLabel: '历史事件' },
+  { id: 'u193', path: LAD_MESSAGE_CENTER_PATH, role: 'link', ariaLabel: '消息中心更多' }
 ] as const
 
 function stopPrototypeEvent(event: Event) {
