@@ -8,9 +8,9 @@ defineOptions({ name: 'LadDataScreen' })
 const PROTOTYPE_WIDTH = 1920
 const PROTOTYPE_HEIGHT = 1080
 const DISPLAY_MAX_WIDTH = 1920
-const PROTOTYPE_DIRECTORY = 'data-screen-03-20260915-091801'
+const PROTOTYPE_DIRECTORY = 'data-screen-03-20260915-113208'
 const PROTOTYPE_PAGE = encodeURIComponent('数据大屏03.html')
-const PROTOTYPE_VERSION = '20260915-091801'
+const PROTOTYPE_VERSION = '20260915-113208'
 const PROTOTYPE_SRC = `${import.meta.env.BASE_URL}prototypes/${PROTOTYPE_DIRECTORY}/${PROTOTYPE_PAGE}?v=${PROTOTYPE_VERSION}`
 
 type Cleanup = () => void
