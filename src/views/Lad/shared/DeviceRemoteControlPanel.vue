@@ -59,7 +59,7 @@ const panelMode = computed<
   if (model === 'EO-V2.8' || props.deviceType === '光电跟踪') return 'eo'
   if (model === 'TBD-LSR' || props.deviceType === '激光打击') return 'strike'
   if (model === 'TBD-HPM' || props.deviceType === '高功率微波') return 'hpm'
-  if (model === 'TBD-SLA' || props.deviceType === '声光驱离') return 'sound_light'
+  if (model === 'TBD-SLA' || props.deviceType === '强光驱离') return 'sound_light'
   return 'readonly'
 })
 
@@ -154,7 +154,7 @@ const actions = computed<DeviceOperationAction[]>(() => {
   }
   if (panelMode.value === 'sound_light') {
     return [
-      { key: 'sla_on', label: '启动声光警示', type: 'primary' },
+      { key: 'sla_on', label: '启动强光警示', type: 'primary' },
       { key: 'sla_off', label: '停止警示' }
     ]
   }
@@ -297,7 +297,7 @@ const panelHint = computed(() => {
     return '按 V2.8 指控协议演示搜索跟踪、双光通道切换、镜头控制和测距；状态、目标、镜头及脱靶量由设备主动回传。'
   if (panelMode.value === 'strike') return '激光打击需完成安全联锁复核后方可出光，请谨慎操作。'
   if (panelMode.value === 'hpm') return '高功率微波设备需确认伺服状态与工作模式后再执行发射准备。'
-  if (panelMode.value === 'sound_light') return '声光警示用于近距驱离，请确认警戒区域内无无关人员。'
+  if (panelMode.value === 'sound_light') return '强光警示用于近距驱离，请确认警戒区域内无无关人员。'
   if (panelMode.value === 'detect') return '探测类设备以监视为主，指令经供应商平台上报链路转发。'
   if (panelMode.value === 'rid')
     return 'RID 协议的 0x1100/0x1102 均由设备主动上报且平台无需应答；操作台仅刷新本地显示。'

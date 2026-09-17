@@ -426,15 +426,15 @@ export const INTERNAL_PLACEHOLDER_DEVICES: DeviceCatalogEntry[] = [
   {
     model: 'TBD-SLA',
     vendor: '警翼科技',
-    deviceType: '声光驱离',
+    deviceType: '强光驱离',
     tier: 'pending',
     groupMasterEligible: false,
-    archiveName: '声光驱离设备档案',
+    archiveName: '强光驱离设备档案',
     archiveNo: 'D-LAD-SLA0001',
     specifications: [
       ind('声压级', 'dB', '≥120'),
       ind('警示灯', '', '红蓝频闪'),
-      ind('备注', '', '南区声光警示站')
+      ind('备注', '', '南区强光警示站')
     ],
     configurableItems: [
       cfg('warning_level', '警示等级', '', 'device', '低 / 中 / 高', '中'),
@@ -444,7 +444,7 @@ export const INTERNAL_PLACEHOLDER_DEVICES: DeviceCatalogEntry[] = [
     ],
     demo: {
       deviceId: 'DEV-SLA-01',
-      deviceName: '1#声光-SG',
+      deviceName: '1#强光-SG',
       deployLocation: '南区警示塔',
       ipAddress: '192.168.8.95',
       serialNo: 'SG-SLA-2025-001',
@@ -497,13 +497,13 @@ export const COUNTERMEASURE_DEVICE_BINDINGS: Record<
     demoExecutable: true
   },
   sound_light_expulsion: {
-    deviceType: '声光驱离',
+    deviceType: '强光驱离',
     model: 'TBD-SLA',
-    effect: '声光驱离',
-    actionLabel: '声光驱离',
-    timelineLabel: '声光驱离',
+    effect: '强光驱离',
+    actionLabel: '强光驱离',
+    timelineLabel: '强光驱离',
     resultEventType: '驱离/自离',
-    aliases: ['声光驱离', '声光警示', '声光', '驱离'],
+    aliases: ['强光驱离', '强光警示', '强光', '驱离'],
     internalOnly: true,
     demoExecutable: false
   },

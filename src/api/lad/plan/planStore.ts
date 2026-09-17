@@ -68,11 +68,11 @@ const legacyCountermeasureMigration: Record<
   string,
   Pick<PlanTriggerRule, 'deviceFunction' | 'deviceAction'>
 > = {
-  alarm_sound_light: { deviceFunction: 'sound_light_expulsion', deviceAction: '声光驱离' },
+  alarm_sound_light: { deviceFunction: 'sound_light_expulsion', deviceAction: '强光驱离' },
   eo_track_lock: { deviceFunction: 'navigation_spoofing', deviceAction: '导航诱骗' },
   eo_evidence_tracking: { deviceFunction: 'navigation_spoofing', deviceAction: '导航诱骗' },
   radar_track: { deviceFunction: 'radio_jamming', deviceAction: '无线电干扰' },
-  fusion_monitor_report: { deviceFunction: 'sound_light_expulsion', deviceAction: '声光驱离' }
+  fusion_monitor_report: { deviceFunction: 'sound_light_expulsion', deviceAction: '强光驱离' }
 }
 
 function sanitizeTriggerRule(rule: PlanTriggerRule): PlanTriggerRule {
@@ -129,7 +129,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '1#光电-GD',
         deviceGroupType: '光电协同组',
         deviceFunction: 'sound_light_expulsion',
-        deviceAction: '声光驱离',
+        deviceAction: '强光驱离',
         enabled: true
       }
     ]
@@ -196,7 +196,7 @@ const seed: SeedInput[] = [
     id: 'plan-004',
     planCode: 'contingency-004',
     planName: '人工复核告警',
-    planRule: '1. 触发声光告警与平台弹窗\n2. 值班员确认后升级处置\n3. 未确认前禁止自动驱离',
+    planRule: '1. 触发强光告警与平台弹窗\n2. 值班员确认后升级处置\n3. 未确认前禁止自动驱离',
     disposalMode: 'manual',
     manualResponseSeconds: 0,
     threatLevel: '全部',
@@ -214,7 +214,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '南门光电观察组',
         deviceGroupType: '光电协同组',
         deviceFunction: 'alarm_sound_light',
-        deviceAction: '声光警示',
+        deviceAction: '强光警示',
         enabled: true
       }
     ]
@@ -251,7 +251,7 @@ const seed: SeedInput[] = [
     id: 'plan-007',
     planCode: 'contingency-007',
     planName: '试飞区告警提示',
-    planRule: '1. 仅平台弹窗与声光提示\n2. 不启动干扰\n3. 记录操作员与时间',
+    planRule: '1. 仅平台弹窗与强光提示\n2. 不启动干扰\n3. 记录操作员与时间',
     disposalMode: 'manual',
     manualResponseSeconds: 0,
     threatLevel: '低危',
@@ -269,7 +269,7 @@ const seed: SeedInput[] = [
         deviceGroupName: '南门光电观察组',
         deviceGroupType: '光电协同组',
         deviceFunction: 'alarm_sound_light',
-        deviceAction: '声光警示',
+        deviceAction: '强光警示',
         enabled: true
       }
     ]

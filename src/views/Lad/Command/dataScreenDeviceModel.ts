@@ -186,7 +186,7 @@ function mockLiveMetrics(entry: DeviceCatalogEntry): DataScreenMetricItem[] {
     case 'TBD-SLA':
       return [
         { label: '锁定目标', value: 'T-0726-01' },
-        { label: '声光状态', value: '待命' },
+        { label: '强光状态', value: '待命' },
         { label: '警示等级', value: '—' },
         ...common
       ]
@@ -225,7 +225,7 @@ function resolveRunStatus(entry: DeviceCatalogEntry): string {
     case '激光打击':
     case '高功率微波':
       return '待机'
-    case '声光驱离':
+    case '强光驱离':
       return '待命'
     default:
       return '运行中'

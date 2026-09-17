@@ -28,12 +28,12 @@ const detectionFunctions: PlanDeviceFunctionOption[] = [
 const electroOpticalFunctions: PlanDeviceFunctionOption[] = [
   { label: '光电目标锁定', value: 'eo_track_lock', deviceAction: '目标锁定' },
   { label: '视频取证跟踪', value: 'eo_evidence_tracking', deviceAction: '取证跟踪' },
-  { label: '声光警示', value: 'alarm_sound_light', deviceAction: '声光警示' }
+  { label: '强光警示', value: 'alarm_sound_light', deviceAction: '强光警示' }
 ]
 
 const linkedFunctions: PlanDeviceFunctionOption[] = [
   { label: '预警广播', value: 'alarm_dispatch_notify', deviceAction: '预警广播' },
-  { label: '声光警示', value: 'alarm_sound_light', deviceAction: '声光警示' },
+  { label: '强光警示', value: 'alarm_sound_light', deviceAction: '强光警示' },
   { label: '联动上报', value: 'linked_report', deviceAction: '联动上报' }
 ]
 

@@ -24,7 +24,7 @@ export const LAD_DEVICE_TYPE_ENTRIES: LadDeviceTypeEntry[] = [
   { label: '激光打击', dictValue: 'laser_strike' },
   { label: '高功率微波', dictValue: 'hpm' },
   { label: '光电跟踪', dictValue: 'eo_track' },
-  { label: '声光驱离', dictValue: 'sound_light_expulsion' },
+  { label: '强光驱离', dictValue: 'sound_light_expulsion' },
   { label: '监控摄像机', dictValue: 'camera', monitorVisible: false, masterEligible: false }
 ]
 

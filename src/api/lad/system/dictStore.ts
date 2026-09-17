@@ -279,7 +279,7 @@ const dictEntriesSeed: DictEntryItem[] = [
   {
     id: 'de-034',
     dictTypeId: 'dt-009',
-    label: '声光驱离',
+    label: '强光驱离',
     value: 'sound_light_expulsion',
     sort: 3,
     updatedAt: '2026-06-30 09:30:00'
