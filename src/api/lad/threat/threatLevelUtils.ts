@@ -1,4 +1,4 @@
-export const THREAT_LEVELS = ['高危', '中危', '低危', '无危'] as const
+export const THREAT_LEVELS = ['超高危', '高危', '中危', '低危', '无危'] as const
 
 export type ThreatLevelLabel = (typeof THREAT_LEVELS)[number]
 
@@ -9,6 +9,8 @@ export type ThreatLevelScope = ThreatLevelLabel | typeof THREAT_LEVEL_ALL
 export const THREAT_LEVEL_OPTIONS = THREAT_LEVELS.map((value) => ({ label: value, value }))
 
 const LEGACY_TO_LABEL: Record<string, ThreatLevelLabel> = {
+  超高危: '超高危',
+  very_high: '超高危',
   高: '高危',
   中: '中危',
   低: '低危',

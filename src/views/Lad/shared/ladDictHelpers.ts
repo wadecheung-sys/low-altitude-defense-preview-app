@@ -35,6 +35,7 @@ type LadTagType = 'danger' | 'warning' | 'success' | 'info'
 
 export const THREAT_LEVEL_TAG_TYPE: Record<string, LadTagType> = {
   全部: 'info',
+  超高危: 'danger',
   高危: 'danger',
   中危: 'warning',
   低危: 'success',

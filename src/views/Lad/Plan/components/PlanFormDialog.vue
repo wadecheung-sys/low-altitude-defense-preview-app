@@ -55,7 +55,7 @@ const visible = computed({
 
 const threatLevelOptions = [
   { label: allOption.label, value: allOption.value },
-  ...THREAT_LEVEL_OPTIONS.filter((item) => item.value !== '无危')
+  ...THREAT_LEVEL_OPTIONS
 ]
 
 const isEdit = computed(() => !!props.row?.id)

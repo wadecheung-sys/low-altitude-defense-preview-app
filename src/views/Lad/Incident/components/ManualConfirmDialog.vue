@@ -38,7 +38,7 @@ const threatOptions: Array<{
       ? 'success'
       : item.value === '中危'
         ? 'warning'
-        : item.value === '高危'
+        : item.value === '高危' || item.value === '超高危'
           ? 'danger'
           : 'info'
 }))
@@ -47,6 +47,7 @@ const nuisanceOptions = ['飞鸟', '地面杂波', '气球', '风筝', '其他�
 
 const disposalHint = computed(() => {
   const hints: Record<ThreatLevel, string> = {
+    超高危: '超高危等级展示，具体处置由人工复核',
     无危: '威胁等级未判定，暂不执行自动处置',
     低危: '系统将持续自动监控目标',
     中危: '系统将联动反制设备自动驱离',

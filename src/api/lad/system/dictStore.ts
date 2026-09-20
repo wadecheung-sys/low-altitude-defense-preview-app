@@ -38,7 +38,7 @@ const dictTypesSeed: DictTypeItem[] = [
     id: 'dt-003',
     dictCode: 'threat_level',
     dictName: '威胁等级',
-    itemCount: 4,
+    itemCount: 5,
     updatedAt: '2026-05-19 09:00:00'
   },
   {
@@ -139,6 +139,14 @@ const dictEntriesSeed: DictEntryItem[] = [
     value: 'unknown',
     sort: 4,
     updatedAt: '2026-05-18 10:05:00'
+  },
+  {
+    id: 'de-threat-very-high',
+    dictTypeId: 'dt-003',
+    label: '超高危',
+    value: 'very_high',
+    sort: 0,
+    updatedAt: '2026-09-20 10:00:00'
   },
   {
     id: 'de-008',
@@ -322,7 +330,7 @@ function cloneDictEntriesSeed(): DictEntryItem[] {
 let allTypes: DictTypeItem[] = cloneDictTypesSeed()
 let allEntries: DictEntryItem[] = cloneDictEntriesSeed()
 
-const DICT_STORE_VERSION = 2
+const DICT_STORE_VERSION = 3
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladDictStoreVer?: number }
