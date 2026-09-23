@@ -240,7 +240,7 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
   },
   {
     model: 'RADAR-081',
-    vendor: '未在接口协议中标注',
+    vendor: '081',
     deviceType: '雷达',
     tier: 'confirmed',
     docFile: '雷达对外通讯接口协议设计20240614.docx',
@@ -277,19 +277,18 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
   },
   {
     model: 'EXD55-LS',
-    vendor: '亿思德科技',
+    vendor: '凡双科技',
     deviceType: 'ADS-B 监视',
-    tier: 'peripheral',
-    docFile: 'EXD55-LS ADS-B接收机手册V1.3.pdf',
-    groupMasterEligible: false,
+    tier: 'confirmed',
+    docFile: '数据接入接口文档v0.2.4.pdf',
+    groupMasterEligible: true,
     archiveName: 'ADS-B 地面站接收机档案',
     archiveNo: 'D-LAD-ADS0001',
     specifications: [
-      ind('接收频段', 'MHz', '1090ES / UAT978'),
-      ind('作用距离', 'km', '≤250'),
-      ind('通信协议', '', 'TCP/UDP'),
-      ind('输出模式', '', 'Mode1-4 JSON/明文'),
-      ind('防护等级', '', 'IP66')
+      ind('设备心跳', '', '§2.1 设备状态推送，约 30 秒'),
+      ind('协议设备类型', '', '13：ADS-B 接收机'),
+      ind('坐标系', '', 'WGS84'),
+      ind('通信协议', '', 'TCP/UDP JSON 推送')
     ],
     configurableItems: [cfg('output_format', '数据输出格式', '', 'device', 'JSON / 明文', 'JSON')],
     demo: {
@@ -305,21 +304,21 @@ export const CONFIRMED_DEVICES: DeviceCatalogEntry[] = [
   },
   {
     model: 'EO-V2.8',
-    vendor: '光电设备厂商（资料未标注）',
+    vendor: '耐杰光电',
     deviceType: '光电跟踪',
     tier: 'confirmed',
     groupMasterEligible: true,
     archiveName: '双光谱光电跟踪设备档案',
     archiveNo: 'D-LAD-EO0001',
     specifications: [
-      ind('指控协议', '', '光电指控协议 V2.8（协议号 9002）'),
+      ind('指控协议', '', '光电指控协议 V2.9.2（协议号 9002）'),
       ind('通信方式', '', 'UDP / TCP，可配置'),
       ind('数据格式', '', '36+N Byte，小端序'),
       ind('视频通道', '', '可见光 / 热成像'),
       ind('工作模式', '', '空闲 / 搜索 / 跟踪'),
-      ind('核心回传', '', '状态、方位俯仰、目标、镜头、脱靶量'),
+      ind('状态心跳', '', '0x01 状态（500ms）/ 0x02 方位俯仰（100ms）'),
       ind('SDK', '', 'Windows x86/x64、Linux，ControlClient 3.8.0.0'),
-      ind('厂商及商品型号', '', '待依据设备铭牌或产品规格书补录')
+      ind('厂商', '', '耐杰光电')
     ],
     configurableItems: [
       cfg('eo_transport', '指控通信方式', '', 'device', 'UDP / TCP', 'UDP'),
@@ -391,16 +390,17 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
   },
   {
     model: 'TBD-HPM',
-    vendor: '磐石电子',
+    vendor: '081',
     deviceType: '高功率微波',
     tier: 'pending',
     groupMasterEligible: true,
     archiveName: '高功率微波设备档案',
     archiveNo: 'D-LAD-HPM0001',
     specifications: [
-      ind('作用范围', 'm', '≥300'),
-      ind('输出峰值', 'kW', '—'),
-      ind('备注', '', '核心区微波压制')
+      ind('设备心跳', '', '系统软件接口协议 status，1Hz'),
+      ind('设备类型码', '', '4：微波武器'),
+      ind('状态字段', '', '工作模式 / 设备状态 / 低压状态 / 高压状态'),
+      ind('作用范围', 'm', '≥300')
     ],
     configurableItems: [
       cfg('work_mode', '工作模式', '', 'device', '待机 / 发射准备', '待机'),
@@ -418,22 +418,53 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
       controlRangeM: 1200,
       deviceIcon: 'counter'
     }
+  },
+  {
+    model: 'FS-CDYT',
+    vendor: '凡双科技',
+    deviceType: '察打一体',
+    tier: 'confirmed',
+    docFile: '数据接入接口文档v0.2.4.pdf',
+    groupMasterEligible: true,
+    archiveName: '察打一体设备档案',
+    archiveNo: 'D-LAD-CDYT0001',
+    specifications: [
+      ind('设备心跳', '', '数据接入接口 §2.1，类型 14：侦打一体设备'),
+      ind('能力组合', '', '侦测 + 反制同机；状态优先上报反制中'),
+      ind('坐标系', '', 'WGS84'),
+      ind('上报周期', '', '约 30 秒；状态变化立即上报')
+    ],
+    configurableItems: [
+      cfg('detect_sensitivity', '侦测灵敏度', '', 'device', '低 / 中 / 高', '中'),
+      cfg('jam_default_band', '默认压制频段', 'MHz', 'device', '2400-2485 / 5725-5850', '2400-2485'),
+      cfg('link_track_mode', '联动跟踪模式', '', 'device', '自动 / 手动', '自动')
+    ],
+    demo: {
+      deviceId: 'DEV-CDYT-01',
+      deviceName: '西区1#察打一体',
+      deployLocation: '西区制高点',
+      ipAddress: '192.168.8.130',
+      serialNo: 'FS-CDYT-2026-001',
+      personInCharge: '周工',
+      controlRangeM: 2500,
+      deviceIcon: 'jammer'
+    }
   }
 ]
 
-/** 内部占位能力：用于动作映射和后续接入准备，不进入用户可见设备台账。 */
+/** 内部占位能力：用于动作映射和后续接入准备；强光等亦进入演示台账 seed。 */
 export const INTERNAL_PLACEHOLDER_DEVICES: DeviceCatalogEntry[] = [
   {
     model: 'TBD-SLA',
-    vendor: '警翼科技',
+    vendor: '凡双科技',
     deviceType: '强光驱离',
     tier: 'pending',
-    groupMasterEligible: false,
+    groupMasterEligible: true,
     archiveName: '强光驱离设备档案',
     archiveNo: 'D-LAD-SLA0001',
     specifications: [
-      ind('声压级', 'dB', '≥120'),
-      ind('警示灯', '', '红蓝频闪'),
+      ind('设备心跳', '', '数据接入接口 §2.1，类型 11：探照灯'),
+      ind('警示灯', '', '红蓝频闪 / 强光警示'),
       ind('备注', '', '南区强光警示站')
     ],
     configurableItems: [
@@ -466,7 +497,13 @@ export function catalogCategoryFromDeviceType(
 ): 'radar' | 'radio' | 'counter' | 'eo' | 'camera' {
   if (deviceType === '监控摄像机') return 'camera'
   if (deviceType === '雷达' || deviceType === 'ADS-B 监视') return 'radar'
-  if (deviceType === '无线电侦测' || deviceType === 'Remote-ID 监视') return 'radio'
+  if (
+    deviceType === '无线电侦测' ||
+    deviceType === 'Remote-ID 监视' ||
+    deviceType === '察打一体'
+  ) {
+    return 'radio'
+  }
   if (deviceType === '光电跟踪') return 'eo'
   return 'counter'
 }

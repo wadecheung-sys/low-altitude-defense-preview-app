@@ -150,22 +150,26 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
       row.deviceType === '监控摄像机'
         ? 120
         : row.deviceType === '雷达'
-          ? 800
+          ? 5000
           : row.deviceType === 'Remote-ID 监视'
-            ? 2500
+            ? 5000
             : row.deviceType === 'ADS-B 监视'
-              ? 50000
+              ? 25000
               : row.deviceType === '无线电侦测'
                 ? 5000
                 : row.deviceType === '无线电干扰'
                   ? 3000
                   : row.deviceType === '导航诱骗'
-                    ? 800
+                    ? 1000
                     : row.deviceType === '高功率微波'
-                      ? 1200
+                      ? 800
                       : row.deviceType === '光电跟踪'
                         ? 600
-                        : 500,
+                        : row.deviceType === '察打一体'
+                          ? 3000
+                          : row.deviceType === '强光驱离'
+                            ? 3000
+                            : 500,
     contactPhone: `138${String(10000000 + index).slice(-8)}`,
     extendedFields: [],
     deviceConfigValues: buildDefaultDeviceConfigValues(row.archiveId)
@@ -259,6 +263,10 @@ const seedRows: Omit<DeviceInfoItem, 'id'>[] = [
   catalogSeedRow('TBD-SLA', {
     lastHeartbeat: '2026-05-20 10:00:00',
     updatedAt: '2026-05-20 10:00:00'
+  }),
+  catalogSeedRow('FS-CDYT', {
+    lastHeartbeat: '2026-05-20 14:18:00',
+    updatedAt: '2026-05-20 14:18:00'
   })
 ]
 

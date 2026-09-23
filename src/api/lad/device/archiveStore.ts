@@ -206,7 +206,8 @@ const catalogArchiveIds = [
   'da-10006',
   'da-10007',
   'da-10008',
-  'da-10009'
+  'da-10009',
+  'da-10015'
 ]
 
 const detailExt: Record<

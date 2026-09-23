@@ -59,6 +59,7 @@ export interface DeviceRuntimeSnapshot {
   workMode?: string
   updatedAt: string
   metrics: DeviceRuntimeMetric[]
+  /** @deprecated 心跳弹层已统一为 metrics 两列；保留类型以免外部引用报错 */
   radar?: RadarRuntimeProtocol
 }
 

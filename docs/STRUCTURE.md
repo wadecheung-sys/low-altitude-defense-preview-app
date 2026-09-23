@@ -2,30 +2,13 @@
 
 > 对照 `reference/vue-element-plus-admin-master`（上游脚手架，只读）与 LAD 定制后的实际布局。
 
-## 体积说明
+## 资源与文档管理
 
-| 路径 | 典型大小 | 是否进 Git | 说明 |
-|------|----------|------------|------|
-| `node_modules/` | **~440 MB** | 否 | `npm install` 本地生成；Element Plus + 图标集 + 地图 + 编辑器等 |
-| `src/` | ~7 MB | 是 | 业务与共享组件源码 |
-| `public/` | ~4 MB | 是 | 静态资源；含指挥大屏 Axure 原型 |
-| `reference/`（工作区） | ~2 MB | 否 | 上游参照，不含 node_modules |
+依赖安装在 `node_modules/`，不进 Git；体积随安装版本变化。`public/prototypes/` 含多个历史大屏资源版本，体积随导入增长，不再采用早期“约 4 MB”的估计。
 
-**GitHub 仓库体积**仅含源码（约数 MB），不含 `node_modules`。本地 1 GB+ 主要来自依赖安装，属正常现象。
+`public/export-templates/` 为运行时导出模板。文档清理不删除上述资源、源代码或设备原始资料。历史文档移入完整工作区 `_archive/documents-20260921/`，`artifacts/` 仅保留生成脚本。
 
-### node_modules 主要占用（参考）
-
-| 包 | 约占用 | 用途 |
-|----|--------|------|
-| `@iconify/json` | 按需临时安装 | `npm run icon` 时 `npm i -D @iconify/json` |
-| `echarts` | ~50 MB | 图表组件（共享组件库保留） |
-| `element-plus` | ~40 MB | UI 框架 |
-| `leaflet` / `@amap/*` | 较小 | LAD 区域/设备 GIS |
-| ~~`cesium`~~ | 已移除 | 原 v3 大屏试验，当前未引用 |
-
-清理本地缓存：`npm run clean:cache` · 清理构建产物：`npm run clean:dist`
-
----
+清理构建缓存可使用 `npm run clean:cache`；清理构建产物可使用 `npm run clean:dist`。
 
 ## 目录对照（reference → LAD）
 
@@ -57,7 +40,7 @@ preview-app/
 │   ├── user/             ← 登录 Mock
 │   ├── table/            ← Example Mock
 │   └── role/             ← 空壳（动态路由已禁用）
-├── artifacts/            ← 交接文档、规格脚本（非运行时）
+├── artifacts/            ← 保留的文档生成脚本（非运行时）
 └── public/prototypes/    ← 指挥大屏 iframe 原型
 ```
 

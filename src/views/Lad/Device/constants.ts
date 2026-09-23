@@ -3,11 +3,9 @@ export { LAD_DEVICE_TYPE_OPTIONS as deviceArchiveTypeOptions } from '@/constants
 
 export const deviceArchiveVendorOptions = [
   { label: '凡双科技', value: '凡双科技' },
-  { label: '亿思德科技', value: '亿思德科技' },
-  { label: '华诺智感', value: '华诺智感' },
-  { label: '视界光电', value: '视界光电' },
+  { label: '081', value: '081' },
+  { label: '耐杰光电', value: '耐杰光电' },
   { label: '锐光防务', value: '锐光防务' },
-  { label: '磐石电子', value: '磐石电子' },
   { label: '海康威视', value: '海康威视' },
   { label: '大华', value: '大华' },
   { label: '通用', value: '通用' }

@@ -66,30 +66,18 @@ server: {
 - `.npmrc` 已设置 `legacy-peer-deps=true`，直接 `npm install` 即可。
 - `node_modules` 不提交 Git；克隆后需重新 `npm install`。
 
-## 当前进度
+## 当前状态
 
-- [x] 登录页（对齐 `raw/登录页.png`）
-- [ ] 业务模块页面（按需求迭代）
+各业务模块按展示原型持续迭代，接口采用 Mock 数据。登录首页为 `/lad/data-screen`，控制台首页为 `/lad/incident/history`。当前代码与 Git 历史是实现状态的依据。
 
-## GitHub 协作发布
+## GitHub 发布
 
-建议把 `preview-app` 单独作为一个 GitHub 仓库维护，这样研发同事可以直接拉取、对比、提 PR，不需要反复收前端压缩包。
+本目录已是独立 Git 仓库，远程仓库为 [low-altitude-defense-preview-app](https://github.com/wadecheung-sys/low-altitude-defense-preview-app)。推送 `main` 会触发 `.github/workflows/deploy-pages.yml`，构建并发布 GitHub Pages。
 
-这个目录已经预留了 GitHub Pages 自动部署工作流：
+[在线预览](https://wadecheung-sys.github.io/low-altitude-defense-preview-app/)
 
-- 推送到 `main` 分支后，会自动构建并发布一个在线预览页
-- 预览地址格式通常为：`https://<GitHub用户名>.github.io/<仓库名>/`
-- 如果仓库开启了 GitHub Pages，部署成功后同事可以直接点链接查看当前页面效果
+## 文档与资源
 
-推荐发布步骤：
+开发结构见 [docs/STRUCTURE.md](docs/STRUCTURE.md)。`public/export-templates/` 和 `public/prototypes/` 是运行所需资源。
 
-```bash
-cd preview-app
-git init -b main
-git add .
-git commit -m "chore: initialize preview app repository"
-git remote add origin <你的GitHub仓库地址>
-git push -u origin main
-```
-
-首次推送后，到 GitHub 仓库的 `Settings -> Pages` 确认使用 GitHub Actions 进行部署即可。
+历史交接报告、文档修订稿及渲染输出已于 2026-09-21 移出日常目录，归档位于完整工作区的 `_archive/documents-20260921/`；归档不随本仓库发布。`artifacts/` 保留文档生成脚本，重建旧文档前需恢复对应输入。
