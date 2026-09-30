@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { PlanSimulateResult } from '@/api/lad/plan/types'
 import { THREAT_LEVEL_ALL } from '@/api/lad/threat/threatLevelUtils'
 import { normalizePlanPriority } from '@/api/lad/plan/planDefaults'
+import { formatMaxDisposalDetail } from '@/api/lad/plan/planSafety'
 import { UI } from '../planConstants'
 import { threatLevelTagType } from '../../shared/ladDictHelpers'
 import { ElAlert, ElDescriptions, ElDescriptionsItem, ElTag } from 'element-plus'
@@ -88,6 +89,9 @@ const disposalLabel = computed(() => {
           <ElTag :type="threatLevelTagType(planThreatLevel)" size="small" effect="plain">
             {{ planThreatLevel }}
           </ElTag>
+        </ElDescriptionsItem>
+        <ElDescriptionsItem :label="UI.maxDisposalSeconds">
+          {{ result.maxDisposalSeconds ? formatMaxDisposalDetail(result.maxDisposalSeconds) : '—' }}
         </ElDescriptionsItem>
         <ElDescriptionsItem :label="UI.planPriority">
           {{ displayPriority }}

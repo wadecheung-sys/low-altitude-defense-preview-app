@@ -48,6 +48,8 @@ export interface PlanStrategy {
   planRule: string
   disposalMode: PlanDisposalMode
   manualResponseSeconds: number
+  /** 从反制功能实际开启起计时，到时仍未关闭则自动关闭；单位：秒。 */
+  maxDisposalSeconds: number
   disposalModeLabel?: string
   threatLevel: string
   areaLevel: string
@@ -97,6 +99,7 @@ export interface PlanStrategySavePayload {
   enabled: PlanEnabled
   disposalMode: PlanDisposalMode
   manualResponseSeconds: number
+  maxDisposalSeconds: number
   threatLevel: string
   areaLevel: string
   priority: number
@@ -125,6 +128,7 @@ export interface PlanSimulateResult {
   disposalModeLabel?: string
   /** 命中预案自身优先级（0-999），命中时返回 */
   priority?: number
+  maxDisposalSeconds?: number
   triggerRuleName?: string
   triggerAreaLevel?: string
   triggerWeatherSummary?: string
@@ -155,4 +159,6 @@ export interface PlanExecutionPayload {
   disposalMode: PlanDisposalMode
   manualResponseSeconds: number
   requiresManualConfirm: boolean
+  /** 安全关闭上限，从功能实际开启计时，不包含人工响应窗口。 */
+  maxDisposalSeconds: number
 }

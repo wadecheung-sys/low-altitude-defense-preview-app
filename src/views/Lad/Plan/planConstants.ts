@@ -7,6 +7,11 @@ export const UI = {
   disposalModeAuto: '自动处置',
   disposalModeManual: '人工值守',
   manualResponseSeconds: '人工响应时间',
+  deviceSafety: '设备安全限制',
+  maxDisposalSeconds: '单次最大处置时长',
+  maxDisposalHint:
+    '从反制设备的反制功能开启时开始计时；达到此时长仍未关闭时，自动关闭反制功能。提前关闭则本次计时结束，自动处置与人工值守均适用。',
+  maxDisposalInputHint: '请输入大于 0 的整数秒，0 不代表无限制。',
   manualResponseUnit: '秒',
   manualResponseHint: '自动处置专用：触发后进入人工核查窗口；填 0 表示不等待，立即执行。',
   manualResponseManualHint: '人工值守模式下不启用等待窗口，所有动作均需人工核查后下发。',

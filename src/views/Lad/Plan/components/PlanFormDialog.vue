@@ -20,6 +20,12 @@ import { getPlanDetailApi, savePlanApi } from '@/api/lad/plan'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import { PLAN_DEFAULT_PRIORITY } from '@/api/lad/plan/planDefaults'
 import {
+  PLAN_DEFAULT_MAX_DISPOSAL_SECONDS,
+  PLAN_MAX_DISPOSAL_VALIDATION_MESSAGE,
+  isValidMaxDisposalSeconds,
+  normalizeMaxDisposalSeconds
+} from '@/api/lad/plan/planSafety'
+import {
   PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS,
   planDisposalModeOptions
 } from '@/api/lad/plan/planDisposal'
@@ -69,6 +75,7 @@ const form = ref({
   planRule: '',
   disposalMode: 'auto' as PlanDisposalMode,
   manualResponseSeconds: PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS,
+  maxDisposalSeconds: PLAN_DEFAULT_MAX_DISPOSAL_SECONDS,
   threatLevel: '全部',
   priority: PLAN_DEFAULT_PRIORITY,
   enabled: true
@@ -207,7 +214,8 @@ function fillFormFromPlan(plan: PlanStrategy) {
     manualResponseSeconds:
       plan.disposalMode === 'manual'
         ? 0
-        : plan.manualResponseSeconds || PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS,
+        : (plan.manualResponseSeconds ?? PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS),
+    maxDisposalSeconds: normalizeMaxDisposalSeconds(plan.maxDisposalSeconds),
     threatLevel: plan.threatLevel || '全部',
     priority: Number.isFinite(Number(plan.priority))
       ? Number(plan.priority)
@@ -233,6 +241,7 @@ function resetNewForm() {
     planRule: '',
     disposalMode: 'auto',
     manualResponseSeconds: PLAN_DEFAULT_MANUAL_RESPONSE_SECONDS,
+    maxDisposalSeconds: PLAN_DEFAULT_MAX_DISPOSAL_SECONDS,
     threatLevel: '全部',
     priority: PLAN_DEFAULT_PRIORITY,
     enabled: true
@@ -262,6 +271,10 @@ watch(
 )
 
 async function onSave() {
+  if (!isValidMaxDisposalSeconds(form.value.maxDisposalSeconds)) {
+    ElMessage.warning(PLAN_MAX_DISPOSAL_VALIDATION_MESSAGE)
+    return
+  }
   if (!form.value.planName.trim()) {
     ElMessage.warning('请填写预案名称')
     return
@@ -294,6 +307,7 @@ async function onSave() {
       planRule: form.value.planRule.trim() || undefined,
       enabled: form.value.enabled,
       disposalMode: form.value.disposalMode,
+      maxDisposalSeconds: form.value.maxDisposalSeconds,
       manualResponseSeconds: isAutoDisposal.value
         ? Number(form.value.manualResponseSeconds) || 0
         : 0,
@@ -337,7 +351,7 @@ async function onSave() {
     width="980px"
     max-height="90vh"
   >
-    <ElForm v-loading="detailLoading" label-width="110px">
+    <ElForm v-loading="detailLoading" label-width="150px">
       <div class="plan-form-section">
         <div class="plan-form-section__title">基本信息</div>
         <ElFormItem :label="UI.planName" required>
@@ -400,6 +414,25 @@ async function onSave() {
         </ElFormItem>
         <ElFormItem :label="UI.enabled">
           <ElSwitch v-model="form.enabled" inline-prompt active-text="ON" inactive-text="OFF" />
+        </ElFormItem>
+      </div>
+      <div class="plan-form-section">
+        <div class="plan-form-section__title">{{ UI.deviceSafety }}</div>
+        <ElFormItem :label="UI.maxDisposalSeconds" required>
+          <div class="flex items-center gap-8px w-full">
+            <ElInputNumber
+              v-model="form.maxDisposalSeconds"
+              :min="1"
+              :step="1"
+              :precision="0"
+              controls-position="right"
+              :aria-label="UI.maxDisposalSeconds"
+              class="!w-160px"
+            />
+            <span class="text-13px">秒</span>
+          </div>
+          <div class="plan-form__tip">{{ UI.maxDisposalHint }}</div>
+          <div class="plan-form__tip">{{ UI.maxDisposalInputHint }}</div>
         </ElFormItem>
       </div>
       <ElFormItem :label="UI.triggerRules" required>

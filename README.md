@@ -70,6 +70,8 @@ server: {
 
 各业务模块按展示原型持续迭代，接口采用 Mock 数据。登录首页为 `/lad/data-screen`，控制台首页为 `/lad/incident/history`。当前代码与 Git 历史是实现状态的依据。
 
+预案策略的“单次最大处置时长”使用 `maxDisposalSeconds` 字段，单位为秒，必须为正整数；新增及未配置该字段的旧预案采用 30 秒原型默认值。自动处置与人工值守均适用：从反制功能实际开启起计时，到时仍未关闭则自动关闭，提前关闭结束本次计时，不计入开启前的人工响应窗口。该值已贯通 Mock 保存、详情、模拟结果及执行参数；目前没有真实设备控制服务，实际计时、关闭指令与关闭回执仍需在设备接入层实现，前端展示不代表设备已经关闭。Mock 数据仅保留于当前运行实例，重启后恢复示例数据。
+
 ## GitHub 发布
 
 本目录已是独立 Git 仓库，远程仓库为 [low-altitude-defense-preview-app](https://github.com/wadecheung-sys/low-altitude-defense-preview-app)。推送 `main` 会触发 `.github/workflows/deploy-pages.yml`，构建并发布 GitHub Pages。

@@ -23,6 +23,11 @@ import type { PlanTriggerContext } from './planTrigger'
 import { PLAN_DEFAULT_PRIORITY, normalizePlanPriority } from './planDefaults'
 import { matchesPlanThreatLevel, isSimulateThreatLevelAll } from './planThreatLevel'
 import { THREAT_LEVEL_ALL } from '@/api/lad/threat/threatLevelUtils'
+import {
+  isValidMaxDisposalSeconds,
+  normalizeMaxDisposalSeconds,
+  PLAN_MAX_DISPOSAL_VALIDATION_MESSAGE
+} from './planSafety'
 
 function formatNow() {
   const d = new Date()
@@ -53,8 +58,10 @@ type SeedInput = Omit<
   | 'triggerRuleCount'
   | 'triggerRulesSummary'
   | 'disposalModeLabel'
+  | 'maxDisposalSeconds'
 > & {
   triggerRules: PlanTriggerRule[]
+  maxDisposalSeconds?: number
 }
 
 export { PLAN_DEFAULT_PRIORITY } from './planDefaults'
@@ -278,6 +285,7 @@ const seed: SeedInput[] = [
     id: 'plan-008',
     planCode: 'contingency-008',
     planName: '边界全向干扰',
+    maxDisposalSeconds: 60,
     planRule: '1. 全向干扰模式最长60秒\n2. 监测周边设备状态\n3. 异常自动停止并告警',
     disposalMode: 'auto',
     manualResponseSeconds: 15,
@@ -332,6 +340,7 @@ const seed: SeedInput[] = [
     id: 'plan-010',
     planCode: 'contingency-010',
     planName: '导航诱骗驱离',
+    maxDisposalSeconds: 45,
     planRule: '1. 导航诱骗模式不超过45秒\n2. 执行中禁止切换频段\n3. 结束后生成备注',
     disposalMode: 'auto',
     manualResponseSeconds: 10,
@@ -516,6 +525,7 @@ function enrichPlan(plan: SeedInput | PlanStrategy): PlanStrategy {
   return {
     ...(plan as PlanStrategy),
     ...disposal,
+    maxDisposalSeconds: normalizeMaxDisposalSeconds(plan.maxDisposalSeconds),
     triggerRules,
     priority: normalizePriority((plan as PlanStrategy).priority),
     weatherFactor: undefined,
@@ -540,11 +550,8 @@ function ensureStoreVersion() {
 
 export function syncPlansFromSeed() {
   ensureStoreVersion()
-  const seedIds = new Set(seed.map((item) => item.id))
-  const userCreated = allPlans
-    .filter((item) => !seedIds.has(item.id))
-    .map((item) => enrichPlan(item))
-  allPlans = [...seed.map((item) => enrichPlan(item)), ...userCreated]
+  // 种子只在初始化时载入，读取不得覆盖已保存的编辑或恢复已删除的预案。
+  allPlans = allPlans.map((item) => enrichPlan(item))
 }
 
 syncPlansFromSeed()
@@ -639,11 +646,15 @@ export function buildPlanExecutionPayload(
     execNote: enriched.planRule,
     disposalMode: enriched.disposalMode,
     manualResponseSeconds: enriched.manualResponseSeconds,
+    maxDisposalSeconds: enriched.maxDisposalSeconds,
     requiresManualConfirm: planRequiresManualConfirm(enriched)
   }
 }
 
 function normalizeSaveBody(body: PlanStrategySavePayload): PlanStrategySavePayload {
+  if (!isValidMaxDisposalSeconds(body.maxDisposalSeconds)) {
+    throw new Error(PLAN_MAX_DISPOSAL_VALIDATION_MESSAGE)
+  }
   if (!body.triggerRules?.length) {
     throw new Error('请至少配置一条触发策略规则')
   }
@@ -680,6 +691,7 @@ export function savePlan(body: PlanStrategySavePayload): PlanStrategy {
     planRule: normalized.planRule?.trim() || '-',
     disposalMode: normalized.disposalMode,
     manualResponseSeconds: normalized.manualResponseSeconds,
+    maxDisposalSeconds: normalized.maxDisposalSeconds,
     threatLevel: normalized.threatLevel || '全部',
     areaLevel: normalized.areaLevel || '全部',
     priority: normalizePriority(normalized.priority),
@@ -760,6 +772,7 @@ export function simulatePlan(input: PlanSimulateInput): PlanSimulateResult {
       planThreatLevel: enriched.threatLevel || '全部',
       disposalMode: enriched.disposalMode,
       disposalModeLabel: enriched.disposalModeLabel,
+      maxDisposalSeconds: enriched.maxDisposalSeconds,
       priority: normalizePlanPriority(enriched.priority),
       triggerRuleName: triggerRule.ruleName,
       triggerAreaLevel: formatTriggerRuleAreaLevel(triggerRule),

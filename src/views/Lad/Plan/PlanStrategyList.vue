@@ -190,6 +190,16 @@ const crudSchemas = reactive<CrudSchema[]>([
     table: { width: 100, align: 'center' }
   },
   {
+    field: 'maxDisposalSeconds',
+    label: UI.maxDisposalSeconds,
+    search: { hidden: true },
+    table: {
+      width: 160,
+      align: 'center',
+      slots: { default: ({ row }: { row: PlanStrategy }) => `${row.maxDisposalSeconds} 秒` }
+    }
+  },
+  {
     field: 'priority',
     label: UI.planPriority,
     search: { hidden: true },
