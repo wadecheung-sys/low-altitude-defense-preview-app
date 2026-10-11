@@ -10,7 +10,7 @@ export type DataScreenNavBridgeCleanup = () => void
 const NAV_LINKS = [
   { id: 'u18', path: LAD_BACKEND_HOME_PATH, role: 'button', ariaLabel: '进入控制台' },
   { id: 'u112', path: LAD_BACKEND_HOME_PATH, role: 'link', ariaLabel: '历史事件' },
-  { id: 'u193', path: LAD_MESSAGE_CENTER_PATH, role: 'link', ariaLabel: '消息中心更多' }
+  { id: 'u191', path: LAD_MESSAGE_CENTER_PATH, role: 'link', ariaLabel: '消息中心更多' }
 ] as const
 
 function stopPrototypeEvent(event: Event) {

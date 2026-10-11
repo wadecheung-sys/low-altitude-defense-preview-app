@@ -1,5 +1,6 @@
 import {
   buildDataScreenDeviceView,
+  DATA_SCREEN_SUMMARY_PANEL_ROOT_ID,
   DATA_SCREEN_SUMMARY_PANELS,
   DATA_SCREEN_VIEW_MORE_BUTTONS,
   setPrototypeLabelText
@@ -67,7 +68,7 @@ export function bindDataScreenDeviceBridge(
     if (cleanup) cleanups.push(cleanup)
   })
 
-  const summaryPanel = doc.getElementById('u315')
+  const summaryPanel = doc.getElementById(DATA_SCREEN_SUMMARY_PANEL_ROOT_ID)
   if (summaryPanel) {
     const handlePanelClick = (event: Event) => {
       const model = resolveViewMoreModel(event.target)
