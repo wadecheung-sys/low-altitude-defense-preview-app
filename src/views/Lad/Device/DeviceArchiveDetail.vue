@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { getDeviceArchiveDetailApi, saveDeviceArchiveApi } from '@/api/lad/device'
+import { DEVICE_CLASS_OPTIONS, isValidDeviceClass } from '@/api/lad/device/deviceSafety'
 import type {
   DeviceArchiveCategory,
+  DeviceClass,
   DeviceArchiveDetail,
   DeviceArchiveIndicator,
   DeviceArchiveConfigurableItem
@@ -19,6 +21,8 @@ import {
   ElFormItem,
   ElImage,
   ElInput,
+  ElRadio,
+  ElRadioGroup,
   ElMessage,
   ElMessageBox,
   ElOption,
@@ -62,6 +66,7 @@ const recordId = computed(() => (route.params.id as string) || '')
 const form = reactive({
   archiveNo: '',
   archiveName: '',
+  deviceClass: '' as DeviceClass | '',
   deviceType: '',
   vendor: '',
   deviceModel: '',
@@ -69,6 +74,7 @@ const form = reactive({
 })
 
 const rules: FormRules = {
+  deviceClass: [{ required: true, message: '请选择设备类别', trigger: 'change' }],
   archiveName: [{ required: true, message: '请输入档案名称', trigger: 'blur' }],
   deviceType: [{ required: true, message: '请选择设备类型', trigger: 'change' }],
   vendor: [{ required: true, message: '请选择厂商', trigger: 'change' }],
@@ -89,6 +95,7 @@ function resetCreateState() {
   form.vendor = '凡双科技'
   form.deviceModel = ''
   form.remark = ''
+  form.deviceClass = ''
   enabledState.value = true
   recordCategory.value = 'radar'
   imageUrl.value = DEVICE_ARCHIVE_PLACEHOLDER
@@ -105,6 +112,7 @@ const applyDetail = (data: DeviceArchiveDetail) => {
   form.vendor = data.vendor
   form.deviceModel = data.deviceModel
   form.remark = data.remark
+  form.deviceClass = data.deviceClass
   enabledState.value = data.enabled
   recordCategory.value = data.category
   imageUrl.value = data.imageUrl
@@ -195,6 +203,10 @@ function configScopeTagType(scope: DeviceArchiveConfigurableItem['scope']) {
 
 async function save() {
   if (!isEditable.value) return
+  if (!isValidDeviceClass(form.deviceClass)) {
+    ElMessage.warning('请选择设备类别')
+    return
+  }
   const indErr = validateSpecifications()
   if (indErr) {
     ElMessage.warning(indErr)
@@ -217,6 +229,7 @@ async function save() {
       enabled: enabledState.value,
       category: recordCategory.value,
       remark: form.remark,
+      deviceClass: form.deviceClass,
       imageUrl: imageUrl.value,
       specifications: specificationRows.value.map((r) => ({
         id: r.id,
@@ -232,6 +245,8 @@ async function save() {
     }
     const full = await getDeviceArchiveDetailApi(res.data.id)
     applyDetail(full.data)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '保存失败，请重试')
   } finally {
     saveLoading.value = false
   }
@@ -307,6 +322,17 @@ watch(
           </ElFormItem>
           <ElFormItem label="档案" prop="archiveName" required>
             <ElInput v-model="form.archiveName" placeholder="请输入档案名称" clearable />
+          </ElFormItem>
+          <ElFormItem label="设备类别" prop="deviceClass" required>
+            <ElRadioGroup v-model="form.deviceClass" aria-label="设备类别">
+              <ElRadio
+                v-for="option in DEVICE_CLASS_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </ElRadio>
+            </ElRadioGroup>
           </ElFormItem>
           <ElFormItem label="设备类型" prop="deviceType" required>
             <ElSelect v-model="form.deviceType" placeholder="--" clearable class="w-100%">

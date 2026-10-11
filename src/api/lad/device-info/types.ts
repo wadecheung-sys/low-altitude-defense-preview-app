@@ -1,4 +1,8 @@
-import type { DeviceArchiveConfigurableItem, DeviceArchiveIndicator } from '../device/types'
+import type {
+  DeviceArchiveConfigurableItem,
+  DeviceArchiveIndicator,
+  DeviceClass
+} from '../device/types'
 import type { LadDeviceTypeLabel } from '@/constants/deviceTypes'
 
 /** 设备类型（筛选项 / 列表展示） */
@@ -65,6 +69,7 @@ export interface DeviceExtendedField {
 
 /** 关联设备档案摘要（设备规格与可配置项定义） */
 export interface DeviceLinkedArchive {
+  deviceClass: DeviceClass
   id: string
   archiveNo: string
   archiveName: string
@@ -80,6 +85,8 @@ export interface DeviceLinkedArchive {
 export type DeviceConfigValues = Record<string, string>
 
 export interface DeviceInfoDetail extends DeviceInfoItem, DeviceInfoDeployment {
+  /** 单台反制设备的时长上限，单位秒。 */
+  maxDisposalSeconds?: number
   remark: string
   linkedArchive: DeviceLinkedArchive | null
   extendedFields: DeviceExtendedField[]
@@ -96,6 +103,7 @@ export type {
 } from './deviceSelfCheck'
 
 export interface DeviceInfoSavePayload {
+  maxDisposalSeconds?: number
   id?: string
   deviceId?: string
   deviceName: string

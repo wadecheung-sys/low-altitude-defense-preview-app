@@ -6,7 +6,6 @@ import { BaseButton } from '@/components/Button'
 import { getPlanDetailApi } from '@/api/lad/plan'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import { formatDisposalModeDetail } from '@/api/lad/plan/planDisposal'
-import { formatMaxDisposalDetail } from '@/api/lad/plan/planSafety'
 import { formatTriggerCondition } from '@/api/lad/plan/planTrigger'
 import type { PlanStrategy } from '@/api/lad/plan/types'
 import { countermeasureActionLabel } from '../planDeviceConstants'
@@ -81,14 +80,6 @@ watch(
       </ElDescriptionsItem>
       <ElDescriptionsItem :label="UI.manualResponseSeconds" :span="2">
         <div class="whitespace-pre-line">{{ disposalDetail }}</div>
-      </ElDescriptionsItem>
-      <ElDescriptionsItem :label="UI.maxDisposalSeconds" :span="2">
-        <template v-if="detail">
-          <strong>{{ detail.maxDisposalSeconds }} 秒</strong>
-          <div class="text-12px text-[var(--el-text-color-secondary)]">
-            {{ formatMaxDisposalDetail(detail.maxDisposalSeconds) }}
-          </div>
-        </template>
       </ElDescriptionsItem>
       <ElDescriptionsItem :label="UI.enabled">
         <ElTag :type="detail?.enabled ? 'success' : 'info'">{{

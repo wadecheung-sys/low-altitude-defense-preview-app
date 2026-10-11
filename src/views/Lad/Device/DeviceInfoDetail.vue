@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { getDeviceArchiveDetailApi, getDeviceArchiveListApi } from '@/api/lad/device'
 import type { DeviceArchiveItem } from '@/api/lad/device'
+import {
+  deviceClassLabel,
+  isValidMaxDisposalSeconds,
+  DEVICE_MAX_DISPOSAL_VALIDATION_MESSAGE
+} from '@/api/lad/device/deviceSafety'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import type { AreaRegion } from '@/api/lad/area'
 import {
@@ -65,6 +70,8 @@ const selfCheckLoading = ref(false)
 const selfCheckVisible = ref(false)
 const selfCheckResult = ref<DeviceSelfCheckResult | null>(null)
 const mapPlacing = ref(false)
+let applyingDetail = false
+let archiveRequestSeq = 0
 
 const isCreateMode = computed(() => route.name === 'LadDeviceInfoAdd')
 const isMonitorDetailMode = computed(() => route.name === 'LadDeviceMonitorDetail')
@@ -76,6 +83,7 @@ const detailFallbackPath = computed(() =>
 )
 
 const linkedArchive = computed(() => currentLinkedArchive.value)
+const showDeviceSafety = computed(() => linkedArchive.value?.deviceClass === 'countermeasure')
 const archiveSelectOptions = computed(() => {
   const selectedArchiveId = form.archiveId
   return archiveOptions.value.filter((item) => item.enabled || item.id === selectedArchiveId)
@@ -112,6 +120,7 @@ const form = reactive({
   ipAddress: '',
   deviceName: '',
   archiveId: '',
+  maxDisposalSeconds: undefined as number | undefined,
   deployAreaId: '',
   serialNo: '',
   deviceType: '',
@@ -123,6 +132,18 @@ const form = reactive({
 })
 
 const rules: FormRules = {
+  maxDisposalSeconds: [
+    {
+      validator: (_rule, value, callback) => {
+        if (showDeviceSafety.value && !isValidMaxDisposalSeconds(value)) {
+          callback(new Error(DEVICE_MAX_DISPOSAL_VALIDATION_MESSAGE))
+        } else {
+          callback()
+        }
+      },
+      trigger: ['blur', 'change']
+    }
+  ],
   deviceId: [{ required: true, message: '请输入设备编号', trigger: 'blur' }],
   deviceName: [{ required: true, message: '请输入设备名称', trigger: 'blur' }],
   archiveId: [{ required: true, message: '请选择基础档案', trigger: 'change' }],
@@ -204,6 +225,7 @@ function mapArchiveDetailToLinkedArchive(
     archiveNo: data.archiveNo,
     archiveName: data.archiveName,
     deviceType: data.deviceType,
+    deviceClass: data.deviceClass,
     vendor: data.vendor,
     deviceModel: data.deviceModel,
     imageUrl: data.imageUrl,
@@ -219,12 +241,17 @@ function resolveDeployAreaId(deployLocation: string) {
 }
 
 function applyDetail(data: DeviceInfoDetail) {
+  archiveRequestSeq += 1
+  archiveLoading.value = false
+  applyingDetail = true
   detail.value = data
   currentLinkedArchive.value = data.linkedArchive
   form.deviceId = data.deviceId
   form.ipAddress = data.ipAddress
   form.deviceName = data.deviceName
   form.archiveId = data.archiveId || ''
+  form.maxDisposalSeconds =
+    data.linkedArchive?.deviceClass === 'countermeasure' ? data.maxDisposalSeconds : undefined
   form.deployAreaId = resolveDeployAreaId(data.deployLocation)
   form.serialNo = data.serialNo
   form.deviceType = data.deviceType
@@ -254,15 +281,19 @@ function applyDetail(data: DeviceInfoDetail) {
   placement.mapX = data.mapX
   placement.mapY = data.mapY
   placement.controlRangeM = data.controlRangeM
+  applyingDetail = false
 }
 
 function resetCreate() {
+  archiveRequestSeq += 1
+  archiveLoading.value = false
   detail.value = null
   currentLinkedArchive.value = null
   form.deviceId = ''
   form.ipAddress = ''
   form.deviceName = ''
   form.archiveId = ''
+  form.maxDisposalSeconds = undefined
   form.deployAreaId = ''
   form.serialNo = ''
   form.deviceType = ''
@@ -292,22 +323,28 @@ async function loadArchiveOptions() {
 }
 
 async function syncLinkedArchive(archiveId?: string) {
+  const requestSeq = ++archiveRequestSeq
+  currentLinkedArchive.value = null
+  form.deviceType = ''
+  form.maxDisposalSeconds = undefined
+  formRef.value?.clearValidate(['maxDisposalSeconds', 'deviceType'])
   if (!archiveId) {
-    currentLinkedArchive.value = null
-    form.deviceType = ''
+    archiveLoading.value = false
     return
   }
   archiveLoading.value = true
   try {
     const res = await getDeviceArchiveDetailApi(archiveId)
+    if (requestSeq !== archiveRequestSeq) return
     currentLinkedArchive.value = mapArchiveDetailToLinkedArchive(res.data)
     form.deviceType = res.data.deviceType
   } catch {
+    if (requestSeq !== archiveRequestSeq) return
     currentLinkedArchive.value = null
     form.deviceType = ''
     ElMessage.warning('基础档案加载失败')
   } finally {
-    archiveLoading.value = false
+    if (requestSeq === archiveRequestSeq) archiveLoading.value = false
   }
 }
 
@@ -389,6 +426,10 @@ async function runSelfCheck() {
 
 async function save() {
   if (!isEditable.value) return
+  if (archiveLoading.value || !linkedArchive.value || linkedArchive.value.id !== form.archiveId) {
+    ElMessage.warning(archiveLoading.value ? '请等待基础档案加载完成' : '请选择有效的基础档案')
+    return
+  }
   try {
     await formRef.value?.validate()
   } catch {
@@ -406,6 +447,7 @@ async function save() {
       deviceName: form.deviceName.trim(),
       archiveInfo,
       archiveId: form.archiveId || undefined,
+      ...(showDeviceSafety.value ? { maxDisposalSeconds: form.maxDisposalSeconds } : {}),
       deviceType: form.deviceType,
       deployLocation,
       deployAddress: deployLocation,
@@ -433,6 +475,8 @@ async function save() {
       const full = await getDeviceInfoDetailApi(res.data.id)
       applyDetail(full.data)
     }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '保存失败，请重试')
   } finally {
     saveLoading.value = false
   }
@@ -453,8 +497,9 @@ watch(
 watch(
   () => form.archiveId,
   (archiveId) => {
-    syncLinkedArchive(archiveId)
-  }
+    if (!applyingDetail) void syncLinkedArchive(archiveId)
+  },
+  { flush: 'sync' }
 )
 
 watch(
@@ -483,7 +528,13 @@ watch(metricsTab, (tab) => {
     <template #header>
       <div class="device-detail-header">
         <div class="device-detail-header__left">
-          <BaseButton v-if="isEditable" type="primary" :loading="saveLoading" @click="save">
+          <BaseButton
+            v-if="isEditable"
+            type="primary"
+            :loading="saveLoading"
+            :disabled="archiveLoading"
+            @click="save"
+          >
             保存
           </BaseButton>
           <BaseButton @click="go(-1)">返回</BaseButton>
@@ -590,6 +641,29 @@ watch(metricsTab, (tab) => {
               {{ detail?.archiveInfo || '未关联' }}
             </span>
           </ElFormItem>
+          <ElFormItem v-if="linkedArchive" label="设备类别">
+            <ElInput :model-value="deviceClassLabel(linkedArchive.deviceClass)" disabled />
+          </ElFormItem>
+          <div v-if="showDeviceSafety" class="device-detail-safety-block">
+            <ElFormItem label="单次最大处置时长" prop="maxDisposalSeconds" :required="isEditable">
+              <div v-if="isEditable" class="device-detail-safety-input">
+                <ElInputNumber
+                  v-model="form.maxDisposalSeconds"
+                  :min="1"
+                  :step="1"
+                  controls-position="right"
+                  placeholder="请输入时长"
+                  aria-label="单次最大处置时长"
+                />
+                <span>秒</span>
+              </div>
+              <strong v-else>{{
+                form.maxDisposalSeconds ? `${form.maxDisposalSeconds} 秒` : '未配置'
+              }}</strong>
+            </ElFormItem>
+            <p>仅针对本设备，预案反制与人工触发均适用。</p>
+            <p v-if="isEditable">请依据设备安全要求填写正整数秒，0 不代表无限制。</p>
+          </div>
           <ElFormItem :label="DEVICE_INFO_FIELD_LABELS.deviceType" prop="deviceType" required>
             <ElInput v-model="form.deviceType" placeholder="随所选档案自动确定" disabled />
           </ElFormItem>
@@ -810,6 +884,28 @@ watch(metricsTab, (tab) => {
 </template>
 
 <style scoped lang="less">
+.device-detail-safety-block {
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--el-border-radius-base);
+  background: var(--el-fill-color-light);
+
+  p {
+    margin: 6px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.device-detail-safety-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
 .device-detail-grid {
   display: grid;
   grid-template-columns: 280px minmax(260px, 1fr) minmax(340px, 1.25fr);

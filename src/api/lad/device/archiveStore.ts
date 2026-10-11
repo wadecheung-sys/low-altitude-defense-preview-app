@@ -7,6 +7,7 @@ import {
   INTERNAL_PLACEHOLDER_DEVICES
 } from '@/constants/deviceCatalog'
 import type { DeviceCatalogEntry } from '@/constants/deviceCatalog'
+import { defaultDeviceClassForType, isValidDeviceClass } from './deviceSafety'
 import type {
   DeviceArchiveCategory,
   DeviceArchiveConfigurableItem,
@@ -52,6 +53,7 @@ const CAMERA_ARCHIVE_SEEDS: CameraArchiveSeed[] = [
       archiveNo: 'D-LAD-CAM0001',
       archiveName: '400万星光筒型网络摄像机档案',
       deviceType: '监控摄像机',
+      deviceClass: 'detection',
       vendor: '海康威视',
       deviceModel: 'DS-2CD3T46WDV3-I3',
       enabled: true,
@@ -75,6 +77,7 @@ const CAMERA_ARCHIVE_SEEDS: CameraArchiveSeed[] = [
       archiveNo: 'D-LAD-CAM0002',
       archiveName: '800万红外枪型网络摄像机档案',
       deviceType: '监控摄像机',
+      deviceClass: 'detection',
       vendor: '大华',
       deviceModel: 'DH-IPC-HFW5831E-Z',
       enabled: true,
@@ -98,6 +101,7 @@ const CAMERA_ARCHIVE_SEEDS: CameraArchiveSeed[] = [
       archiveNo: 'D-LAD-CAM0003',
       archiveName: '200万高速云台球机档案',
       deviceType: '监控摄像机',
+      deviceClass: 'detection',
       vendor: '海康威视',
       deviceModel: 'DS-2DE4423IW-DE',
       enabled: true,
@@ -132,6 +136,7 @@ const CAMERA_ARCHIVE_SEEDS: CameraArchiveSeed[] = [
       archiveNo: 'D-LAD-CAM0004',
       archiveName: '400万全景广角摄像机档案',
       deviceType: '监控摄像机',
+      deviceClass: 'detection',
       vendor: '大华',
       deviceModel: 'DH-IPC-PFW3849-AS',
       enabled: true,
@@ -189,6 +194,7 @@ function catalogToArchiveRow(entry: DeviceCatalogEntry, id: string): DeviceArchi
     archiveNo: entry.archiveNo,
     archiveName: entry.archiveName,
     deviceType: entry.deviceType,
+    deviceClass: defaultDeviceClassForType(entry.deviceType),
     vendor: entry.vendor,
     deviceModel: entry.model,
     enabled: entry.tier !== 'pending',
@@ -362,6 +368,7 @@ function generateArchiveNo(category: Exclude<DeviceArchiveCategory, 'all'>) {
 }
 
 export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceArchiveItem {
+  if (!isValidDeviceClass(body.deviceClass)) throw new Error('请选择设备类别')
   const now = formatNow()
   const category = body.category ?? categoryFromDeviceType(body.deviceType)
 
@@ -372,6 +379,7 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
       ...allList[idx],
       archiveName: body.archiveName,
       deviceType: body.deviceType,
+      deviceClass: body.deviceClass,
       vendor: body.vendor,
       deviceModel: body.deviceModel,
       enabled: body.enabled,
@@ -394,6 +402,7 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
     archiveNo: body.archiveNo?.trim() || generateArchiveNo(category),
     archiveName: body.archiveName,
     deviceType: body.deviceType,
+    deviceClass: body.deviceClass,
     vendor: body.vendor,
     deviceModel: body.deviceModel,
     enabled: body.enabled ?? true,

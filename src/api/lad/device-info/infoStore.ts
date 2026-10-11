@@ -1,6 +1,10 @@
 import { deviceSupportsSelfCheck, runDeviceSelfCheck } from './deviceSelfCheck'
 import type { DeviceSelfCheckResult } from './deviceSelfCheck'
 import { DEVICE_ARCHIVE_ID_BY_MODEL, queryDeviceArchiveDetail } from '../device/archiveStore'
+import {
+  DEVICE_DEMO_MAX_DISPOSAL_SECONDS,
+  validateDeviceMaxDisposalSeconds
+} from '../device/deviceSafety'
 import { ALL_DEVICE_CAPABILITY_CATALOG } from '@/constants/deviceCatalog'
 import type {
   DeviceExtendedField,
@@ -14,6 +18,7 @@ import type {
 } from './types'
 
 interface DeviceInfoExt extends DeviceInfoDeployment {
+  maxDisposalSeconds?: number
   remark: string
   extendedFields: DeviceExtendedField[]
   deviceConfigValues: Record<string, string>
@@ -90,6 +95,7 @@ function resolveLinkedArchive(archiveId?: string): DeviceLinkedArchive | null {
     archiveNo: arch.archiveNo,
     archiveName: arch.archiveName,
     deviceType: arch.deviceType,
+    deviceClass: arch.deviceClass,
     vendor: arch.vendor,
     deviceModel: arch.deviceModel,
     imageUrl: arch.imageUrl,
@@ -176,7 +182,11 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
   }
 }
 
-function mergeExt(body: DeviceInfoSavePayload, prev?: DeviceInfoExt): DeviceInfoExt {
+function mergeExt(
+  body: DeviceInfoSavePayload,
+  maxDisposalSeconds: number | undefined,
+  prev?: DeviceInfoExt
+): DeviceInfoExt {
   const extendedFields =
     body.extendedFields?.map((f) => ({
       id: f.id,
@@ -186,6 +196,7 @@ function mergeExt(body: DeviceInfoSavePayload, prev?: DeviceInfoExt): DeviceInfo
     prev?.extendedFields ??
     []
   return {
+    ...(maxDisposalSeconds !== undefined ? { maxDisposalSeconds } : {}),
     remark: body.remark ?? prev?.remark ?? '',
     imageUrl: body.imageUrl ?? prev?.imageUrl ?? '',
     deployAddress: body.deployAddress?.trim() ?? prev?.deployAddress ?? '',
@@ -440,6 +451,9 @@ allList.forEach((row, i) => {
   if (!detailExt[row.id]) {
     detailExt[row.id] = {
       ...defaultExtForRow(row, i),
+      ...(resolveLinkedArchive(row.archiveId)?.deviceClass === 'countermeasure'
+        ? { maxDisposalSeconds: DEVICE_DEMO_MAX_DISPOSAL_SECONDS }
+        : {}),
       extendedFields: defaultExtendedFields(row, i)
     }
   } else if (!detailExt[row.id]!.extendedFields?.length) {
@@ -497,11 +511,16 @@ export function buildDeviceInfoDetail(row: DeviceInfoItem): DeviceInfoDetail {
     detailExt[row.id] = defaultExtForRow(row, idx >= 0 ? idx : 0)
   }
   const ext = detailExt[row.id]!
+  const linkedArchive = resolveLinkedArchive(row.archiveId)
+  const { maxDisposalSeconds, ...deployment } = ext
   return {
     ...row,
-    ...ext,
+    ...deployment,
+    ...(linkedArchive?.deviceClass === 'countermeasure' && maxDisposalSeconds !== undefined
+      ? { maxDisposalSeconds }
+      : {}),
     remark: ext.remark,
-    linkedArchive: resolveLinkedArchive(row.archiveId),
+    linkedArchive,
     extendedFields: ext.extendedFields.map((f) => ({ ...f })),
     deviceConfigValues: { ...ext.deviceConfigValues },
     supportsSelfCheck: deviceSupportsSelfCheck(row.deviceType)
@@ -551,6 +570,12 @@ function generateDeviceCode() {
 }
 
 export function saveDeviceInfoRecord(body: DeviceInfoSavePayload): DeviceInfoItem {
+  const linkedArchive = resolveLinkedArchive(body.archiveId)
+  if (!linkedArchive) throw new Error('请选择有效的基础档案')
+  const maxDisposalSeconds = validateDeviceMaxDisposalSeconds(
+    linkedArchive.deviceClass,
+    body.maxDisposalSeconds
+  )
   const now = formatNow()
   if (body.id) {
     const idx = allList.findIndex((r) => r.id === body.id)
@@ -559,9 +584,9 @@ export function saveDeviceInfoRecord(body: DeviceInfoSavePayload): DeviceInfoIte
       ...allList[idx],
       deviceId: body.deviceId?.trim() || allList[idx].deviceId,
       deviceName: body.deviceName.trim(),
-      archiveInfo: body.archiveInfo.trim(),
+      archiveInfo: linkedArchive.archiveName,
       archiveId: body.archiveId,
-      deviceType: body.deviceType,
+      deviceType: linkedArchive.deviceType,
       deployLocation: body.deployLocation.trim(),
       ipAddress: body.ipAddress.trim(),
       serialNo: body.serialNo.trim(),
@@ -570,7 +595,7 @@ export function saveDeviceInfoRecord(body: DeviceInfoSavePayload): DeviceInfoIte
       updatedAt: now
     }
     allList[idx] = row
-    detailExt[row.id] = mergeExt(body, detailExt[row.id])
+    detailExt[row.id] = mergeExt(body, maxDisposalSeconds, detailExt[row.id])
     return row
   }
   const id = nextDeviceId()
@@ -578,9 +603,9 @@ export function saveDeviceInfoRecord(body: DeviceInfoSavePayload): DeviceInfoIte
     id,
     deviceId: body.deviceId?.trim() || generateDeviceCode(),
     deviceName: body.deviceName.trim(),
-    archiveInfo: body.archiveInfo.trim(),
+    archiveInfo: linkedArchive.archiveName,
     archiveId: body.archiveId,
-    deviceType: body.deviceType,
+    deviceType: linkedArchive.deviceType,
     deployLocation: body.deployLocation.trim(),
     ipAddress: body.ipAddress.trim(),
     serialNo: body.serialNo.trim(),
@@ -589,7 +614,7 @@ export function saveDeviceInfoRecord(body: DeviceInfoSavePayload): DeviceInfoIte
     updatedAt: now
   }
   allList.unshift(row)
-  detailExt[id] = mergeExt(body)
+  detailExt[id] = mergeExt(body, maxDisposalSeconds)
   if (!detailExt[id].deployAddress) {
     detailExt[id].deployAddress = `${row.deployLocation} · 待补充详细地址`
   }

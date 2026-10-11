@@ -1,12 +1,16 @@
 /** 档案树分类（左侧树） */
 export type DeviceArchiveCategory = 'all' | 'radar' | 'radio' | 'counter' | 'eo' | 'camera'
 
+/** 业务类别，与雷达、干扰等设备类型及档案树分类分别维护。 */
+export type DeviceClass = 'detection' | 'countermeasure'
+
 /** 列表记录 */
 export interface DeviceArchiveItem {
   id: string
   archiveNo: string
   archiveName: string
   deviceType: string
+  deviceClass: DeviceClass
   vendor: string
   deviceModel: string
   enabled: boolean
@@ -64,7 +68,7 @@ export interface DeviceArchiveDetail extends DeviceArchiveItem {
 
 export type DeviceArchiveSavePayload = Pick<
   DeviceArchiveItem,
-  'archiveName' | 'deviceType' | 'vendor' | 'deviceModel' | 'enabled' | 'category'
+  'archiveName' | 'deviceType' | 'deviceClass' | 'vendor' | 'deviceModel' | 'enabled' | 'category'
 > & {
   id?: string
   archiveNo?: string
