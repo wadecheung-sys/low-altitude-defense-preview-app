@@ -84,11 +84,11 @@ const DETECT_RANGE_BY_TYPE: Record<string, number> = {
   强光驱离: 0
 }
 
-/** 定向反制波束/覆盖张角（度）。无反制天线能力为 0。 */
+/** 定向反制波束/覆盖张角（度）。无定向反制天线能力为 0（强光等协议字段仍上报 0）。 */
 const ANTENNA_SCOPE_BY_TYPE: Record<string, number> = {
   无线电干扰: 60,
   察打一体: 60,
-  强光驱离: 1,
+  强光驱离: 0,
   导航诱骗: 0,
   无线电侦测: 0,
   'Remote-ID 监视': 0,
@@ -113,8 +113,14 @@ function hasDetectAbility(deviceType: string): boolean {
   return (DETECT_RANGE_BY_TYPE[deviceType] ?? 0) > 0
 }
 
+/** 具备反制功能（影响在线状态码：反制中 / 待机） */
 function hasCounterAbility(deviceType: string): boolean {
   return ['无线电干扰', '导航诱骗', '强光驱离', '察打一体'].includes(deviceType)
+}
+
+/** 具备定向反制天线角度回传；强光（探照灯）协议同构但无有效方位/俯仰 */
+function hasDirectionalCounterAntenna(deviceType: string): boolean {
+  return deviceType === '无线电干扰' || deviceType === '察打一体'
 }
 
 /** 慢节奏状态机：约 60s 才可能切换，避免心跳刷新时性能/状态乱跳 */
@@ -167,7 +173,7 @@ function resolveFirmware(deviceType: string, seed: number): string {
   return `V1.${1 + (seed % 3)}`
 }
 
-/** 凡双 §2.1 设备状态推送（设备心跳） */
+/** 凡双 §2.1 设备状态推送（设备心跳）；离线时仍按同构字段上报，便于监控页统一展示 */
 export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBuildResult {
   const {
     onlineStatus,
@@ -181,17 +187,17 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
     serialNo
   } = input
 
-  if (onlineStatus === '离线') {
-    return offlineMetrics('超过 30 秒未收到心跳（定位/移动类阈值 15 秒）')
-  }
-
   const typeCode = FANS_SHUANG_TYPE_CODE[deviceType] ?? 2
   const detectAbility = hasDetectAbility(deviceType)
   const counterAbility = hasCounterAbility(deviceType)
+  const directionalAntenna = hasDirectionalCounterAntenna(deviceType)
   const phase = slowPhase(seed, tick)
+  const offline = onlineStatus === '离线'
 
   let statusCode = 1
-  if (onlineStatus === '异常') {
+  if (offline) {
+    statusCode = 0
+  } else if (onlineStatus === '异常') {
     statusCode = 1
   } else if (deviceType === '察打一体') {
     // 需求：当前阶段侧重数据解析；演示上多数时间侦测，偶发反制
@@ -205,30 +211,37 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
   const statusText = FANS_SHUANG_STATUS[statusCode]
   const statusLevel: DeviceRuntimeMetricLevel =
     statusCode === 0 ? 'fault' : statusCode >= 2 ? 'running' : 'normal'
-  const counterActive = statusCode === 3
+  const counterActive = !offline && statusCode === 3
 
   // —— 性能参数：固定 ——
-  const counterRangeM = resolveCounterRangeM(input)
-  const detectRangeM = resolveDetectRangeM(deviceType)
-  const antennaScope = ANTENNA_SCOPE_BY_TYPE[deviceType] ?? 0
+  const counterRangeM = offline ? 0 : resolveCounterRangeM(input)
+  const detectRangeM = offline ? 0 : resolveDetectRangeM(deviceType)
+  const antennaScope = offline ? 0 : (ANTENNA_SCOPE_BY_TYPE[deviceType] ?? 0)
   const altitudeM = 60 + (seed % 80)
   const lng = resolveInstallCoord(input.longitude, seed, 120.414078, 17)
   const lat = resolveInstallCoord(input.latitude, seed + 3, 30.228708, 13)
   const firmware = resolveFirmware(deviceType, seed)
 
-  // —— 运行态：仅反制启用且具备反制天线时可变；否则按协议填 0 ——
+  // —— 运行态：仅定向反制天线在反制中可变；强光等同构字段填 0 ——
   let azimuth = 0
   let elevation = 0
-  if (counterAbility && counterActive) {
+  if (directionalAntenna && counterActive) {
     azimuth = Number(((seed * 7 + tick * 1.8) % 360).toFixed(1))
     elevation = Number((((seed % 35) - 5) + Math.sin(tick / 6) * 2).toFixed(1))
   }
 
   const batteryCapable = typeCode === 11 || typeCode === 5 || typeCode === 15
-  const battery = batteryCapable ? 55 + ((seed + Math.floor(tick / 120)) % 40) : -1
+  const battery = offline
+    ? batteryCapable
+      ? 0
+      : -1
+    : batteryCapable
+      ? 55 + ((seed + Math.floor(tick / 120)) % 40)
+      : -1
 
-  const workMode =
-    statusCode === 3
+  const workMode = offline
+    ? '离线'
+    : statusCode === 3
       ? '反制中'
       : statusCode === 2
         ? '侦测中'
@@ -260,7 +273,11 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
       battery >= 0 && battery < 20 ? 'warning' : 'normal'
     ),
     metric('report_interval', '心跳上报周期', '30 秒'),
-    metric('timestamp', '上报时间', formatHeartbeatTime())
+    metric(
+      'timestamp',
+      '上报时间',
+      offline ? '超过 30 秒未收到心跳（定位/移动类阈值 15 秒）' : formatHeartbeatTime()
+    )
   ]
 
   if (onlineStatus === '异常') {
