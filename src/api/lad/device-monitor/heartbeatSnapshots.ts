@@ -1,15 +1,14 @@
 /**
  * 设备运行监控「扩展信息」弹层心跳快照。
  *
- * 字段口径：
- * - 凡双《数据接入接口文档 v0.2.4》§2.1 设备状态推送
- * - 081《系统软件接口协议 V0.0.1》status 心跳
+ * 字段口径（仅展示协议载荷中有明确字段的项；上报周期/频率等说明性文字不单列）：
+ * - 凡双《数据接入接口文档 v0.2.4》§2.1 设备状态推送（含强光/探照灯 type=11）
+ * - 081《系统软件接口协议 V0.0.2》status 心跳
  * - 耐杰《光电指控协议 V2.9.2》0x01 / 0x02
- * - 需求规格说明书第 5 章：选型性能参数 vs 运行态反馈
  *
  * 变化策略：
- * - 性能/能力类（反制范围半径、侦测范围半径、波束张角、安装经纬高等）按设备固定，不随心跳刷新抖动
- * - 运行态类（在线状态、反制天线朝向/俯仰、光电跟踪角度与距离等）可随工作状态变化
+ * - 安装经纬高、范围半径、张角等按设备固定，不随心跳刷新抖动
+ * - 在线状态、反制天线朝向/俯仰、光电跟踪角度与距离等可随工作状态变化
  * - 无对应能力或未启用时，按接口约定填 0（不用空字符串冒充「无」）
  */
 import type {
@@ -263,26 +262,21 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
     metric('azimuth', '反制天线中心朝向', azimuth, '°', counterActive ? 'running' : 'normal'),
     metric('elevation_angle', '反制天线俯仰角', elevation, '°', counterActive ? 'running' : 'normal'),
     metric('antenna_scope', '反制天线覆盖范围张角', antennaScope, '°'),
-    metric('suppr_distance', '反制范围半径', counterRangeM, '米'),
+    metric('suppr_distance', '反制有效距离', counterRangeM, '米'),
     metric('spect_distance', '侦测范围半径', detectRangeM, '米'),
     metric(
       'battery',
       '电池电量',
-      battery < 0 ? '无电池' : battery,
+      battery < 0 ? -1 : battery,
       battery < 0 ? undefined : '%',
       battery >= 0 && battery < 20 ? 'warning' : 'normal'
     ),
-    metric('report_interval', '心跳上报周期', '30 秒'),
     metric(
       'timestamp',
       '上报时间',
-      offline ? '超过 30 秒未收到心跳（定位/移动类阈值 15 秒）' : formatHeartbeatTime()
+      offline ? '超过心跳间隔未收到上报' : formatHeartbeatTime()
     )
   ]
-
-  if (onlineStatus === '异常') {
-    metrics.splice(7, 0, metric('link', '链路质量', '抖动', undefined, 'warning'))
-  }
 
   return { workStatus: statusText, workMode, metrics }
 }
@@ -298,41 +292,41 @@ const H081_VOL: Record<number, string> = {
   2: '正常'
 }
 
-/** 081 设备状态心跳（1Hz）；工作模式/高低压按慢节奏切换 */
+/** 081 设备状态心跳（status，约 1Hz）；离线时仍按同构字段展示 */
 export function buildH081Heartbeat(input: HeartbeatBuildInput): HeartbeatBuildResult {
   const { onlineStatus, seed, tick, deviceType, deviceId, deviceName } = input
-  if (onlineStatus === '离线') {
-    return offlineMetrics('超过 1 秒未收到 status 心跳')
-  }
-
+  const offline = onlineStatus === '离线'
   const phase = slowPhase(seed, tick, 18)
   const typeMeta = H081_DEVICE_TYPE[deviceType] || { code: 1, label: deviceType }
-  const workModeCode = phase % 3
-  const workModeText =
-    typeMeta.code === 1
-      ? ['常规', '增程', '测试'][workModeCode]
-      : ['待机', '发射准备', '处置中'][workModeCode]
-  const deviceStatusCode = onlineStatus === '异常' ? 1 : 0
-  const deviceStatusText = deviceStatusCode === 0 ? '正常' : '异常'
+  // 控制命令枚举：0 取消跟踪 / 1 跟踪；status 载荷未另给枚举，演示按此口径
+  const workModeCode = offline ? 0 : phase % 2
+  const workModeText = workModeCode === 1 ? '跟踪' : '未跟踪'
+  const deviceStatusCode = offline ? 1 : onlineStatus === '异常' ? 1 : 0
+  const deviceStatusText = offline ? '离线' : deviceStatusCode === 0 ? '正常' : '异常'
   const deviceStatusLevel: DeviceRuntimeMetricLevel =
-    deviceStatusCode === 0 ? 'normal' : 'fault'
+    offline || deviceStatusCode !== 0 ? 'fault' : 'normal'
 
   const metrics: DeviceRuntimeMetric[] = [
-    metric('msg_code', '消息编码', '设备状态（status）'),
     metric('name', '设备名称', deviceName),
     metric('id', '设备标识', deviceId),
     metric('type', '设备类型', `${typeMeta.label}（${typeMeta.code}）`),
-    metric('work_mode', '工作模式', workModeText, undefined, 'running'),
+    metric(
+      'work_mode',
+      '工作模式',
+      workModeText,
+      undefined,
+      workModeCode === 1 ? 'running' : 'normal'
+    ),
     metric('status', '设备状态', deviceStatusText, undefined, deviceStatusLevel)
   ]
 
   if (typeMeta.code === 1) {
-    const transmitting = phase % 4 !== 0
+    const transmitting = !offline && phase % 4 !== 0
     metrics.push(
       metric(
         'transmitter',
         '发射状态',
-        transmitting ? '开启' : '关闭',
+        transmitting ? '开' : '关',
         undefined,
         transmitting ? 'running' : 'normal'
       )
@@ -340,23 +334,28 @@ export function buildH081Heartbeat(input: HeartbeatBuildInput): HeartbeatBuildRe
   }
 
   if (typeMeta.code === 4) {
-    // 需求 5.2：低压→高压→打击；演示按慢相位推进，异常时回落
+    // status：low_vol / high_vol；演示按慢相位推进，异常/离线时回落
     let lowVol = 2
     let highVol = 2
-    if (onlineStatus === '异常') {
+    if (offline || onlineStatus === '异常') {
       lowVol = 0
       highVol = 0
     } else if (workModeCode === 0) {
       lowVol = 1
       highVol = 1
-    } else if (workModeCode === 1) {
-      lowVol = 2
-      highVol = 1
     } else {
       lowVol = 2
       highVol = 2
     }
+    // status 表：transmitter（微波：触发状态）、low_vol、high_vol
     metrics.push(
+      metric(
+        'transmitter',
+        '触发状态',
+        !offline && workModeCode === 1 ? '开' : '关',
+        undefined,
+        !offline && workModeCode === 1 ? 'running' : 'normal'
+      ),
       metric(
         'low_vol',
         '低压状态',
@@ -370,19 +369,16 @@ export function buildH081Heartbeat(input: HeartbeatBuildInput): HeartbeatBuildRe
         H081_VOL[highVol],
         undefined,
         highVol === 0 ? 'fault' : highVol === 1 ? 'warning' : 'running'
-      ),
-      metric(
-        'action_range',
-        '反制范围半径',
-        input.controlRangeM && input.controlRangeM > 0 ? Math.round(input.controlRangeM) : 800,
-        '米'
       )
     )
   }
 
   metrics.push(
-    metric('report_rate', '心跳频率', '1', 'Hz'),
-    metric('timestamp', '上报时间', formatHeartbeatTime())
+    metric(
+      'timestamp',
+      '上报时间',
+      offline ? '超过 status 心跳间隔未收到上报' : formatHeartbeatTime()
+    )
   )
 
   return {
@@ -398,20 +394,17 @@ const EO_WORK_MODE: Record<number, string> = {
   2: '跟踪'
 }
 
-/** 耐杰光电：0x01 状态 + 0x02 方位俯仰；空闲时距离/目标高度按 0 */
+/** 耐杰光电：0x01 状态 + 0x02 方位俯仰；空闲/离线时距离与目标高度按 0；离线仍同构展示 */
 export function buildNajieEoHeartbeat(input: HeartbeatBuildInput): HeartbeatBuildResult {
   const { onlineStatus, seed, tick, deviceId } = input
-  if (onlineStatus === '离线') {
-    return offlineMetrics('超过状态上报周期未收到 0x01/0x02')
-  }
-
+  const offline = onlineStatus === '离线'
   const phase = slowPhase(seed, tick, 10)
-  const workOk = onlineStatus !== '异常'
+  const workOk = !offline && onlineStatus !== '异常'
   const modeCode = workOk ? (phase % 6 === 0 ? 0 : phase % 6 <= 2 ? 1 : 2) : 0
   const modeText = EO_WORK_MODE[modeCode]
   const channel = seed % 2 === 0 ? '可见光' : '热成像'
 
-  // 云台角度：搜索/跟踪可变；空闲保持安装基准角
+  // 云台角度：搜索/跟踪可变；空闲/离线保持安装基准角
   const baseAz = (seed % 3600) / 10
   const baseEl = 5 + (seed % 20)
   let azimuth = baseAz
@@ -431,13 +424,11 @@ export function buildNajieEoHeartbeat(input: HeartbeatBuildInput): HeartbeatBuil
   const eoId = Number.parseInt(deviceId.replace(/\D/g, '').slice(-4) || String(seed), 10) || seed
 
   const metrics: DeviceRuntimeMetric[] = [
-    metric('cmd_status', '状态报文', '光电设备状态信息包（0x01）'),
-    metric('cmd_attitude', '姿态报文', '方位俯仰信息包（0x02）'),
     metric('eo_id', '光电编号', eoId),
     metric(
       'work_status',
       '工作状态',
-      workOk ? '正常' : '异常',
+      offline ? '离线' : workOk ? '正常' : '异常',
       undefined,
       workOk ? 'normal' : 'fault'
     ),
@@ -448,13 +439,15 @@ export function buildNajieEoHeartbeat(input: HeartbeatBuildInput): HeartbeatBuil
     metric('distance', '距离', distance, '米'),
     metric('target_height', '目标高度', targetHeight, '米'),
     metric('lens_zoom', '镜头倍率', zoom),
-    metric('status_period', '状态上报周期', '500', 'ms'),
-    metric('attitude_period', '方位俯仰上报周期', '100', 'ms'),
-    metric('timestamp', '状态时间戳', `${formatHeartbeatTime()}（UTC）`)
+    metric(
+      'timestamp',
+      '状态时间戳',
+      offline ? '超过状态上报周期未收到 0x01/0x02' : `${formatHeartbeatTime()}（UTC）`
+    )
   ]
 
   return {
-    workStatus: workOk ? modeText : '异常',
+    workStatus: offline ? '离线' : workOk ? modeText : '异常',
     workMode: modeText,
     metrics
   }
