@@ -8,7 +8,7 @@
  *
  * 变化策略：
  * - 安装经纬高、范围半径、张角等按设备固定，不随心跳刷新抖动
- * - 在线状态、反制天线朝向/俯仰、光电跟踪角度与距离等可随工作状态变化
+ * - 在线状态、反制天线朝向/俯仰、光电跟踪角度等可随工作状态变化
  * - 无对应能力或未启用时，按接口约定填 0（不用空字符串冒充「无」）
  */
 import type {
@@ -394,7 +394,7 @@ const EO_WORK_MODE: Record<number, string> = {
   2: '跟踪'
 }
 
-/** 耐杰光电：0x01 状态 + 0x02 方位俯仰；空闲/离线时距离与目标高度按 0；离线仍同构展示 */
+/** 耐杰光电：0x01 状态 + 0x02 方位俯仰；监控扩展信息不展示距离/目标高度；离线仍同构展示 */
 export function buildNajieEoHeartbeat(input: HeartbeatBuildInput): HeartbeatBuildResult {
   const { onlineStatus, seed, tick, deviceId } = input
   const offline = onlineStatus === '离线'
@@ -417,9 +417,6 @@ export function buildNajieEoHeartbeat(input: HeartbeatBuildInput): HeartbeatBuil
     elevation = baseEl + Math.cos(tick / 7) * 1.2
   }
 
-  const tracking = modeCode === 2
-  const distance = tracking ? 520 + (seed % 100) + Math.round(Math.sin(tick / 9) * 15) : 0
-  const targetHeight = tracking ? 60 + (seed % 40) : 0
   const zoom = modeCode === 0 ? 1 : 4 + (seed % 8)
   const eoId = Number.parseInt(deviceId.replace(/\D/g, '').slice(-4) || String(seed), 10) || seed
 
@@ -436,8 +433,6 @@ export function buildNajieEoHeartbeat(input: HeartbeatBuildInput): HeartbeatBuil
     metric('track_source', '跟踪视频源', channel),
     metric('azimuth', '水平角度', azimuth.toFixed(2), '°'),
     metric('elevation', '俯仰角度', elevation.toFixed(2), '°'),
-    metric('distance', '距离', distance, '米'),
-    metric('target_height', '目标高度', targetHeight, '米'),
     metric('lens_zoom', '镜头倍率', zoom),
     metric(
       'timestamp',
