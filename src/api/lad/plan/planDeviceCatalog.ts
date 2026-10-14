@@ -121,12 +121,3 @@ export function resolveCountermeasureDeviceBinding(
   const actionValue = resolveCountermeasureActionValue(functionValue)
   return actionValue ? COUNTERMEASURE_DEVICE_BINDINGS[actionValue] : undefined
 }
-
-export function countermeasureActionDeviceHint(functionValue: string): string {
-  const hit = resolveCountermeasureDeviceBinding(functionValue)
-  if (!hit) return ''
-  if (hit.internalOnly || !hit.demoExecutable || hit.model.startsWith('TBD-')) {
-    return `${hit.deviceType} · ${hit.effect}`
-  }
-  return `推荐设备：${hit.model}（${hit.deviceType}）· ${hit.effect}`
-}

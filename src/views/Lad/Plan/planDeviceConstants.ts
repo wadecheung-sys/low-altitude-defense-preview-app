@@ -6,7 +6,6 @@ export {
   resolveDeviceFunction,
   functionLabel,
   countermeasureActionLabel,
-  countermeasureActionDeviceHint,
   resolveCountermeasureDeviceBinding,
   dictEntriesToPlanFunctionOptions,
   type PlanDeviceFunctionOption,
