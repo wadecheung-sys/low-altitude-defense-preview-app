@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="395px" height="336px" xmlns="http://www.w3.org/2000/svg">
+  <g transform="matrix(1 0 0 1 -403 -746 )">
+    <path d="M 405 748  L 780 748  L 780 1064  L 405 1064  L 405 748  " fill-rule="nonzero" fill="rgba(204, 204, 204, 1)" stroke="none" class="fill" />
+    <path d="M 427 770  L 758 770  L 758 1042  L 427 1042  L 427 770  " fill-rule="nonzero" fill="rgba(255, 255, 255, 1)" stroke="none" class="fill" />
+    <path d="M 623.7 842.8  C 610.428 842.8  600 832.372  600 819.0999999999999  C 600 805.828  610.428 795.4  623.7 795.4  C 636.972 795.4  647.4 805.828  647.4 819.0999999999999  C 647.4 832.372  636.972 842.8  623.7 842.8  " fill-rule="nonzero" fill="rgba(204, 204, 204, 1)" stroke="none" class="fill" />
+    <path d="M 435 1034  L 435 893.2  L 513.75 829.2  L 624 904.5664  L 687 867.6  L 750 904.5664  L 750 1034  L 435 1034  " fill-rule="nonzero" fill="rgba(22, 155, 213, 1)" stroke="none" class="fill" />
+    <path d="M 406.5 1062.5  L 406.5 749.5  L 778.5 749.5  L 778.5 1062.5  L 406.5 1062.5  Z " stroke-width="3" stroke-dasharray="0" stroke="rgba(2, 167, 240, 1)" fill="none" class="stroke" />
+  </g>
+  <style>svg { filter: drop-shadow(8px 8px 5px rgba(2, 167, 240, 0.34901960784313724)); }</style>
+</svg>

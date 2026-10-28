@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="395px" height="336px" xmlns="http://www.w3.org/2000/svg">
+  <g transform="matrix(1 0 0 1 -18 -746 )">
+    <path d="M 20 748  L 395 748  L 395 1064  L 20 1064  L 20 748  " fill-rule="nonzero" fill="rgba(204, 204, 204, 1)" stroke="none" class="fill" />
+    <path d="M 42 770  L 373 770  L 373 1042  L 42 1042  L 42 770  " fill-rule="nonzero" fill="rgba(255, 255, 255, 1)" stroke="none" class="fill" />
+    <path d="M 238.7 842.8  C 225.428 842.8  215 832.372  215 819.0999999999999  C 215 805.828  225.428 795.4  238.7 795.4  C 251.97199999999998 795.4  262.4 805.828  262.4 819.0999999999999  C 262.4 832.372  251.97199999999998 842.8  238.7 842.8  " fill-rule="nonzero" fill="rgba(204, 204, 204, 1)" stroke="none" class="fill" />
+    <path d="M 50 1034  L 50 893.2  L 128.75 829.2  L 239 904.5664  L 302 867.6  L 365 904.5664  L 365 1034  L 50 1034  " fill-rule="nonzero" fill="rgba(22, 155, 213, 1)" stroke="none" class="fill" />
+    <path d="M 21.5 1062.5  L 21.5 749.5  L 393.5 749.5  L 393.5 1062.5  L 21.5 1062.5  Z " stroke-width="3" stroke-dasharray="0" stroke="rgba(2, 167, 240, 1)" fill="none" class="stroke" />
+  </g>
+  <style>svg { filter: drop-shadow(8px 8px 5px rgba(2, 167, 240, 0.34901960784313724)); }</style>
+</svg>
