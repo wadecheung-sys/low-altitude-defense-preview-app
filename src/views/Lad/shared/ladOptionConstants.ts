@@ -69,12 +69,12 @@ export const ruleStatusOptions = [
 ]
 
 export const conditionPropertyOptions = [
-  { label: '\u901f\u5ea6', value: 'speed' },
-  { label: '\u9017\u7559\u65f6\u95f4', value: 'stayDuration' },
-  { label: '\u5165\u4fb5\u6b21\u6570', value: 'intrusionCount' },
-  { label: '\u8702\u7fa4\u673a\u6570', value: 'swarmCount' },
-  { label: '\u98de\u884c\u9ad8\u5ea6', value: 'altitude' },
-  { label: '\u6240\u5904\u533a\u57df', value: 'locatedArea' }
+  { label: '速度（m/s）', value: 'speed' },
+  { label: '逗留时间（秒）', value: 'stayDuration' },
+  { label: '入侵次数（次）', value: 'intrusionCount' },
+  { label: '蜂群机数（架）', value: 'swarmCount' },
+  { label: '飞行高度（米）', value: 'altitude' },
+  { label: '所处区域', value: 'locatedArea' }
 ]
 
 export const conditionOperatorOptions = [

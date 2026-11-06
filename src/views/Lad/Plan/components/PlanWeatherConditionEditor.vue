@@ -4,7 +4,8 @@ import {
   createPlanWeatherCondition,
   planConditionOperatorOptions,
   planWeatherConditionLogicOptions,
-  planWeatherPropertyOptions
+  planWeatherPropertyOptions,
+  planWeatherUnits
 } from '@/api/lad/plan/planWeatherConditions'
 import type {
   PlanWeatherCondition,
@@ -84,7 +85,7 @@ function removeCondition(id: string) {
         <ElOption
           v-for="option in planWeatherPropertyOptions"
           :key="option.value"
-          :label="option.label"
+          :label="`${option.label}（${planWeatherUnits[option.value]}）`"
           :value="option.value"
         />
       </ElSelect>
@@ -144,7 +145,7 @@ function removeCondition(id: string) {
 }
 
 .plan-weather-condition-row__property {
-  width: 100px;
+  width: 150px;
 }
 
 .plan-weather-condition-row__operator {

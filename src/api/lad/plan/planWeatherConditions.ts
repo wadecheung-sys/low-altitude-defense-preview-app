@@ -6,6 +6,14 @@ import type {
   PlanWeatherConditionProperty
 } from './types'
 
+/** 与系统参数中的模拟天气单位一致。 */
+export const planWeatherUnits: Record<PlanWeatherConditionProperty, string> = {
+  temperature: '℃',
+  humidity: '%',
+  windPower: 'm/s',
+  rainfall: 'mm/h'
+}
+
 export const planWeatherPropertyOptions: {
   label: string
   value: PlanWeatherConditionProperty
@@ -131,7 +139,7 @@ export function formatPlanWeatherConditions(rule: Partial<PlanTriggerRule>): str
   return conditions
     .map((item, index) => {
       const op = item.operator === '!=' ? '≠' : item.operator
-      let text = `${planWeatherPropertyLabel(item.property)}${op}${item.value}`
+      let text = `${planWeatherPropertyLabel(item.property)}${op}${item.value}${planWeatherUnits[item.property]}`
       if (index < conditions.length - 1) {
         text += item.nextLogic === 'or' ? ' 或 ' : ' 且 '
       }

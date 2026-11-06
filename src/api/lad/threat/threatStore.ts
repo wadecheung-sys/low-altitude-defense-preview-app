@@ -1,3 +1,4 @@
+import { threatConditionDisplayValue, threatConditionUnits } from './conditionDisplay'
 import { functionLabel } from '../plan/planDeviceCatalog'
 import { getPlan, listPlanOptions } from '../plan/planStore'
 import { formatDisposalExecNote } from '../plan/planDisposal'
@@ -114,17 +115,8 @@ function buildConditionText(c: RuleCondition) {
   if (c.property === 'locatedArea') {
     return `${prop} = ${formatAreaConditionValue(c.value)}`
   }
-  const unit =
-    c.property === 'speed'
-      ? 'm/s'
-      : c.property === 'stayDuration'
-        ? 'min'
-        : c.property === 'swarmCount'
-          ? '架'
-          : c.property === 'altitude'
-            ? 'm'
-            : ''
-  return `${prop} ${c.operator} ${c.value}${unit}`
+  const value = threatConditionDisplayValue(c.property, c.value)
+  return `${prop} ${c.operator} ${value}${threatConditionUnits[c.property] || ''}`
 }
 
 function buildSummary(conditions: RuleCondition[], logic: RuleConditionLogic = 'and') {
@@ -157,30 +149,6 @@ function evalConditions(conditions: RuleCondition[], input: ThreatSimulateInput)
     return previous.nextLogic === 'or' ? result || current : result && current
   }, true)
 }
-
-function legacyBuildSummary(conditions: RuleCondition[], logic: RuleConditionLogic = 'and') {
-  const joiner = logic === 'or' ? ' 或 ' : ' 且 '
-  return conditions
-    .map((c) => {
-      const prop = propertyLabel[c.property] || c.property
-      if (c.property === 'locatedArea') {
-        return `${prop} = ${formatAreaConditionValue(c.value)}`
-      }
-      const unit =
-        c.property === 'speed'
-          ? 'm/s'
-          : c.property === 'stayDuration'
-            ? 'min'
-            : c.property === 'swarmCount'
-              ? '\u67b6'
-              : c.property === 'altitude'
-                ? 'm'
-                : ''
-      return `${prop} ${c.operator} ${c.value}${unit}`
-    })
-    .join(joiner)
-}
-void legacyBuildSummary
 
 function evalCondition(c: RuleCondition, input: ThreatSimulateInput): boolean {
   const num = Number(c.value)

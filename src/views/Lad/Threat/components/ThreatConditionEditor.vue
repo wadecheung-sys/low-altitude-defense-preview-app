@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { getAreaRegionListApi } from '@/api/lad/area'
 import type { RuleCondition, RuleConditionLogic } from '@/api/lad/threat/types'
+import {
+  threatConditionDisplayValue,
+  threatConditionStoredValue
+} from '@/api/lad/threat/conditionDisplay'
 import { BaseButton } from '@/components/Button'
 import { conditionOperatorOptions, conditionPropertyOptions } from '../../shared/ladOptionConstants'
 import { ElInput, ElLink, ElOption, ElSelect } from 'element-plus'
@@ -25,6 +29,27 @@ const conditionLogicOptions: { label: string; value: RuleConditionLogic }[] = [
   { label: '且', value: 'and' },
   { label: '或', value: 'or' }
 ]
+
+// 保留输入中的小数点等中间状态，避免秒/分钟换算打断编辑。
+const valueDrafts = reactive<Record<string, { property: string; stored: string; display: string }>>(
+  {}
+)
+
+function displayConditionValue(condition: RuleCondition) {
+  const draft = valueDrafts[condition.id]
+  if (draft?.property === condition.property && draft.stored === condition.value)
+    return draft.display
+  return threatConditionDisplayValue(condition.property, condition.value)
+}
+
+function updateConditionValueText(condition: RuleCondition, value: string) {
+  condition.value = threatConditionStoredValue(condition.property, value)
+  valueDrafts[condition.id] = {
+    property: condition.property,
+    stored: condition.value,
+    display: value
+  }
+}
 
 function newCondition(): RuleCondition {
   return {
@@ -54,6 +79,7 @@ function updateConditionValue(condition: RuleCondition, value: string[]) {
 }
 
 function onPropertyChange(condition: RuleCondition) {
+  delete valueDrafts[condition.id]
   if (isAreaCondition(condition)) {
     condition.operator = '='
     condition.value = ''
@@ -76,6 +102,7 @@ function addCondition() {
 }
 
 function removeCondition(id: string) {
+  delete valueDrafts[id]
   conditions.value = conditions.value.filter((item) => item.id !== id)
   const last = conditions.value[conditions.value.length - 1]
   if (last) last.nextLogic = undefined
@@ -131,7 +158,12 @@ onMounted(async () => {
       </template>
 
       <template v-else-if="mode === 'simulate'">
-        <ElInput v-model="condition.value" class="threat-condition-row__value" clearable />
+        <ElInput
+          :model-value="displayConditionValue(condition)"
+          class="threat-condition-row__value"
+          clearable
+          @update:model-value="updateConditionValueText(condition, $event)"
+        />
       </template>
 
       <template v-else>
@@ -143,7 +175,12 @@ onMounted(async () => {
             :value="option.value"
           />
         </ElSelect>
-        <ElInput v-model="condition.value" class="threat-condition-row__value" clearable />
+        <ElInput
+          :model-value="displayConditionValue(condition)"
+          class="threat-condition-row__value"
+          clearable
+          @update:model-value="updateConditionValueText(condition, $event)"
+        />
       </template>
 
       <ElLink type="danger" @click="removeCondition(condition.id)">删除</ElLink>
@@ -179,7 +216,7 @@ onMounted(async () => {
 }
 
 .threat-condition-row__property {
-  width: 140px;
+  width: 170px;
 }
 
 .threat-condition-row__operator {

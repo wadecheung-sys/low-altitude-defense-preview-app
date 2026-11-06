@@ -10,8 +10,8 @@ const form = defineModel<ThreatSimulateSwarmFormState>({ required: true })
 </script>
 
 <template>
-  <ElForm label-width="108px">
-    <ElFormItem :label="UI.swarmCount" required>
+  <ElForm label-width="120px">
+    <ElFormItem :label="`${UI.swarmCount}（架）`" required>
       <ElInputNumber v-model="form.swarmCount" :min="1" :max="99" class="w-full" />
     </ElFormItem>
   </ElForm>
