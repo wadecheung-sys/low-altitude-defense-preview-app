@@ -11,7 +11,7 @@ import {
   buildStageMessageInfo,
   formatTimelineSummary,
   resolveStagePlanContext,
-  resolveThreatEscalationPath
+  resolveHistoryAssessmentLevels
 } from './disposalTimelineMessage'
 import { resolveHistoryTargetType } from './historyTargetType'
 import { isHandlingEnded, isHandlingInProgress } from './handlingStatusUtils'
@@ -169,9 +169,7 @@ function buildThreatAssessmentNode(
   row: HistoryEventItem,
   assessStartAt: string
 ): DisposalTimelineNode {
-  const levels = isNuisanceEvent(row)
-    ? (['无危'] as ThreatLevel[])
-    : resolveThreatEscalationPath(row.threatLevel)
+  const levels = resolveHistoryAssessmentLevels(row)
 
   const summaries: string[] = []
   const detailGroups: DisposalTimelineDetailGroup[] = []
@@ -207,7 +205,7 @@ export function buildDisposalTimeline(row: HistoryEventItem): DisposalTimelineNo
   const assessAt = addSeconds(identifyAt, 5 + (seed % 8))
   const lastAssessAt = addSeconds(
     assessAt,
-    Math.max(0, resolveThreatEscalationPath(row.threatLevel).length - 1) * 8
+    Math.max(0, resolveHistoryAssessmentLevels(row).length - 1) * 8
   )
   const disposeAt =
     row.handledAt && row.handledAt !== '--' ? row.handledAt : addSeconds(lastAssessAt, 12)

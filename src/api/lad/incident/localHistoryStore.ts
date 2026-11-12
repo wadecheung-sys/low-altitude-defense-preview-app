@@ -33,6 +33,8 @@ const dataSources = ['雷达', '无线电', '光电', '雷达+无线电', '多�
 const countermeasures = ['干扰-01', '--', '诱骗-02', '干扰-01', '激光-01']
 
 const LIST_TYPE_STORAGE_KEY = 'lad-history-event-list-types'
+// TG-2024-0018 最新飞行记录：人工核查判定为中危。
+const MANUAL_REVIEW_DEMO_EVENT_ID = 'he-10060'
 
 const targetProfiles: LadTargetProfile[] = LAD_TARGET_PROFILES
 
@@ -88,6 +90,7 @@ function buildSeedList() {
       const seedNum = hashSeed(eventId)
       const stayDurationSec = abnormalSec > 0 ? abnormalSec : 45 + (seedNum % 300)
       const isBirdNuisanceDemo = eventId === BIRD_NUISANCE_DEMO_EVENT_ID
+      const isManualReviewDemo = eventId === MANUAL_REVIEW_DEMO_EVENT_ID
 
       const forceManualExecution = i === 11
       const countermeasureDevice =
@@ -97,7 +100,11 @@ function buildSeedList() {
             ? '干扰-01'
             : countermeasures[i % countermeasures.length]
 
-      const manualConfirmStatus = isBirdNuisanceDemo ? '躁扰告警' : '真实入侵'
+      const manualConfirmStatus = isManualReviewDemo
+        ? '人工-真实入侵'
+        : isBirdNuisanceDemo
+          ? '躁扰告警'
+          : '真实入侵'
       const handlingResult = isBirdNuisanceDemo
         ? '飞鸟虚警过滤'
         : keepOpen
@@ -141,7 +148,11 @@ function buildSeedList() {
         targetId: rowTargetId,
         relatedEventCount: 1,
         historyTargetType,
-        threatLevel: isBirdNuisanceDemo ? '无危' : threatLevels[i % threatLevels.length],
+        threatLevel: isManualReviewDemo
+          ? '中危'
+          : isBirdNuisanceDemo
+            ? '无危'
+            : threatLevels[i % threatLevels.length],
         handledAt: keepOpen || forceEnded ? '--' : handled,
         discoveredAt: discovered,
         endedAt: ended,
@@ -204,7 +215,7 @@ function buildSeedList() {
                 : '已结束',
         manualConfirmStatus,
         listType: isBirdNuisanceDemo ? '未知' : defaultTargetProfileListType(profile),
-        remark
+        remark: isManualReviewDemo ? '人工核查真实入侵，威胁等级中危' : remark
       })
     }
   })

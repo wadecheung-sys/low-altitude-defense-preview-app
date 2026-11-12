@@ -117,6 +117,10 @@ export function buildAssessFlightStatus(
   level: ThreatLevel,
   stepIndex = 0
 ): string {
+  if (row.manualConfirmStatus.startsWith('人工-')) {
+    const metrics = row.assessmentMetrics
+    return `飞行速度：${metrics.speed.toFixed(1)}m/s； 逗留时间：${formatStayDuration(metrics.stayDurationSec)}； 飞行高度：${metrics.altitude}m； 入侵次数：${metrics.intrusionCount}次`
+  }
   const conditions = assessmentConditionsForLevel(row, level)
   if (!conditions.length) return '--'
 
@@ -168,13 +172,15 @@ function escalationHighAssessRuleName(row: HistoryEventItem): string {
 }
 
 export function assessmentRuleNameForLevel(row: HistoryEventItem, level: ThreatLevel): string {
+  if (row.manualConfirmStatus.startsWith('人工-')) return '人工核查'
   if (level === '无危') return '白名单通行规则'
   if (level === '低危') return FALLBACK_ASSESS_RULE_NAME
   if (level === '中危') return INTERMEDIATE_ASSESS_RULE_NAME
   return escalationHighAssessRuleName(row)
 }
 
-export function assessmentReasonForLevel(_row: HistoryEventItem, level: ThreatLevel): string {
+export function assessmentReasonForLevel(row: HistoryEventItem, level: ThreatLevel): string {
+  if (row.manualConfirmStatus.startsWith('人工-')) return '人工核查'
   if (level === '无危') {
     return '无（任意场景）'
   }
@@ -269,6 +275,13 @@ export function resolveThreatEscalationPath(finalLevel: ThreatLevel): ThreatLeve
   if (finalLevel === '中危') return ['低危', '中危']
   if (finalLevel === '低危') return ['低危']
   return ['无危']
+}
+
+/** 人工核查直接展示核查结论，不生成自动评估的递进步骤。 */
+export function resolveHistoryAssessmentLevels(row: HistoryEventItem): ThreatLevel[] {
+  if (row.historyTargetType === '躁扰信号-飞鸟') return ['无危']
+  if (row.manualConfirmStatus.startsWith('人工-')) return [row.threatLevel]
+  return resolveThreatEscalationPath(row.threatLevel)
 }
 
 export function buildStageMessageInfo(
