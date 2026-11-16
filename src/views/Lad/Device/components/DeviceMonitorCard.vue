@@ -27,6 +27,8 @@ import {
 } from 'element-plus'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
+// 本项目暂不启用关联摄像头入口。
+const showCameraEntry = false
 const VIDEO_GRID_SIZE = 4
 
 const props = defineProps<{
@@ -164,7 +166,7 @@ onBeforeUnmount(onPopoverHide)
     <div class="device-monitor-card__body">
       <div class="device-monitor-card__photo">
         <ElImage :src="displayImage" fit="cover" class="device-monitor-card__img" />
-        <ElTooltip content="视频监控" placement="top">
+        <ElTooltip v-if="showCameraEntry" content="视频监控" placement="top">
           <button
             type="button"
             class="device-monitor-card__eye"
@@ -243,10 +245,9 @@ onBeforeUnmount(onPopoverHide)
                   class="device-monitor-detail-popover__metric-row"
                 >
                   <span :title="row.label">{{ row.label }}</span>
-                  <strong
-                    :class="`is-${row.level || 'normal'}`"
-                    :title="runtimeMetricValue(row)"
-                  >{{ runtimeMetricValue(row) }}</strong>
+                  <strong :class="`is-${row.level || 'normal'}`" :title="runtimeMetricValue(row)">{{
+                    runtimeMetricValue(row)
+                  }}</strong>
                 </div>
               </div>
               <div class="device-monitor-detail-popover__updated-at">

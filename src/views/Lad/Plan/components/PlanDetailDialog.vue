@@ -109,7 +109,11 @@ watch(
       </ElTableColumn>
       <ElTableColumn :label="UI.counterDevice" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">
-          {{ countermeasureActionLabel(row.deviceFunction) }}
+          {{
+            (row.displayActions ?? [row.deviceFunction])
+              .map((value: string) => countermeasureActionLabel(value))
+              .join('、')
+          }}
         </template>
       </ElTableColumn>
       <ElTableColumn :label="UI.enabled" width="72" align="center">

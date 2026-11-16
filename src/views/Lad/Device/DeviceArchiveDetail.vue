@@ -2,6 +2,7 @@
 import { getDeviceArchiveDetailApi, saveDeviceArchiveApi } from '@/api/lad/device'
 import { DEVICE_CLASS_OPTIONS, isValidDeviceClass } from '@/api/lad/device/deviceSafety'
 import type {
+  DeviceArchiveAttachment,
   DeviceArchiveCategory,
   DeviceClass,
   DeviceArchiveDetail,
@@ -17,6 +18,7 @@ import {
 } from './constants'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
+  ElDialog,
   ElForm,
   ElFormItem,
   ElImage,
@@ -31,7 +33,7 @@ import {
   ElTableColumn,
   ElTag
 } from 'element-plus'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 defineOptions({ name: 'LadDeviceArchiveDetail' })
@@ -41,6 +43,102 @@ const showConfigurableItems = false
 
 const route = useRoute()
 const { push, go } = useRouter()
+
+const attachmentRows = ref<DeviceArchiveAttachment[]>([])
+const attachmentInput = ref<HTMLInputElement>()
+const readingAttachments = ref(false)
+const previewVisible = ref(false)
+const previewAttachment = ref<DeviceArchiveAttachment | null>(null)
+const previewUrl = ref('')
+const previewText = ref('')
+const previewKind = ref<'pdf' | 'image' | 'text' | 'unsupported'>('unsupported')
+
+function releasePreview() {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  previewUrl.value = ''
+  previewText.value = ''
+}
+
+function openAttachmentPreview(row: DeviceArchiveAttachment) {
+  releasePreview()
+  previewAttachment.value = row
+  previewKind.value = 'unsupported'
+  const extension = row.name.split('.').pop()?.toLowerCase() || ''
+  const imageTypes: Record<string, string> = {
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    bmp: 'image/bmp'
+  }
+  const isText = ['txt', 'md', 'csv', 'json', 'log', 'xml'].includes(extension)
+  if (extension === 'pdf' || imageTypes[extension] || isText) {
+    try {
+      const encoded = row.dataUrl.split(',')[1]
+      const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0))
+      if (isText) {
+        previewText.value = new TextDecoder().decode(bytes)
+        previewKind.value = 'text'
+      } else {
+        const mime = extension === 'pdf' ? 'application/pdf' : imageTypes[extension]
+        previewUrl.value = URL.createObjectURL(new Blob([bytes], { type: mime }))
+        previewKind.value = extension === 'pdf' ? 'pdf' : 'image'
+      }
+    } catch {
+      ElMessage.error('附件内容读取失败，请下载后查看')
+    }
+  }
+  previewVisible.value = true
+}
+
+watch(previewVisible, (visible) => {
+  if (!visible) releasePreview()
+})
+onBeforeUnmount(releasePreview)
+
+async function addAttachments(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  if (!files.length) return
+  if (files.some((file) => file.size > 20 * 1024 * 1024)) {
+    ElMessage.warning('单个附件不能超过 20 MB')
+    return
+  }
+  readingAttachments.value = true
+  try {
+    const rows = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise<DeviceArchiveAttachment>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () =>
+              resolve({
+                id: crypto.randomUUID(),
+                name: file.name,
+                size: file.size,
+                dataUrl: String(reader.result)
+              })
+            reader.onerror = () => reject(new Error('附件读取失败，请重试'))
+            reader.readAsDataURL(file)
+          })
+      )
+    )
+    attachmentRows.value.push(...rows)
+  } catch {
+    ElMessage.error('附件读取失败，请重试')
+  } finally {
+    readingAttachments.value = false
+  }
+}
+
+function downloadAttachment(row: DeviceArchiveAttachment) {
+  const link = document.createElement('a')
+  link.href = row.dataUrl
+  link.download = row.name
+  link.click()
+}
 
 const loading = ref(false)
 const saveLoading = ref(false)
@@ -89,6 +187,7 @@ function nextIndicatorId() {
 
 function resetCreateState() {
   detail.value = null
+  attachmentRows.value = []
   form.archiveNo = ''
   form.archiveName = ''
   form.deviceType = '雷达'
@@ -105,6 +204,7 @@ function resetCreateState() {
 }
 
 const applyDetail = (data: DeviceArchiveDetail) => {
+  attachmentRows.value = (data.attachments ?? []).map((item) => ({ ...item }))
   detail.value = data
   form.archiveNo = data.archiveNo
   form.archiveName = data.archiveName
@@ -202,7 +302,7 @@ function configScopeTagType(scope: DeviceArchiveConfigurableItem['scope']) {
 }
 
 async function save() {
-  if (!isEditable.value) return
+  if (!isEditable.value || readingAttachments.value) return
   if (!isValidDeviceClass(form.deviceClass)) {
     ElMessage.warning('请选择设备类别')
     return
@@ -231,6 +331,7 @@ async function save() {
       remark: form.remark,
       deviceClass: form.deviceClass,
       imageUrl: imageUrl.value,
+      attachments: attachmentRows.value.map((item) => ({ ...item })),
       specifications: specificationRows.value.map((r) => ({
         id: r.id,
         item: r.item.trim(),
@@ -361,6 +462,45 @@ watch(
             <ElInput v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
           </ElFormItem>
         </ElForm>
+        <div class="archive-detail-config-block">
+          <div class="archive-detail-panel__title">附件</div>
+          <p class="archive-detail-panel__hint"
+            >可添加产品手册等多个文档，单个不超过 20 MB，点击保存后生效。</p
+          >
+          <template v-if="isEditable">
+            <input ref="attachmentInput" type="file" multiple hidden @change="addAttachments" />
+            <BaseButton
+              class="mb-10px"
+              type="primary"
+              :loading="readingAttachments"
+              :disabled="saveLoading"
+              @click="attachmentInput?.click()"
+              >新增附件</BaseButton
+            >
+          </template>
+          <ElTable :data="attachmentRows" border row-key="id" empty-text="暂无附件">
+            <ElTableColumn prop="name" label="文件名称" min-width="150" show-overflow-tooltip />
+            <ElTableColumn label="大小" width="90">
+              <template #default="{ row }">{{ (row.size / 1024 / 1024).toFixed(2) }} MB</template>
+            </ElTableColumn>
+            <ElTableColumn label="操作" :width="isEditable ? 185 : 130">
+              <template #default="{ row }">
+                <BaseButton link type="primary" @click="openAttachmentPreview(row)"
+                  >预览</BaseButton
+                >
+                <BaseButton link type="primary" @click="downloadAttachment(row)">下载</BaseButton>
+                <BaseButton
+                  v-if="isEditable"
+                  link
+                  type="danger"
+                  :disabled="saveLoading"
+                  @click="attachmentRows = attachmentRows.filter((item) => item.id !== row.id)"
+                  >删除</BaseButton
+                >
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </div>
       </section>
 
       <section class="archive-detail-panel archive-detail-panel--wide">
@@ -454,6 +594,36 @@ watch(
         </div>
       </section>
     </div>
+    <ElDialog
+      v-model="previewVisible"
+      :title="previewAttachment?.name || '附件预览'"
+      width="80%"
+      append-to-body
+      destroy-on-close
+    >
+      <iframe
+        v-if="previewKind === 'pdf' && previewUrl"
+        :src="previewUrl"
+        title="PDF 附件预览"
+        class="attachment-preview-frame"
+      ></iframe>
+      <div v-else-if="previewKind === 'image'" class="attachment-preview-image"
+        ><img :src="previewUrl" :alt="previewAttachment?.name"
+      /></div>
+      <pre v-else-if="previewKind === 'text'" class="attachment-preview-text">{{
+        previewText
+      }}</pre>
+      <p v-else>此格式暂不支持在线预览，请下载后使用相应软件打开。</p>
+      <template #footer>
+        <BaseButton
+          v-if="previewAttachment"
+          type="primary"
+          @click="downloadAttachment(previewAttachment)"
+          >下载附件</BaseButton
+        >
+        <BaseButton @click="previewVisible = false">关闭</BaseButton>
+      </template>
+    </ElDialog>
   </ContentDetailWrap>
 </template>
 
@@ -668,5 +838,24 @@ watch(
   .archive-detail-panel--wide {
     min-width: 0;
   }
+}
+.attachment-preview-frame {
+  width: 100%;
+  height: 65vh;
+  border: 0;
+}
+.attachment-preview-image {
+  max-height: 65vh;
+  overflow: auto;
+  text-align: center;
+  img {
+    max-width: 100%;
+  }
+}
+.attachment-preview-text {
+  max-height: 65vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 </style>

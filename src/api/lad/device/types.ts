@@ -57,10 +57,18 @@ export interface DeviceArchiveConfigurableItem {
   defaultValue?: string
 }
 
+export interface DeviceArchiveAttachment {
+  id: string
+  name: string
+  size: number
+  dataUrl: string
+}
+
 export interface DeviceArchiveDetail extends DeviceArchiveItem {
   remark: string
   imageUrl: string | null
   /** 设备规格（说明书固定参数，不可随单台设备变更） */
+  attachments?: DeviceArchiveAttachment[]
   specifications: DeviceArchiveIndicator[]
   /** 可配置项定义（区分设备级与运行时） */
   configurableItems: DeviceArchiveConfigurableItem[]
@@ -74,6 +82,7 @@ export type DeviceArchiveSavePayload = Pick<
   archiveNo?: string
   remark?: string
   imageUrl?: string | null
+  attachments?: DeviceArchiveAttachment[]
   specifications: DeviceArchiveIndicator[]
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="tsx">
+import { countermeasureActionLabel } from './planDeviceConstants'
 import { reactive, ref, unref } from 'vue'
 import { ElMessage, ElMessageBox, ElSwitch, ElTag } from 'element-plus'
 import { ContentWrap } from '@/components/ContentWrap'
@@ -197,6 +198,27 @@ const crudSchemas = reactive<CrudSchema[]>([
       width: 90,
       align: 'center',
       slots: { default: ({ row }: { row: PlanStrategy }) => row.priority ?? '-' }
+    }
+  },
+  {
+    field: 'displayActions',
+    label: UI.counterDevice,
+    search: { hidden: true },
+    table: {
+      minWidth: 180,
+      showOverflowTooltip: true,
+      slots: {
+        default: ({ row }: { row: PlanStrategy }) =>
+          [
+            ...new Set(
+              (row.triggerRules || []).flatMap(
+                (rule) => rule.displayActions ?? [rule.deviceFunction]
+              )
+            )
+          ]
+            .map((value) => countermeasureActionLabel(value))
+            .join('、') || '—'
+      }
     }
   },
   {

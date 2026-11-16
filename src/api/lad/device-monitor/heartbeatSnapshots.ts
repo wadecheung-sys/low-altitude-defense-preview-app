@@ -11,11 +11,7 @@
  * - 在线状态、反制天线朝向/俯仰、光电跟踪角度等可随工作状态变化
  * - 无对应能力或未启用时，按接口约定填 0（不用空字符串冒充「无」）
  */
-import type {
-  DeviceOnlineStatus,
-  DeviceRuntimeMetric,
-  DeviceRuntimeMetricLevel
-} from './types'
+import type { DeviceOnlineStatus, DeviceRuntimeMetric, DeviceRuntimeMetricLevel } from './types'
 
 function metric(
   key: string,
@@ -69,7 +65,7 @@ const FANS_SHUANG_TYPE_CODE: Record<string, number> = {
   'Remote-ID 监视': 20,
   'ADS-B 监视': 13,
   强光驱离: 11,
-  察打一体: 14
+  协议解析: 14
 }
 
 /** 第 5 章选型性能：侦测范围半径（米）。无侦测能力为 0。 */
@@ -77,7 +73,7 @@ const DETECT_RANGE_BY_TYPE: Record<string, number> = {
   无线电侦测: 5000,
   'Remote-ID 监视': 5000,
   'ADS-B 监视': 25000,
-  察打一体: 3000,
+  协议解析: 3000,
   无线电干扰: 0,
   导航诱骗: 0,
   强光驱离: 0
@@ -86,7 +82,7 @@ const DETECT_RANGE_BY_TYPE: Record<string, number> = {
 /** 定向反制波束/覆盖张角（度）。无定向反制天线能力为 0（强光等协议字段仍上报 0）。 */
 const ANTENNA_SCOPE_BY_TYPE: Record<string, number> = {
   无线电干扰: 60,
-  察打一体: 60,
+  协议解析: 60,
   强光驱离: 0,
   导航诱骗: 0,
   无线电侦测: 0,
@@ -114,12 +110,12 @@ function hasDetectAbility(deviceType: string): boolean {
 
 /** 具备反制功能（影响在线状态码：反制中 / 待机） */
 function hasCounterAbility(deviceType: string): boolean {
-  return ['无线电干扰', '导航诱骗', '强光驱离', '察打一体'].includes(deviceType)
+  return ['无线电干扰', '导航诱骗', '强光驱离', '协议解析'].includes(deviceType)
 }
 
 /** 具备定向反制天线角度回传；强光（探照灯）协议同构但无有效方位/俯仰 */
 function hasDirectionalCounterAntenna(deviceType: string): boolean {
-  return deviceType === '无线电干扰' || deviceType === '察打一体'
+  return deviceType === '无线电干扰' || deviceType === '协议解析'
 }
 
 /** 慢节奏状态机：约 60s 才可能切换，避免心跳刷新时性能/状态乱跳 */
@@ -157,7 +153,7 @@ function resolveCounterRangeM(input: HeartbeatBuildInput): number {
     无线电干扰: 3000,
     导航诱骗: 1000,
     强光驱离: 3000,
-    察打一体: 3000
+    协议解析: 3000
   }
   return fallback[input.deviceType] ?? 0
 }
@@ -198,7 +194,7 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
     statusCode = 0
   } else if (onlineStatus === '异常') {
     statusCode = 1
-  } else if (deviceType === '察打一体') {
+  } else if (deviceType === '协议解析') {
     // 需求：当前阶段侧重数据解析；演示上多数时间侦测，偶发反制
     statusCode = phase % 5 === 0 ? 3 : 2
   } else if (counterAbility && !detectAbility) {
@@ -226,7 +222,7 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
   let elevation = 0
   if (directionalAntenna && counterActive) {
     azimuth = Number(((seed * 7 + tick * 1.8) % 360).toFixed(1))
-    elevation = Number((((seed % 35) - 5) + Math.sin(tick / 6) * 2).toFixed(1))
+    elevation = Number(((seed % 35) - 5 + Math.sin(tick / 6) * 2).toFixed(1))
   }
 
   const batteryCapable = typeCode === 11 || typeCode === 5 || typeCode === 15
@@ -260,7 +256,13 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
     metric('lat', '纬度', padCoord(lat)),
     metric('altitude', '海拔高度', altitudeM.toFixed(2), '米'),
     metric('azimuth', '反制天线中心朝向', azimuth, '°', counterActive ? 'running' : 'normal'),
-    metric('elevation_angle', '反制天线俯仰角', elevation, '°', counterActive ? 'running' : 'normal'),
+    metric(
+      'elevation_angle',
+      '反制天线俯仰角',
+      elevation,
+      '°',
+      counterActive ? 'running' : 'normal'
+    ),
     metric('antenna_scope', '反制天线覆盖范围张角', antennaScope, '°'),
     metric('suppr_distance', '反制有效距离', counterRangeM, '米'),
     metric('spect_distance', '侦测范围半径', detectRangeM, '米'),
@@ -271,11 +273,7 @@ export function buildFanshuangHeartbeat(input: HeartbeatBuildInput): HeartbeatBu
       battery < 0 ? undefined : '%',
       battery >= 0 && battery < 20 ? 'warning' : 'normal'
     ),
-    metric(
-      'timestamp',
-      '上报时间',
-      offline ? '超过心跳间隔未收到上报' : formatHeartbeatTime()
-    )
+    metric('timestamp', '上报时间', offline ? '超过心跳间隔未收到上报' : formatHeartbeatTime())
   ]
 
   return { workStatus: statusText, workMode, metrics }
@@ -463,7 +461,7 @@ export function buildHeartbeatByDeviceType(input: HeartbeatBuildInput): Heartbea
     type === 'Remote-ID 监视' ||
     type === 'ADS-B 监视' ||
     type === '强光驱离' ||
-    type === '察打一体'
+    type === '协议解析'
   ) {
     return buildFanshuangHeartbeat(input)
   }

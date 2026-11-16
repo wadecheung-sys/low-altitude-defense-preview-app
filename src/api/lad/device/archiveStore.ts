@@ -221,6 +221,7 @@ const detailExt: Record<
   {
     remark: string
     imageUrl: string | null
+    attachments?: import('./types').DeviceArchiveAttachment[]
     specifications: DeviceArchiveIndicator[]
     configurableItems: DeviceArchiveConfigurableItem[]
   }
@@ -308,6 +309,7 @@ export function buildDeviceArchiveDetail(row: DeviceArchiveItem): DeviceArchiveD
     ...row,
     remark: cur.remark,
     imageUrl: cur.imageUrl,
+    attachments: (cur.attachments ?? []).map((item) => ({ ...item })),
     specifications: cur.specifications.map((i) => ({ ...i })),
     configurableItems: cur.configurableItems.map((i) => ({ ...i }))
   }
@@ -390,6 +392,7 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
     detailExt[row.id] = {
       remark: body.remark ?? '',
       imageUrl: body.imageUrl ?? detailExt[row.id]?.imageUrl ?? DEVICE_ARCHIVE_PLACEHOLDER,
+      attachments: (body.attachments ?? []).map((item) => ({ ...item })),
       specifications: body.specifications.map((i) => ({ ...i })),
       configurableItems: detailExt[row.id]?.configurableItems.map((i) => ({ ...i })) ?? []
     }
@@ -413,6 +416,7 @@ export function saveDeviceArchiveRecord(body: DeviceArchiveSavePayload): DeviceA
   detailExt[id] = {
     remark: body.remark ?? '',
     imageUrl: body.imageUrl ?? DEVICE_ARCHIVE_PLACEHOLDER,
+    attachments: (body.attachments ?? []).map((item) => ({ ...item })),
     specifications: body.specifications.map((i) => ({ ...i })),
     configurableItems: []
   }

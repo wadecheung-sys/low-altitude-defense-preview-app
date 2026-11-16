@@ -30,10 +30,7 @@ import {
   weatherConditionsComplete
 } from '@/api/lad/plan/planWeatherConditions'
 import { UI } from '../planConstants'
-import {
-  listCountermeasureActions,
-  resolveCountermeasureFunction
-} from '../planDeviceConstants'
+import { listCountermeasureActions, resolveCountermeasureFunction } from '../planDeviceConstants'
 import {
   buildPlanAreaCascaderOptions,
   normalizePlanAreaIds,
@@ -128,6 +125,7 @@ function createEmptyRule(): PlanTriggerRule {
     deviceGroupId: '',
     deviceGroupName: '',
     deviceGroupType: '',
+    displayActions: fn ? [fn.value] : [],
     deviceFunction: fn?.value || '',
     deviceAction: fn?.deviceAction || '',
     enabled: true
@@ -167,6 +165,7 @@ function normalizeRule(rule: Partial<PlanTriggerRule>): PlanTriggerRule {
     deviceGroupId: '',
     deviceGroupName: '',
     deviceGroupType: '',
+    displayActions: rule.displayActions ? [...rule.displayActions] : fn ? [fn.value] : [],
     deviceFunction: fn?.value || '',
     deviceAction: fn?.deviceAction || '',
     ruleName: rule.ruleName || '',
@@ -181,11 +180,6 @@ function addTriggerRule() {
 function removeTriggerRule(index: number) {
   triggerRules.value.splice(index, 1)
   syncTriggerRuleOrder()
-}
-
-function onRowFunctionChange(row: PlanTriggerRule) {
-  const fn = resolveCountermeasureFunction(row.deviceFunction, countermeasureEntries.value)
-  row.deviceAction = fn?.deviceAction || ''
 }
 
 function collectPlanAreaLevel() {
@@ -274,7 +268,7 @@ async function onSave() {
       ElMessage.warning('请填写每条触发策略的规则名称')
       return
     }
-    if (!rule.deviceFunction) {
+    if (!rule.displayActions?.length) {
       ElMessage.warning('请为每条触发策略选择反制动作')
       return
     }
@@ -482,10 +476,10 @@ async function onSave() {
                 <div class="trigger-rule-form__item">
                   <label>{{ UI.counterDevice }}</label>
                   <ElSelect
-                    v-model="rule.deviceFunction"
+                    v-model="rule.displayActions"
+                    multiple
                     class="w-full"
-                    placeholder="请选择反制动作"
-                    @change="onRowFunctionChange(rule)"
+                    placeholder="请选择反制动作（可多选）"
                   >
                     <ElOption
                       v-for="option in countermeasureOptions"

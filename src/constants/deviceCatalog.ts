@@ -422,11 +422,11 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
   {
     model: 'FS-CDYT',
     vendor: '凡双科技',
-    deviceType: '察打一体',
+    deviceType: '协议解析',
     tier: 'confirmed',
     docFile: '数据接入接口文档v0.2.4.pdf',
     groupMasterEligible: true,
-    archiveName: '察打一体设备档案',
+    archiveName: '协议解析设备档案',
     archiveNo: 'D-LAD-CDYT0001',
     specifications: [
       ind('设备心跳', '', '数据接入接口 §2.1，类型 14：侦打一体设备'),
@@ -436,12 +436,19 @@ export const PENDING_DEVICES: DeviceCatalogEntry[] = [
     ],
     configurableItems: [
       cfg('detect_sensitivity', '侦测灵敏度', '', 'device', '低 / 中 / 高', '中'),
-      cfg('jam_default_band', '默认压制频段', 'MHz', 'device', '2400-2485 / 5725-5850', '2400-2485'),
+      cfg(
+        'jam_default_band',
+        '默认压制频段',
+        'MHz',
+        'device',
+        '2400-2485 / 5725-5850',
+        '2400-2485'
+      ),
       cfg('link_track_mode', '联动跟踪模式', '', 'device', '自动 / 手动', '自动')
     ],
     demo: {
       deviceId: 'DEV-CDYT-01',
-      deviceName: '西区1#察打一体',
+      deviceName: '西区1#协议解析',
       deployLocation: '西区制高点',
       ipAddress: '192.168.8.130',
       serialNo: 'FS-CDYT-2026-001',
@@ -497,11 +504,7 @@ export function catalogCategoryFromDeviceType(
 ): 'radar' | 'radio' | 'counter' | 'eo' | 'camera' {
   if (deviceType === '监控摄像机') return 'camera'
   if (deviceType === '雷达' || deviceType === 'ADS-B 监视') return 'radar'
-  if (
-    deviceType === '无线电侦测' ||
-    deviceType === 'Remote-ID 监视' ||
-    deviceType === '察打一体'
-  ) {
+  if (deviceType === '无线电侦测' || deviceType === 'Remote-ID 监视' || deviceType === '协议解析') {
     return 'radio'
   }
   if (deviceType === '光电跟踪') return 'eo'

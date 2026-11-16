@@ -171,7 +171,7 @@ function defaultExtForRow(row: DeviceInfoItem, index: number): DeviceInfoExt {
                       ? 800
                       : row.deviceType === '光电跟踪'
                         ? 600
-                        : row.deviceType === '察打一体'
+                        : row.deviceType === '协议解析'
                           ? 3000
                           : row.deviceType === '强光驱离'
                             ? 3000

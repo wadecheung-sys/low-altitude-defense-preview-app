@@ -17,6 +17,8 @@ export interface PlanWeatherCondition {
 }
 
 export interface PlanTriggerRule {
+  /** 前端展示选择，不参与设备执行。 */
+  displayActions?: string[]
   id: string
   ruleName: string
   sortOrder?: number
