@@ -1,9 +1,13 @@
 /** 告警相关系统参数键（由参数配置页维护） */
 export const ALARM_PARAM_KEYS = {
+  minTriggerLevel: 'alarm.min.trigger.level',
   audioFile: 'alarm.audio.file',
   maxDurationSeconds: 'alarm.audio.max.duration.seconds',
   visualMode: 'alarm.visual.mode'
 } as const
+
+export const ALARM_LEVEL_DICT_CODE = 'threat_level'
+export const DEFAULT_ALARM_MIN_TRIGGER_LEVEL = 'low'
 
 export type AlarmVisualMode = '闪烁' | '常亮'
 

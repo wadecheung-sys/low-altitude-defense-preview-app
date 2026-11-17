@@ -13,6 +13,7 @@ import {
 import { BaseButton } from '@/components/Button'
 import {
   ALARM_AUDIO_ACCEPT,
+  ALARM_LEVEL_DICT_CODE,
   ALARM_PARAM_KEYS,
   ALARM_VISUAL_MODE_OPTIONS
 } from '@/api/lad/system/alarmParams'
@@ -39,6 +40,11 @@ const uploadProps = {
   autoUpload: false,
   showFileList: false
 }
+
+const alarmLevelOptions = ref<Array<{ label: string; value: string }>>([])
+const isAlarmMinTriggerLevelParam = computed(
+  () => props.param.paramKey === ALARM_PARAM_KEYS.minTriggerLevel
+)
 
 const isAlarmAudioParam = computed(() => props.param.paramKey === ALARM_PARAM_KEYS.audioFile)
 const isAlarmVisualParam = computed(() => props.param.paramKey === ALARM_PARAM_KEYS.visualMode)
@@ -74,6 +80,11 @@ const numValue = computed({
 
 const displayText = computed(() => {
   const value = props.modelValue
+  if (isAlarmMinTriggerLevelParam.value) {
+    return (
+      alarmLevelOptions.value.find((item) => item.value === value)?.label || String(value ?? '—')
+    )
+  }
   if (props.param.valueType === 'boolean') {
     return value ? '是' : '否'
   }
@@ -114,6 +125,24 @@ async function loadDataSourceOptions() {
     }))
   }
 }
+
+async function loadAlarmLevelOptions() {
+  try {
+    const res = await getDictEntriesByCodeApi(ALARM_LEVEL_DICT_CODE)
+    alarmLevelOptions.value = res.data.map(({ label, value }) => ({ label, value }))
+  } catch {
+    alarmLevelOptions.value = []
+    ElMessage.error('告警等级字典加载失败，请重新打开页面后重试')
+  }
+}
+
+watch(
+  () => [isAlarmMinTriggerLevelParam.value, props.readonly],
+  () => {
+    if (isAlarmMinTriggerLevelParam.value) void loadAlarmLevelOptions()
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   if (isDefaultDataSourceParam.value) {
@@ -158,6 +187,21 @@ watch(isDefaultDataSourceParam, (active) => {
         </div>
       </div>
     </template>
+
+    <ElSelect
+      v-else-if="isAlarmMinTriggerLevelParam"
+      v-model="stringValue"
+      class="system-param-value__control"
+      placeholder="请选择告警最低触发等级"
+      @visible-change="(visible) => visible && loadAlarmLevelOptions()"
+    >
+      <ElOption
+        v-for="item in alarmLevelOptions"
+        :key="item.value"
+        :label="item.label"
+        :value="item.value"
+      />
+    </ElSelect>
 
     <ElSelect
       v-else-if="isDefaultDataSourceParam"

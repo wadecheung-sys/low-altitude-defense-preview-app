@@ -5,11 +5,12 @@ import { ContentWrap } from '@/components/ContentWrap'
 import { BaseButton } from '@/components/Button'
 import { Icon } from '@/components/Icon'
 import {
+  getDictEntriesByCodeApi,
   getSystemParamListApi,
   restoreSystemParamDefaultsApi,
   saveSystemParamApi
 } from '@/api/lad/system'
-import { ALARM_PARAM_KEYS } from '@/api/lad/system/alarmParams'
+import { ALARM_LEVEL_DICT_CODE, ALARM_PARAM_KEYS } from '@/api/lad/system/alarmParams'
 import { LAD_DEFAULT_DATA_SOURCE_PARAM_KEY } from '@/constants/ladDataSources'
 import type { ParamGroup, SystemParam } from '@/api/lad/system/types'
 import SystemParamValueInput from './components/SystemParamValueInput.vue'
@@ -99,6 +100,16 @@ function validateParam(param: SystemParam, value: string | number | boolean | nu
 }
 
 async function saveAll() {
+  const thresholdParam = params.value.find(
+    (param) => param.paramKey === ALARM_PARAM_KEYS.minTriggerLevel
+  )
+  if (thresholdParam) {
+    const { data: levels } = await getDictEntriesByCodeApi(ALARM_LEVEL_DICT_CODE)
+    if (!levels.some((level) => level.value === formValues.value[thresholdParam.id])) {
+      ElMessage.warning('请选择字典中有效的告警最低触发等级')
+      return
+    }
+  }
   for (const param of params.value) {
     const message = validateParam(param, formValues.value[param.id])
     if (message) {

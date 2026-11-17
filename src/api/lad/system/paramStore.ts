@@ -5,6 +5,12 @@ import type {
   SystemParamSavePayload
 } from './types'
 import {
+  ALARM_LEVEL_DICT_CODE,
+  ALARM_PARAM_KEYS,
+  DEFAULT_ALARM_MIN_TRIGGER_LEVEL
+} from './alarmParams'
+import { queryDictEntriesByCode } from './dictStore'
+import {
   LAD_DEFAULT_DATA_SOURCE,
   LAD_DEFAULT_DATA_SOURCE_PARAM_KEY,
   normalizeLadDataSource
@@ -120,6 +126,16 @@ const PARAM_SEED: SystemParam[] = [
     updatedAt: '2026-06-01 10:00:00'
   },
   {
+    id: 'sp-021',
+    paramKey: ALARM_PARAM_KEYS.minTriggerLevel,
+    paramName: '告警最低触发等级',
+    group: '告警',
+    valueType: 'string',
+    paramValue: DEFAULT_ALARM_MIN_TRIGGER_LEVEL,
+    remark: '告警等级达到或高于所选等级时触发告警；等级选项跟随威胁等级字典，默认低危',
+    updatedAt: '2026-11-17 00:00:00'
+  },
+  {
     id: 'sp-017',
     paramKey: 'alarm.audio.file',
     paramName: '告警音频',
@@ -157,7 +173,7 @@ function cloneParamSeed(): SystemParam[] {
 
 let allParams: SystemParam[] = cloneParamSeed()
 
-export const SYSTEM_PARAM_STORE_VERSION = 8
+export const SYSTEM_PARAM_STORE_VERSION = 9
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladSystemParamStoreVer?: number }
@@ -206,6 +222,14 @@ export function saveSystemParam(body: SystemParamSavePayload): SystemParam {
   if (body.id) {
     const idx = allParams.findIndex((row) => row.id === body.id)
     if (idx < 0) throw new Error('参数不存在')
+    if (
+      allParams[idx].paramKey === ALARM_PARAM_KEYS.minTriggerLevel &&
+      !queryDictEntriesByCode(ALARM_LEVEL_DICT_CODE).some(
+        (entry) => entry.value === body.paramValue
+      )
+    ) {
+      throw new Error('请选择字典中有效的告警最低触发等级')
+    }
     const row = {
       ...allParams[idx],
       paramValue: body.paramValue,
