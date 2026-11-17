@@ -132,7 +132,7 @@ const PARAM_SEED: SystemParam[] = [
     group: '告警',
     valueType: 'string',
     paramValue: DEFAULT_ALARM_MIN_TRIGGER_LEVEL,
-    remark: '告警等级达到或高于所选等级时触发告警；等级选项跟随威胁等级字典，默认低危',
+    remark: '告警等级达到或高于所选等级时触发告警；等级选项跟随威胁等级字典，默认中危',
     updatedAt: '2026-11-17 00:00:00'
   },
   {
@@ -173,7 +173,7 @@ function cloneParamSeed(): SystemParam[] {
 
 let allParams: SystemParam[] = cloneParamSeed()
 
-export const SYSTEM_PARAM_STORE_VERSION = 9
+export const SYSTEM_PARAM_STORE_VERSION = 10
 
 function ensureStoreVersion() {
   const g = globalThis as { __ladSystemParamStoreVer?: number }

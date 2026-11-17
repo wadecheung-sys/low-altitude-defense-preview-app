@@ -7,7 +7,7 @@ export const ALARM_PARAM_KEYS = {
 } as const
 
 export const ALARM_LEVEL_DICT_CODE = 'threat_level'
-export const DEFAULT_ALARM_MIN_TRIGGER_LEVEL = 'low'
+export const DEFAULT_ALARM_MIN_TRIGGER_LEVEL = 'medium'
 
 export type AlarmVisualMode = '闪烁' | '常亮'
 
