@@ -1,5 +1,5 @@
 import type { Router } from 'vue-router'
-import { LAD_BACKEND_HOME_PATH, LAD_MESSAGE_CENTER_PATH } from '@/constants/lad'
+import { LAD_BACKEND_HOME_PATH } from '@/constants/lad'
 
 export type DataScreenNavBridgeCleanup = () => void
 
@@ -9,8 +9,7 @@ export type DataScreenNavBridgeCleanup = () => void
  */
 const NAV_LINKS = [
   { id: 'u18', path: LAD_BACKEND_HOME_PATH, role: 'button', ariaLabel: '进入控制台' },
-  { id: 'u112', path: LAD_BACKEND_HOME_PATH, role: 'link', ariaLabel: '历史事件' },
-  { id: 'u180', path: LAD_MESSAGE_CENTER_PATH, role: 'link', ariaLabel: '消息中心更多' }
+  { id: 'u112', path: LAD_BACKEND_HOME_PATH, role: 'link', ariaLabel: '历史事件' }
 ] as const
 
 function stopPrototypeEvent(event: Event) {
